@@ -129,7 +129,6 @@ Elle couvre :
 
 👉 **À lire avant toute intégration (extension, API, automatisation).**
 ---
-s
 
 ## Sécurité
 
