@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "AllDebrid Submitter",
+  "version": "1.2.0",
+  "description": "Clic droit sur un lien magnet/http(s) ou sur une sélection : générer liens (public) ou envoyer NAS (admin).",
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "notifications",
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "AllDebrid Submitter"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

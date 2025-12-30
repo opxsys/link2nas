@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Link2NAS — Status</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --card: #121826;
+      --text: #e6edf3;
+      --muted: #9aa4af;
+      --border: rgba(255,255,255,0.08);
+      --green: #2ecc71;
+      --yellow: #f1c40f;
+      --red: #e74c3c;
+      --gray: #7f8c8d;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap { max-width: 1100px; margin: 28px auto; padding: 0 16px; }
+    .top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 18px;
+    }
+    h1 { font-size: 20px; margin: 0; font-weight: 700; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .card {
+      grid-column: span 12;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    }
+    .card h2 { margin: 0 0 10px; font-size: 14px; letter-spacing: .2px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); }
+    .row:first-of-type { border-top: 0; }
+    .left { display:flex; align-items:center; gap: 10px; min-width: 0; }
+    .name { font-weight: 600; }
+    .desc { color: var(--muted); font-size: 12px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display:inline-block; }
+    .green { background: var(--green); }
+    .yellow { background: var(--yellow); }
+    .red { background: var(--red); }
+    .gray { background: var(--gray); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; color: var(--muted); }
+    .split { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+    .badge { font-size: 12px; color: var(--muted); }
+    a { color: inherit; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Link2NAS — Status</h1>
+      <div class="muted">Dernière génération : {{ now.strftime("%Y-%m-%d %H:%M:%S") }}</div>
+    </div>
+    <div class="pill">
+      <span class="dot {{ overall }}"></span>
+      <span class="name">Overall: {{ overall|upper }}</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>AllDebrid</h2>
+
+      <div class="row">
+        <div class="left">
+          <span class="dot {{ 'green' if ad_ping_ok else 'red' }}"></span>
+          <div>
+            <div class="name">Ping</div>
+            <div class="desc mono">{{ ad_ping.get("url") if ad_ping else "" }}</div>
+          </div>
+        </div>
+        <div class="pill">
+          <span class="dot {{ 'green' if ad_ping_ok else 'red' }}"></span>
+          <span>{{ "OK" if ad_ping_ok else (ad_ping.get("code") or ad_ping.get("kind") or "KO") }}</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="left">
+          <span class="dot {{ premium_color }}"></span>
+          <div>
+            <div class="name">Premium</div>
+            <div class="desc">
+              {{ premium.get("username","?") }} —
+              premium={{ premium.get("is_premium") }} trial={{ premium.get("is_trial") }} subscribed={{ premium.get("is_subscribed") }}
+            </div>
+          </div>
+        </div>
+        <div class="pill">
+          <span class="dot {{ premium_color }}"></span>
+          <span>
+            {% if premium.get("ok") %}
+              {{ premium_label }}
+            {% else %}
+              KO
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="split">
+        <div>
+          <div class="badge">Endpoints (vivants / deprecated / discontinued)</div>
+          {% for ep in ad_endpoints %}
+          <div class="row">
+            <div class="left">
+              <span class="dot {{ ep.color }}"></span>
+              <div style="min-width:0">
+                <div class="name">{{ ep.name }}</div>
+                <div class="desc mono">{{ ep.method }} {{ ep.path }}</div>
+              </div>
+            </div>
+            <div class="pill">
+              <span class="dot {{ ep.color }}"></span>
+              <span>{{ ep.state }}</span>
+              {% if ep.http_status %}
+                <span class="mono">HTTP {{ ep.http_status }}</span>
+              {% endif %}
+              {% if ep.error_code %}
+                <span class="mono">{{ ep.error_code }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div>
+          <div class="badge">Notes</div>
+          <div class="row">
+            <div class="left">
+              <span class="dot gray"></span>
+              <div>
+                <div class="name">Interprétation</div>
+                <div class="desc">
+                  Rouge = DISCONTINUED / cassé.<br/>
+                  Jaune = timeout / deprecated / erreur réseau.<br/>
+                  Vert = vivant et répond.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="left">
+              <span class="dot gray"></span>
+              <div>
+                <div class="name">Important</div>
+                <div class="desc">
+                  Les tests d’upload/delete AllDebrid ne sont pas exécutés ici (risque de side effects).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card">
+      <h2>Infra</h2>
+
+      <div class="row">
+        <div class="left">
+          <span class="dot {{ 'green' if redis_info.get('ok') else 'red' }}"></span>
+          <div>
+            <div class="name">Redis</div>
+            <div class="desc mono">{{ redis_info.get("message") }}</div>
+          </div>
+        </div>
+        <div class="pill">
+          <span class="dot {{ 'green' if redis_info.get('ok') else 'red' }}"></span>
+          <span>{{ "OK" if redis_info.get("ok") else "KO" }}</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="left">
+          {% if not nas_info.get("enabled") %}
+            <span class="dot gray"></span>
+          {% else %}
+            <span class="dot {{ 'green' if nas_info.get('ok') else 'red' }}"></span>
+          {% endif %}
+          <div>
+            <div class="name">Synology DSM</div>
+            <div class="desc">{{ nas_info.get("message") }}</div>
+          </div>
+        </div>
+        <div class="pill">
+          {% if not nas_info.get("enabled") %}
+            <span class="dot gray"></span><span>DISABLED</span>
+          {% else %}
+            <span class="dot {{ 'green' if nas_info.get('ok') else 'red' }}"></span>
+            <span>{{ "OK" if nas_info.get("ok") else "KO" }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

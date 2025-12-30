@@ -1,0 +1,31 @@
+[Unit]
+Description=Link2NAS Scheduler (APScheduler runner)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+WorkingDirectory=/opt/link2nas
+
+# Charge TOUT depuis .env
+EnvironmentFile=/opt/link2nas/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/link2nas
+
+# Scheduler ACTIVÉ uniquement ici
+Environment=SCHEDULER_ENABLED=1
+
+ExecStart=/opt/link2nas/venv/bin/python /opt/link2nas/scheduler_runner.py
+
+Restart=always
+RestartSec=5
+
+# Hardening léger
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

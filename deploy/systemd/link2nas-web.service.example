@@ -1,0 +1,35 @@
+[Unit]
+Description=Link2NAS Web (Flask via Gunicorn)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+WorkingDirectory=/opt/link2nas
+
+# Charge TOUT depuis .env (aucun secret ici)
+EnvironmentFile=/opt/link2nas/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/link2nas
+
+# Web uniquement → scheduler volontairement désactivé ici
+Environment=SCHEDULER_ENABLED=0
+
+ExecStart=/opt/link2nas/venv/bin/gunicorn \
+  --bind 0.0.0.0:5000 \
+  --workers 2 \
+  --timeout 120 \
+  link2nas.app:app
+
+Restart=always
+RestartSec=5
+
+# Hardening léger (désactivable si souci)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

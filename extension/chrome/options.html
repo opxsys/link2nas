@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Link2NAS — Options</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#121a33;
+      --muted:#9aa4c7;
+      --text:#e8ecff;
+      --border:#243058;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --err:#ef4444;
+      --btn:#2b3a76;
+      --btn2:#203064;
+      --focus:#7c9bff;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(124,155,255,.18), transparent 55%),
+                  radial-gradient(900px 500px at 80% 10%, rgba(34,197,94,.10), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      padding:24px;
+    }
+    .wrap{ max-width:980px; margin:0 auto; }
+    header{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+      margin-bottom:18px;
+    }
+    .title h1{
+      font-size:22px; margin:0 0 6px 0; letter-spacing:.2px;
+    }
+    .title p{
+      margin:0; color:var(--muted); font-size:13px; line-height:1.4;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      background: rgba(18,26,51,.65);
+      border-radius:999px;
+      box-shadow: var(--shadow);
+      font-size:13px;
+      color:var(--muted);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: #6b7280;
+      box-shadow: 0 0 0 4px rgba(107,114,128,.12);
+    }
+    .dot.ok{ background:var(--ok); box-shadow: 0 0 0 4px rgba(34,197,94,.18); }
+    .dot.warn{ background:var(--warn); box-shadow: 0 0 0 4px rgba(245,158,11,.18); }
+    .dot.err{ background:var(--err); box-shadow: 0 0 0 4px rgba(239,68,68,.18); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:16px;
+    }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: rgba(18,26,51,.75);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+    }
+    .card h2{
+      margin:0 0 12px 0;
+      font-size:15px;
+      letter-spacing:.2px;
+    }
+    .hint{
+      margin:-6px 0 12px 0;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:10px 0 6px;
+    }
+    input[type="text"], input[type="password"]{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(11,16,32,.55);
+      color:var(--text);
+      outline:none;
+      transition: border .15s, box-shadow .15s;
+      font-family: var(--sans);
+      font-size:13px;
+    }
+    input[type="text"]:focus, input[type="password"]:focus{
+      border-color: rgba(124,155,255,.65);
+      box-shadow: 0 0 0 4px rgba(124,155,255,.18);
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 520px){
+      .row{ grid-template-columns: 1fr; }
+    }
+
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-top:12px;
+    }
+    .toggle input{
+      width:18px; height:18px;
+      accent-color: var(--focus);
+    }
+    .toggle span{
+      font-size:13px; color:var(--text);
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+    button{
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(43,58,118,.92), rgba(32,48,100,.92));
+      color: var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size:13px;
+      font-weight:600;
+      transition: transform .05s, filter .15s, border .15s;
+      user-select:none;
+    }
+    button:hover{ filter: brightness(1.05); }
+    button:active{ transform: translateY(1px); }
+    button.secondary{
+      background: rgba(11,16,32,.5);
+      font-weight:600;
+    }
+    .statusline{
+      margin-left:auto;
+      font-size:12px;
+      color:var(--muted);
+      min-height: 18px;
+    }
+    .statusline.ok{ color: var(--ok); }
+    .statusline.err{ color: var(--err); }
+    .statusline.warn{ color: var(--warn); }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 170px 1fr;
+      gap:8px 10px;
+      margin-top:8px;
+      font-size:13px;
+    }
+    .k{ color:var(--muted); }
+    .v{ color:var(--text); font-family: var(--mono); font-size:12px; overflow-wrap:anywhere; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(11,16,32,.45);
+      width: fit-content;
+      font-size:12px;
+      color: var(--muted);
+      margin-top:10px;
+    }
+    .pill b{ color: var(--text); font-weight:700; }
+
+    .footer{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+    code{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: #dbe3ff;
+      background: rgba(11,16,32,.55);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+    .small{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:10px;
+      line-height:1.5;
+    }
+    .warnbox{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius: 12px;
+      border:1px solid rgba(245,158,11,.35);
+      background: rgba(245,158,11,.10);
+      color: #ffd9a3;
+      font-size:12px;
+      line-height:1.45;
+      display:none;
+    }
+    .warnbox.show{ display:block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Link2NAS — Options</h1>
+        <p>Configure l’URL du backend et les identifiants admin (si NAS activé).<br/>Le bouton “Test serveur” vérifie : <code>/api/capabilities</code>, NAS actif, et infos backend.</p>
+      </div>
+      <div class="badge" id="healthBadge" title="État du serveur">
+        <span class="dot" id="healthDot"></span>
+        <span id="healthText">Non testé</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Configuration -->
+      <section class="card">
+        <h2>Configuration</h2>
+        <p class="hint">Le <b>baseUrl</b> doit être l’URL de ton Link2NAS (pas 127.0.0.1 si le serveur est ailleurs).</p>
+
+        <label for="serverBaseUrl">URL du serveur (baseUrl)</label>
+        <input id="serverBaseUrl" type="text" placeholder="http://192.168.100.1:5000" spellcheck="false" />
+
+        <div class="row">
+          <div>
+            <label for="adminUser">Utilisateur admin (Basic Auth)</label>
+            <input id="adminUser" type="text" placeholder="admin" autocomplete="username" spellcheck="false" />
+          </div>
+          <div>
+            <label for="adminPass">Mot de passe admin</label>
+            <input id="adminPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+        </div>
+
+        <div class="toggle">
+          <input id="openAfterSubmit" type="checkbox" />
+          <span>Ouvrir l’UI après soumission</span>
+        </div>
+
+        <div class="actions">
+          <button id="save">Enregistrer</button>
+          <!-- FIX IMPORTANT: id="testServer" (pas "test") -->
+          <button class="secondary" id="testServer">Test serveur</button>
+          <div class="statusline" id="status"></div>
+        </div>
+
+        <div class="warnbox" id="adminWarn"></div>
+
+        <div class="footer">
+          Conseils :
+          <ul>
+            <li>Si tu exposes Link2NAS en HTTPS avec auth, garde l’URL en <code>https://…</code>.</li>
+            <li>Si <code>NAS_ENABLED=0</code> côté serveur, les menus “Envoyer au NAS” seront masqués automatiquement.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Diagnostic -->
+      <section class="card">
+        <h2>Diagnostic (Test serveur)</h2>
+        <p class="hint">Résumé technique basé sur <code>/api/capabilities</code> + tentatives de détection.</p>
+
+        <div class="pill" id="capsPill">
+          <span class="dot" id="capsDot"></span>
+          <span><b>capabilities</b>: <span id="capsSummary">non testé</span></span>
+        </div>
+
+        <div class="kv" style="margin-top:14px">
+          <div class="k">Base URL</div><div class="v" id="kvBase">—</div>
+          <div class="k">Serveur joignable</div><div class="v" id="kvReach">—</div>
+          <div class="k">NAS activé</div><div class="v" id="kvNas">—</div>
+          <div class="k">Version backend</div><div class="v" id="kvVersion">—</div>
+          <div class="k">Détail</div><div class="v" id="kvDetail">—</div>
+        </div>
+
+        <div class="small">
+          Note : si ton backend ne renvoie pas encore de version, tu peux ajouter un champ <code>version</code> dans la réponse de <code>/api/capabilities</code>.
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Redis</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        .torrent { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+        .torrent-key { font-weight: bold; color: #2c3e50; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .data-table th, .data-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        .data-table th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Debug des données Redis</h1>
+
+    {% if torrents %}
+        <h2>Nombre de torrents: {{ torrents|length }}</h2>
+
+        {% for torrent in torrents %}
+        <div class="torrent">
+            <div class="torrent-key">Clé: {{ torrent.key }}</div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Champ</th>
+                        <th>Valeur</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, value in torrent.data.items() %}
+                    <tr>
+                        <td>{{ key }}</td>
+                        <td>{{ value }}</td>
+                        <td>{{ value.__class__.__name__ }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>Aucun torrent trouvé dans Redis.</p>
+    {% endif %}
+</body>
+</html>
