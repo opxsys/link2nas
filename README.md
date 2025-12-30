@@ -27,8 +27,8 @@ L’architecture est volontairement **séparée** (web / scheduler), **stateless
   - masquage automatique des valeurs sensibles
 - 🧩 Extension Chrome (optionnelle)
 - 🚀 Déploiement :
-  - **systemd (recommandé en bare‑metal / VPS)**
-  - **Docker / docker‑compose**
+  - **Docker / docker‑compose (recommandé)**
+  - **systemd (bare‑metal / VPS)**
 
 ---
 
@@ -39,22 +39,22 @@ L’architecture est volontairement **séparée** (web / scheduler), **stateless
 ├── app.py                  # Entrée Gunicorn (web)
 ├── scheduler_runner.py     # Entrée scheduler (APScheduler)
 ├── link2nas/
-│   ├── config.py           # Configuration centralisée (Settings)
-│   ├── webapp.py           # Routes Flask + API
-│   ├── scheduler.py        # Orchestration APScheduler
-│   ├── scheduler_jobs.py   # Jobs métier
-│   ├── redis_store.py      # Accès Redis
-│   ├── alldebrid.py        # API AllDebrid
-│   ├── synology.py         # API Synology Download Station
-│   ├── status.py           # Health / status global
-│   ├── auth.py             # Auth admin
+│   ├── config.py
+│   ├── webapp.py
+│   ├── scheduler.py
+│   ├── scheduler_jobs.py
+│   ├── redis_store.py
+│   ├── alldebrid.py
+│   ├── synology.py
+│   ├── status.py
+│   ├── auth.py
 │   └── utils.py
 ├── templates/
 ├── static/
-├── extension/              # Extension Chrome (optionnelle)
+├── extension/
 ├── deploy/
-│   ├── docker/             # Déploiement Docker
-│   └── systemd/            # Déploiement systemd
+│   ├── docker/
+│   └── systemd/
 ├── .env.example
 └── requirements.txt
 ```
@@ -64,105 +64,36 @@ L’architecture est volontairement **séparée** (web / scheduler), **stateless
 ## Prérequis
 
 - Linux (testé Debian / Ubuntu)
-- Python **3.10+**
-- Redis
 - Compte **AllDebrid**
 - NAS **Synology** avec Download Station
-- systemd **ou** Docker
+- **Docker** ou **systemd**
+- Redis (interne ou externe)
 
 ---
 
-## Installation (classique)
+## Déploiement (recommandé)
 
-### 1. Cloner le dépôt
+### 🐳 Docker
 
-```bash
-git clone https://github.com/<user>/link2nas.git
-cd link2nas
-```
+Deux modes sont possibles :
+- **Utiliser l’image Docker officielle (GHCR)**  
+- **Construire localement via docker‑compose**
 
-### 2. Virtualenv
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 3. Configuration
-
-```bash
-cp .env.example .env
-nano .env
-```
-
-⚠️ **Tous les secrets sont obligatoires** :
-
-- `FLASK_SECRET_KEY`
-- `ADMIN_PASS`
-- `ALLDEBRID_APIKEY`
-- `SYNOLOGY_PASSWORD`
+👉 Voir la documentation complète :
+- `deploy/README.md`
+- `deploy/docker/README.md`
+- `README.docker.md` (image Docker uniquement)
 
 ---
 
-## Lancement en développement
+## Déploiement systemd (installation native)
 
-```bash
-set -a
-source .env
-set +a
-python app.py
+Pour une intégration système fine (serveur dédié, contraintes spécifiques).
+
+👉 Voir :
 ```
-
-👉 Web : http://localhost:5000
-
----
-
-## Déploiement systemd (recommandé)
-
-Les fichiers sont fournis dans `deploy/systemd/`.
-
-### Installation
-
-```bash
-cd deploy/systemd
-sudo ./install.sh
+deploy/systemd/README.md
 ```
-
-Cela installe et active :
-
-- `link2nas-web.service`
-- `link2nas-scheduler.service`
-
-### Gestion
-
-```bash
-systemctl status link2nas-web
-systemctl status link2nas-scheduler
-
-journalctl -u link2nas-web -f
-journalctl -u link2nas-scheduler -f
-```
-
----
-
-## Déploiement Docker
-
-Voir le README dédié :
-
-```
-deploy/docker/README.md
-```
-
-En résumé :
-
-```bash
-cd deploy/docker
-cp .env.example .env
-docker compose up -d
-```
-
-Aucune image pré‑buildée : le `Dockerfile` est utilisé automatiquement.
 
 ---
 
@@ -171,39 +102,17 @@ Aucune image pré‑buildée : le `Dockerfile` est utilisé automatiquement.
 - ❌ Aucun secret dans le code
 - ❌ Aucun secret dans les logs
 - ✅ `.env` ignoré par git
-- ✅ `Settings.__repr__()` masque les secrets
-
-Test rapide :
-
-```bash
-python - <<'EOF'
-from link2nas.config import Settings
-s = Settings.from_env()
-print(s)
-EOF
-```
-
----
-
-## Variables importantes
-
-| Variable | Description |
-|--------|-------------|
-| `NAS_ENABLED` | Active l’envoi vers le NAS |
-| `SCHEDULER_ENABLED` | Activé uniquement côté scheduler |
-| `ADMIN_UI_ENABLED` | Active l’interface admin |
-| `MAX_UNLOCK_PER_RUN` | Limite AllDebrid par cycle |
-| `STATUS_ROUTE_ENABLED` | Active `/api/status` |
+- ✅ Masquage automatique des secrets dans les logs
 
 ---
 
 ## Philosophie
 
 - Un process = un rôle
-- Pas de logique métier dans l’UI
 - Pas de scheduler dans Gunicorn
 - Redis comme source de vérité
-- Déploiement lisible et auditable
+- Déploiement explicite et auditable
+- Zéro magie cachée
 
 ---
 
@@ -211,7 +120,7 @@ EOF
 
 Projet personnel.  
 Utilisation libre, modifications libres.  
-Pas de garantie. Tu assumes.
+Aucune garantie. Tu assumes.
 
 ---
 
