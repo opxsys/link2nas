@@ -9,6 +9,7 @@ vers l’instance Link2NAS, directement depuis le navigateur.
 
 ## Structure
 
+```
 extension/
 ├── chrome/
 │   ├── manifest.json
@@ -20,6 +21,7 @@ extension/
 │   └── README.md
 └── firefox/
     └── (à venir)
+```
 
 ---
 
