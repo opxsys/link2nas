@@ -1,24 +1,34 @@
 # Link2NAS
 
-Link2NAS est un service auto-hébergé qui permet d’envoyer automatiquement des liens et magnets AllDebrid vers un NAS Synology (Download Station), avec une interface web et un scheduler indépendant.
+Link2NAS est un service **auto‑hébergé**, robuste et production‑ready, permettant d’envoyer automatiquement des **liens et magnets AllDebrid** vers un **NAS Synology (Download Station)**.
 
-Architecture **propre**, **séparée**, et **production-ready** (web + scheduler systemd).
+L’architecture est volontairement **séparée** (web / scheduler), **stateless côté applicatif**, avec un stockage d’état centralisé via **Redis**.
+
+> Objectif : fiabilité, clarté, zéro bricolage, et un déploiement propre (systemd ou Docker).
 
 ---
 
-## Fonctionnalités
+## Fonctionnalités principales
 
-- 🔗 Support **AllDebrid** (magnets, liens directs)
+- 🔗 Support complet **AllDebrid**
+  - Magnets
+  - Liens directs
+  - Déverrouillage JIT (just‑in‑time)
 - 📦 Envoi automatique vers **Synology Download Station**
-- 🖥️ Interface web Flask (admin + status)
-- ⏱️ Scheduler APScheduler **séparé du web**
+- 🖥️ Interface web Flask
+  - UI admin
+  - Vue statut détaillée (AllDebrid, Redis, NAS)
+- ⏱️ Scheduler **APScheduler indépendant**
+  - Aucun job dans le process web
 - 🧠 Stockage d’état via **Redis**
-- 🔐 Sécurité :
+- 🔐 Sécurité stricte
   - secrets uniquement via `.env`
   - aucun secret loggé
-  - admin en Basic Auth
+  - masquage automatique des valeurs sensibles
 - 🧩 Extension Chrome (optionnelle)
-- 🚀 Déploiement via **systemd**
+- 🚀 Déploiement :
+  - **systemd (recommandé en bare‑metal / VPS)**
+  - **Docker / docker‑compose**
 
 ---
 
@@ -30,19 +40,21 @@ Architecture **propre**, **séparée**, et **production-ready** (web + scheduler
 ├── scheduler_runner.py     # Entrée scheduler (APScheduler)
 ├── link2nas/
 │   ├── config.py           # Configuration centralisée (Settings)
-│   ├── webapp.py           # Routes Flask
-│   ├── scheduler.py        # Jobs scheduler
-│   ├── scheduler_jobs.py
-│   ├── redis_store.py
-│   ├── alldebrid.py
-│   ├── synology.py
-│   ├── status.py
-│   ├── auth.py
+│   ├── webapp.py           # Routes Flask + API
+│   ├── scheduler.py        # Orchestration APScheduler
+│   ├── scheduler_jobs.py   # Jobs métier
+│   ├── redis_store.py      # Accès Redis
+│   ├── alldebrid.py        # API AllDebrid
+│   ├── synology.py         # API Synology Download Station
+│   ├── status.py           # Health / status global
+│   ├── auth.py             # Auth admin
 │   └── utils.py
 ├── templates/
 ├── static/
-├── extension/              # Extension Chrome (optionnel)
-├── deploy/                 # Services systemd
+├── extension/              # Extension Chrome (optionnelle)
+├── deploy/
+│   ├── docker/             # Déploiement Docker
+│   └── systemd/            # Déploiement systemd
 ├── .env.example
 └── requirements.txt
 ```
@@ -56,13 +68,13 @@ Architecture **propre**, **séparée**, et **production-ready** (web + scheduler
 - Redis
 - Compte **AllDebrid**
 - NAS **Synology** avec Download Station
-- systemd
+- systemd **ou** Docker
 
 ---
 
-## Installation
+## Installation (classique)
 
-### 1. Cloner
+### 1. Cloner le dépôt
 
 ```bash
 git clone https://github.com/<user>/link2nas.git
@@ -102,73 +114,55 @@ set +a
 python app.py
 ```
 
-Web disponible sur :  
-👉 http://localhost:5000
+👉 Web : http://localhost:5000
 
 ---
 
 ## Déploiement systemd (recommandé)
 
-### Web
+Les fichiers sont fournis dans `deploy/systemd/`.
 
-`/etc/systemd/system/link2nas-web.service`
-
-```ini
-[Unit]
-Description=Link2NAS Web (Gunicorn)
-After=network.target
-
-[Service]
-Type=simple
-User=root
-Group=root
-WorkingDirectory=/opt/link2nas
-EnvironmentFile=/opt/link2nas/.env
-Environment=PYTHONUNBUFFERED=1
-Environment=PYTHONPATH=/opt/link2nas
-ExecStart=/opt/link2nas/venv/bin/gunicorn \
-  --bind 0.0.0.0:5000 \
-  --workers 2 \
-  --timeout 120 \
-  app:app
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Scheduler
-
-`/etc/systemd/system/link2nas-scheduler.service`
-
-```ini
-[Unit]
-Description=Link2NAS Scheduler
-After=network.target
-
-[Service]
-Type=simple
-User=root
-Group=root
-WorkingDirectory=/opt/link2nas
-EnvironmentFile=/opt/link2nas/.env
-Environment=PYTHONUNBUFFERED=1
-Environment=PYTHONPATH=/opt/link2nas
-Environment=SCHEDULER_ENABLED=1
-ExecStart=/opt/link2nas/venv/bin/python /opt/link2nas/scheduler_runner.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Activation :
+### Installation
 
 ```bash
-systemctl daemon-reload
-systemctl enable --now link2nas-web
-systemctl enable --now link2nas-scheduler
+cd deploy/systemd
+sudo ./install.sh
 ```
+
+Cela installe et active :
+
+- `link2nas-web.service`
+- `link2nas-scheduler.service`
+
+### Gestion
+
+```bash
+systemctl status link2nas-web
+systemctl status link2nas-scheduler
+
+journalctl -u link2nas-web -f
+journalctl -u link2nas-scheduler -f
+```
+
+---
+
+## Déploiement Docker
+
+Voir le README dédié :
+
+```
+deploy/docker/README.md
+```
+
+En résumé :
+
+```bash
+cd deploy/docker
+cp .env.example .env
+docker compose up -d
+```
+
+Aucune image pré‑buildée : le `Dockerfile` est utilisé automatiquement.
 
 ---
 
@@ -177,9 +171,9 @@ systemctl enable --now link2nas-scheduler
 - ❌ Aucun secret dans le code
 - ❌ Aucun secret dans les logs
 - ✅ `.env` ignoré par git
-- ✅ `Settings.__repr__()` masque toutes les données sensibles
+- ✅ `Settings.__repr__()` masque les secrets
 
-Vérification :
+Test rapide :
 
 ```bash
 python - <<'EOF'
@@ -196,15 +190,28 @@ EOF
 | Variable | Description |
 |--------|-------------|
 | `NAS_ENABLED` | Active l’envoi vers le NAS |
-| `SCHEDULER_ENABLED` | Activé uniquement via le service scheduler |
-| `ADMIN_UI_ENABLED` | Active l’UI admin |
-| `MAX_UNLOCK_PER_RUN` | Limite par cycle scheduler |
+| `SCHEDULER_ENABLED` | Activé uniquement côté scheduler |
+| `ADMIN_UI_ENABLED` | Active l’interface admin |
+| `MAX_UNLOCK_PER_RUN` | Limite AllDebrid par cycle |
+| `STATUS_ROUTE_ENABLED` | Active `/api/status` |
+
+---
+
+## Philosophie
+
+- Un process = un rôle
+- Pas de logique métier dans l’UI
+- Pas de scheduler dans Gunicorn
+- Redis comme source de vérité
+- Déploiement lisible et auditable
 
 ---
 
 ## Licence
 
-Projet personnel — fais-en ce que tu veux, mais **assume** 😉
+Projet personnel.  
+Utilisation libre, modifications libres.  
+Pas de garantie. Tu assumes.
 
 ---
 
@@ -212,10 +219,10 @@ Projet personnel — fais-en ce que tu veux, mais **assume** 😉
 
 ✅ Fonctionnel  
 ✅ Stable  
-🚧 Extension Chrome en évolution
+🚧 Extension Chrome en évolution  
 
 ---
 
 ## Auteur
 
-© 2025 Link2NAS contributors
+© 2025 – Link2NAS contributors

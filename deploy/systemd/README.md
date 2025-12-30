@@ -1,9 +1,50 @@
-Déploiement systemd (sans Docker)
+# Link2NAS — Déploiement systemd
 
-Prérequis :
-- Python ≥ 3.11
-- virtualenv configuré
-- Redis accessible
+## Prérequis
+- Linux avec systemd
+- Python ≥ 3.10
+- Redis disponible
 
-Installation :
-sudo ./install.sh
+---
+
+## Installation
+
+```bash
+sudo ./deploy/systemd/install.sh
+```
+
+---
+
+## Configuration
+
+```bash
+cp .env.example .env
+```
+
+Configurer au minimum :
+- `ALLDEBRID_APIKEY`
+- `ADMIN_PASS`
+- `FLASK_SECRET_KEY`
+
+---
+
+## Services
+
+```bash
+sudo systemctl start link2nas-web
+sudo systemctl start link2nas-scheduler
+```
+
+```bash
+sudo systemctl enable link2nas-web
+sudo systemctl enable link2nas-scheduler
+```
+
+---
+
+## Logs
+
+```bash
+journalctl -u link2nas-web -f
+journalctl -u link2nas-scheduler -f
+```

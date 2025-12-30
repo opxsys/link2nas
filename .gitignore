@@ -26,8 +26,10 @@ build/
 
 # Ignore deploy by default
 deploy/*
+!deploy/
 
 # But keep deployment helpers
+!deploy/README.md
 !deploy/docker/
 !deploy/docker/**
 !deploy/systemd/
