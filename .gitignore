@@ -24,7 +24,11 @@ build/
 .idea/
 .DS_Store
 
-# deploy (ignored by default)
-deploy/
+# Ignore deploy by default
+deploy/*
+
+# But keep deployment helpers
 !deploy/docker/
 !deploy/docker/**
+!deploy/systemd/
+!deploy/systemd/**
