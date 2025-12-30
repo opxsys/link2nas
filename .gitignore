@@ -1,7 +1,9 @@
 # secrets
 .env
 .env.*
+**/.env
 !.env.example
+!.env.*.example
 
 # python
 __pycache__/
@@ -21,4 +23,8 @@ build/
 .vscode/
 .idea/
 .DS_Store
-deploy/docker/
+
+# deploy (ignored by default)
+deploy/
+!deploy/docker/
+!deploy/docker/**

@@ -1,0 +1,68 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: link2nas-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  web:
+    image: link2nas-web
+    container_name: link2nas-web
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ../../.env
+    environment:
+      REDIS_HOST: redis
+      PYTHONUNBUFFERED: "1"
+      SCHEDULER_ENABLED: "0"
+    command:
+      [
+        "gunicorn",
+        "--bind", "0.0.0.0:5000",
+        "--workers", "2",
+        "--timeout", "120",
+        "app:app"
+      ]
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys,requests; r=requests.get('http://127.0.0.1:5000/api/status',timeout=2,auth=('admin',''+(__import__('os').environ.get('ADMIN_PASS','')))); sys.exit(0 if r.status_code==200 else 1)"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  scheduler:
+    image: link2nas-scheduler
+    container_name: link2nas-scheduler
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      REDIS_HOST: redis
+      PYTHONUNBUFFERED: "1"
+      # Scheduler ON uniquement ici
+      SCHEDULER_ENABLED: "1"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["python", "/app/scheduler_runner.py"]

@@ -1,0 +1,31 @@
+# secrets
+.env
+*.env
+.env.*
+
+# python junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# git
+.git/
+.gitignore
+
+# local stuff
+*.log
+*.sqlite3
+*.db
+.vscode/
+.idea/
+.DS_Store
+
+# not needed in container
+extension/
+deploy/systemd/
