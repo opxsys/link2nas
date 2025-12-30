@@ -170,3 +170,77 @@ def unlock_link_safe(s: Settings, link: str) -> tuple[bool, dict]:
         return False, {"kind": "network", "code": "NETWORK_ERROR", "message": str(e)}
     except Exception as e:
         return False, {"kind": "unknown", "code": "EXCEPTION", "message": str(e)}
+
+def get_magnet_files_safe(s, magnet_id: str):
+    try:
+        url = f"{s.alldebrid_base_url}{s.ad_endpoints['magnet_files']}"
+        headers = {"Authorization": f"Bearer {s.alldebrid_apikey}"}
+        r = requests.post(url, headers=headers, data={"id[]": str(magnet_id)}, timeout=s.alldebrid_timeout)
+        js = r.json()
+        if not r.ok or js.get("status") != "success":
+            err = js.get("error") if isinstance(js, dict) else None
+            return False, {
+                "code": (err or {}).get("code") if isinstance(err, dict) else f"HTTP_{r.status_code}",
+                "message": (err or {}).get("message") if isinstance(err, dict) else "request failed",
+            }
+        magnets = ((js.get("data") or {}).get("magnets") or [])
+        if not magnets:
+            return True, []
+        files = (magnets[0] or {}).get("files") or []
+        return True, files
+    except Exception as e:
+        return False, {"code": "EXCEPTION", "message": str(e)}
+
+def get_magnet_status_safe(s: Settings, magnet_id: str) -> tuple[bool, dict]:
+    """
+    Retourne un dict "plat" avec au moins:
+      {status, progress, size, downloaded}
+    en essayant d'être compatible v4 / v4.1.
+    """
+    url = f"{s.alldebrid_base_url}{s.ad_endpoints['magnet_status']}"
+    headers = {"Authorization": f"Bearer {s.alldebrid_apikey}"}
+
+    try:
+        r = requests.post(url, headers=headers, data={"id[]": str(magnet_id)}, timeout=s.alldebrid_timeout)
+        js = r.json() if r.content else None
+
+        if (not r.ok) or (not isinstance(js, dict)) or js.get("status") != "success":
+            err = (js or {}).get("error") if isinstance(js, dict) else None
+            return False, {
+                "code": (err or {}).get("code") if isinstance(err, dict) else f"HTTP_{r.status_code}",
+                "message": (err or {}).get("message") if isinstance(err, dict) else "magnet/status failed",
+            }
+
+        data = js.get("data") or {}
+        magnets = data.get("magnets") or []
+        if not magnets:
+            # Parfois l'API renvoie autre chose selon version; fallback brut
+            return True, {"raw": data}
+
+        m = magnets[0] or {}
+
+        # champs typiques (selon version API)
+        st = (m.get("status") or m.get("state") or "").strip().lower()
+        progress = m.get("progress")
+        size = m.get("size")
+        downloaded = m.get("downloaded")
+
+        # certains payloads utilisent d'autres noms
+        if progress is None:
+            progress = m.get("downloadPercent") or m.get("download_percent")
+
+        out = {
+            "status": st or None,
+            "progress": progress,
+            "size": size,
+            "downloaded": downloaded,
+        }
+        return True, out
+
+    except requests.exceptions.Timeout:
+        return False, {"code": "TIMEOUT", "message": "magnet/status timeout"}
+    except requests.exceptions.RequestException as e:
+        return False, {"code": "NETWORK_ERROR", "message": str(e)}
+    except Exception as e:
+        return False, {"code": "EXCEPTION", "message": str(e)}
+

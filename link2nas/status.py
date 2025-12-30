@@ -1,3 +1,5 @@
+# link2nas/status.py
+
 from __future__ import annotations
 
 import json
@@ -5,9 +7,11 @@ import time
 import requests
 
 from . import config
-from .alldebrid import normalize_alldebrid_error, get_user_safe
-from .redis_store import redis_client
-from .synology import ping_safe
+from .alldebrid import get_premium_info_cached as _ad_get_premium_info_cached
+from .synology import synology_ping_safe
+
+from .config import Settings
+import redis
 
 
 def _join_url(base: str, path: str) -> str:
@@ -44,34 +48,12 @@ def _ad_request(method: str, path: str, data: dict | None, timeout: int) -> tupl
         return False, {"ok": False, "kind": "unknown", "code": "EXCEPTION", "message": str(e), "url": url}
 
 
-def get_premium_info_cached(ttl_seconds: int = 300) -> dict:
-    cache_key = "alldebrid:user:cache:v1"
-    try:
-        raw = redis_client.get(cache_key)
-        if raw:
-            return json.loads(raw.decode("utf-8"))
-    except Exception:
-        pass
-
-    ok, user_or_err = get_user_safe()
-    if not ok:
-        info = {"ok": False, "error": user_or_err, "is_premium": None, "premium_until_ts": None}
-    else:
-        u = user_or_err
-        premium_until = u.get("premiumUntil")
-        try:
-            premium_until_ts = int(str(premium_until).strip()) if premium_until is not None else None
-        except Exception:
-            premium_until_ts = None
-        info = {"ok": True, "username": u.get("username"), "is_premium": bool(u.get("isPremium")), "is_trial": bool(u.get("isTrial")), "is_subscribed": bool(u.get("isSubscribed")), "premium_until_ts": premium_until_ts}
-
-    try:
-        redis_client.setex(cache_key, ttl_seconds, json.dumps(info))
-    except Exception:
-        pass
-
-    return info
-
+def get_premium_info_cached(s: Settings, rdb: redis.Redis, ttl_seconds: int = 300) -> dict:
+    """
+    Webapp appelle status.get_premium_info_cached(s, rdb, ttl_seconds).
+    On délègue à alldebrid.get_premium_info_cached(s, rdb, ttl_seconds).
+    """
+    return _ad_get_premium_info_cached(s, rdb, ttl_seconds=ttl_seconds)
 
 def premium_color_from_days(days_left: int | None) -> tuple[str, str]:
     if days_left is None:
@@ -83,7 +65,7 @@ def premium_color_from_days(days_left: int | None) -> tuple[str, str]:
     return "red", f"{days_left}j"
 
 
-def build_status_context():
+def build_status_context(s: Settings, rdb: redis.Redis):
     ad_ping_ok, ad_ping = _ad_request("GET", config.AD_PING_PATH, data=None, timeout=config.STATUS_HTTP_TIMEOUT)
 
     endpoint_tests = [
@@ -114,21 +96,32 @@ def build_status_context():
         if ok and info.get("deprecated"):
             state = "deprecated"
             color = "yellow"
-        ad_endpoints.append({"name": name, "method": method, "path": path, "color": color, "state": state, "http_status": info.get("http_status"), "error_code": info.get("error_code")})
+        ad_endpoints.append({
+            "name": name,
+            "method": method,
+            "path": path,
+            "color": color,
+            "state": state,
+            "http_status": info.get("http_status"),
+            "error_code": info.get("error_code"),
+        })
 
-    premium = get_premium_info_cached(ttl_seconds=300)
+    premium = get_premium_info_cached(s, rdb, ttl_seconds=300)
+
     days_left = None
     if premium.get("premium_until_ts"):
         try:
             days_left = int((int(premium["premium_until_ts"]) - int(time.time())) / 86400)
         except Exception:
             days_left = None
+
     premium_color, premium_label = premium_color_from_days(days_left)
     premium_ok = bool(premium.get("ok"))
 
+    # Redis check (utilise le client injecté)
     redis_info = {"ok": False, "message": "unknown"}
     try:
-        pong = redis_client.ping()
+        pong = rdb.ping()
         redis_info = {"ok": bool(pong), "message": "OK" if pong else "PING failed"}
     except Exception as e:
         redis_info = {"ok": False, "message": str(e)}

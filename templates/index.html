@@ -637,6 +637,14 @@ https://1fichier.com/?abc123def456"></textarea>
   const $=(s,c=document)=>c.querySelector(s), $$=(s,c=document)=>Array.from(c.querySelectorAll(s));
 
 
+  function escapeHtml(s){
+    return String(s ?? '')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'","&#039;");
+  }
 
 
 
@@ -913,6 +921,9 @@ https://1fichier.com/?abc123def456"></textarea>
     if (ref) { e.preventDefault(); withSpinner(ref, 'Actualisation…', async () => { location.reload(); }); return; }
   });
 
+
+
+
   // Auto refresh pending (met à jour la table + compteurs)
 // --- refresh COMPLETED (prêts) ---
 async function refreshCompletedOnce(){
@@ -922,11 +933,6 @@ async function refreshCompletedOnce(){
 
   if (window.UI_LOCK?.nas?.size) return;
 
-  function escapeHtml(s){
-    return String(s ?? '')
-      .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
-      .replaceAll('"','&quot;').replaceAll("'","&#039;");
-  }
 
   function fmtBytes(n){
     const x = Number(n) || 0;
@@ -960,6 +966,11 @@ async function refreshCompletedOnce(){
       const files = Array.isArray(t.links) ? t.links : [];   // [{link,name,size}, ...]
       const total = files.length;
 
+      const totalSize = files.reduce((acc, f) => {
+        const s = (f && typeof f === 'object') ? Number(f.size || 0) : 0;
+        return acc + (Number.isFinite(s) ? s : 0);
+      }, 0);
+
       const st = (t.status || 'ready');
 
       const appStatus = String(t.app_status || '').trim();
@@ -983,7 +994,11 @@ async function refreshCompletedOnce(){
           </div>
 
           <div class="row__subtitle">
-            <span><i class="fa-solid fa-file"></i> ${total} fichier${total>1?'s':''}</span>
+
+            <span>
+              <i class="fa-solid fa-file"></i>
+              ${total} fichier${total>1?'s':''} • ${fmtBytes(totalSize)}
+            </span>
 
             <span class="status-badge ${String(st).toLowerCase()==='error' ? 'status-error' : ''}">
               <i class="fa-solid ${String(st).toLowerCase()==='error' ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i>
@@ -1094,90 +1109,81 @@ async function refreshCompletedOnce(){
   }catch(e){}
 }
 
+// ---------- AUTO REFRESH (1 seul timer) ----------
 
+let __refreshInFlight = false;
 
-// --- Auto refresh PENDING (et déclenchement quand ça passe READY) ---
-(function autoRefreshPending(){
+// PENDING refresh (version globale)
+async function refreshOnce(){
   const section = document.getElementById('pending-torrents-section');
   const url = section?.getAttribute('data-refresh-url');
   if(!url) return;
 
-  let lastPendingCount = document.getElementById('pending-tbody')?.querySelectorAll('tr').length ?? 0;
+  try{
+    const res = await fetch(url, { headers:{'Accept':'application/json'} });
+    if(!res.ok) return;
 
-  async function refreshOnce(){
-    try{
-      const res = await fetch(url, { headers:{'Accept':'application/json'} });
-      if(!res.ok) return;
+    const list = await res.json();
+    const tbody = document.getElementById('pending-tbody');
+    if(!tbody) return;
 
-      const list = await res.json();
-      const tbody = document.getElementById('pending-tbody');
-      if(!tbody) return;
+    // Si pending vide => ok, on laisse refreshCompletedOnce gérer l’affichage
+    tbody.innerHTML = '';
 
-      // Si ça devient vide => probablement passé en "ready" => reload complet (fiable)
-      if (Array.isArray(list) && list.length === 0){
-        location.reload();
-        return;
+    if (Array.isArray(list)) {
+      for(const t of list){
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-torrent-id', t.id);
+        tr.setAttribute('data-torrent-name', t.name || '');
+
+        const s = String(t.status || '').toLowerCase();
+        const st = (s === 'in_queue') ? 'En file'
+                 : (s === 'downloading') ? 'Téléchargement'
+                 : (s === 'ready' || s === 'completed') ? 'Prêt'
+                 : String(t.status || '').replaceAll('_',' ');
+
+        const p = Number(t.progress || 0);
+        const pSafe = isFinite(p) ? Math.min(Math.max(p, 0), 100) : 0;
+
+        tr.innerHTML=`
+          <td title="${t.name}">${(t.name||'').length>80?(t.name||'').slice(0,77)+'…':(t.name||'')}</td>
+          <td><span class="status-badge status-${escapeHtml(String(t.status||''))}">${st}</span></td>
+          <td>
+            <div class="progress-container">
+              <div class="progress-bar" style="width:${pSafe}%">${pSafe.toFixed(1)}%</div>
+            </div>
+          </td>
+          <td>
+            <button class="action-btn js-refresh" data-torrent-id="${escapeHtml(t.id)}"><i class="fas fa-rotate"></i> Actualiser</button>
+            ${t.direct_download?`<a class="action-btn" href="${escapeHtml(t.direct_download)}" target="_blank" rel="noopener"><i class="fas fa-file-arrow-down"></i> .torrent</a>`:''}
+            <button class="action-btn js-delete" data-torrent-id="${escapeHtml(t.id)}">
+              <i class="fas fa-trash"></i> Supprimer
+            </button>
+          </td>`;
+        tbody.appendChild(tr);
       }
+    }
 
-      // Si on voit du ready dans pending => reload complet (le backend va le déplacer en completed)
-      if (Array.isArray(list) && list.some(t => String(t.status).toLowerCase() === 'ready' || String(t.status).toLowerCase() === 'completed')){
-        location.reload();
-        return;
-      }
-      // Reconstruit la table pending
-      tbody.innerHTML = '';
-      if (Array.isArray(list)) {
-        for(const t of list){
-          const tr = document.createElement('tr');
-          tr.setAttribute('data-torrent-id', t.id);
-          tr.setAttribute('data-torrent-name', t.name || '');
+    syncCountsAndEmptyStates();
+  }catch(e){}
+}
 
-          const s = String(t.status || '').toLowerCase();
-          const st = (s === 'in_queue') ? 'En file'
-                   : (s === 'downloading') ? 'Téléchargement'
-                   : (s === 'ready' || s === 'completed') ? 'Prêt'
-                   : String(t.status || '').replaceAll('_',' ');
-
-          tr.innerHTML=`
-            <td title="${t.name}">${t.name.length>80?t.name.slice(0,77)+'…':t.name}</td>
-            <td><span class="status-badge status-${t.status}">${st}</span></td>
-            <td><div class="progress-container"><div class="progress-bar" style="width:${t.progress}%">${(t.progress||0).toFixed(1)}%</div></div></td>
-            <td>
-              <button class="action-btn js-refresh" data-torrent-id="${t.id}"><i class="fas fa-rotate"></i> Actualiser</button>
-              ${t.direct_download?`<a class="action-btn" href="${t.direct_download}" target="_blank" rel="noopener"><i class="fas fa-file-arrow-down"></i> .torrent</a>`:''}
-              <button class="action-btn js-delete" data-torrent-id="${t.id}">
-                <i class="fas fa-trash"></i> Supprimer
-              </button>
-            </td>`;
-          tbody.appendChild(tr);
-        }
-      }
-
-      const newCount = tbody.querySelectorAll('tr').length;
-
-      // Si le nombre baisse => un torrent a probablement quitté pending -> update completed
-      if (newCount < lastPendingCount){
-        await refreshCompletedOnce();
-      }
-      lastPendingCount = newCount;
-
-      syncCountsAndEmptyStates();
-    }catch(e){}
+// Un seul “tick” qui refresh pending puis completed, sans concurrence
+async function refreshAllOnce() {
+  if (__refreshInFlight) return;
+  __refreshInFlight = true;
+  try {
+    await refreshOnce();
+    await refreshCompletedOnce();
+  } finally {
+    __refreshInFlight = false;
   }
+}
 
-  refreshOnce();
-  setInterval(refreshOnce, 15000);
-})();
+// Boot + 1 seul timer
+refreshAllOnce();
+setInterval(refreshAllOnce, 15000);
 
-
-// --- Auto refresh COMPLETED en boucle (optionnel mais recommandé) ---
-(function autoRefreshCompletedLoop(){
-  const listEl = document.getElementById('completed-list');
-  const url = listEl?.getAttribute('data-refresh-url');
-  if(!url) return;
-  refreshCompletedOnce();
-  setInterval(refreshCompletedOnce, 30000);
-})();
 
   // Init
   syncCountsAndEmptyStates();

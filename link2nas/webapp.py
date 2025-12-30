@@ -30,9 +30,9 @@ from werkzeug.exceptions import HTTPException
 
 from .config import Settings
 from . import redis_store as rs
-from .alldebrid import upload_magnet_safe, unlock_link_safe, get_premium_info_cached
+from .alldebrid import upload_magnet_safe, unlock_link_safe
 from .synology import send_to_download_station_safe
-
+from .status import get_premium_info_cached
 
 def create_app(s: Settings, template_folder: str | None = None, static_folder: str | None = None) -> Flask:
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
@@ -304,6 +304,18 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
     # UI context builder
     # -------------------------
     def build_index_context(is_admin: bool = False):
+        def _safe_int(x, default=0) -> int:
+            try:
+                return int(float(x))
+            except Exception:
+                return default
+
+        def _safe_float(x, default=0.0) -> float:
+            try:
+                return float(x)
+            except Exception:
+                return default
+
         pending_torrents = []
         completed_torrents = []
 
@@ -320,21 +332,18 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
 
                 status = (decoded.get("status") or "unknown").strip().lower()
 
-                try:
-                    progress = float(decoded.get("progress", "0") or 0)
-                except ValueError:
-                    progress = 0.0
-                try:
-                    size = int(float(decoded.get("size", "0") or 0))
-                except ValueError:
-                    size = 0
-                try:
-                    downloaded = int(float(decoded.get("downloaded", "0") or 0))
-                except ValueError:
-                    downloaded = 0
+                size = _safe_int(decoded.get("size", "0"), 0)
+                downloaded = _safe_int(decoded.get("downloaded", "0"), 0)
 
-                links = rs.parse_links_dicts(decoded)
-                links_count = len(links)
+                # PROGRESS: si champ progress est foireux ou non rempli, calcule fallback
+                progress_raw = _safe_float(decoded.get("progress", "0"), 0.0)
+                if progress_raw <= 0 and size > 0 and downloaded > 0:
+                    progress_raw = (downloaded / max(size, 1)) * 100.0
+                progress = min(max(progress_raw, 0.0), 100.0)
+
+                # IMPORTANT: ne plus recalculer links_count via len(parse_links_dicts())
+                links_count = _safe_int(decoded.get("links_count", "0"), 0)
+                links = rs.parse_links_dicts(decoded)  # seulement pour affichage
 
                 app_status = (decoded.get("app_status") or "").strip()
                 nas_error = (decoded.get("nas_error") or "").strip()
@@ -344,10 +353,10 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
                     "kind": kind,
                     "name": decoded.get("name", "Inconnu"),
                     "status": status,
-                    "progress": min(max(progress, 0), 100),
+                    "progress": progress,
                     "size": size,
                     "downloaded": downloaded,
-                    "timestamp": float(decoded.get("timestamp", time.time()) or time.time()),
+                    "timestamp": _safe_float(decoded.get("timestamp", time.time()), time.time()),
                     "type": kind,
                     "links": links,
                     "links_count": links_count,
@@ -355,7 +364,8 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
                     "nas_error": nas_error,
                 }
 
-                if status in ("ready", "completed") and links_count > 0:
+                # Règle stable : completed = links_count > 0 (peu importe status exact)
+                if links_count > 0:
                     completed_torrents.append(torrent_info)
                 else:
                     pending_torrents.append(torrent_info)
@@ -383,19 +393,10 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
             is_admin=is_admin,
         )
 
-        if is_admin:
-            try:
-                ctx["alldebrid_premium"] = get_premium_info_cached(s, rdb, ttl_seconds=300)
-            except Exception as e:
-                logger.warning("AllDebrid premium info cache fetch failed: %s", str(e))
-                ctx["alldebrid_premium"] = {
-                    "ok": False,
-                    "error": {"kind": "unknown", "code": "AD_PREMIUM_FETCH_FAILED", "message": str(e)},
-                    "is_premium": None,
-                    "premium_until_ts": None,
-                }
-
         return ctx
+
+
+
 
 
     # -------------------------
@@ -836,6 +837,18 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
 
     @app.route("/api/pending_torrents", methods=["GET"])
     def api_pending_torrents():
+        def _safe_int(x, default=0) -> int:
+            try:
+                return int(float(x))
+            except Exception:
+                return default
+
+        def _safe_float(x, default=0.0) -> float:
+            try:
+                return float(x)
+            except Exception:
+                return default
+
         torrents = []
         keys = rs.iter_all_items_keys(rdb)
 
@@ -848,26 +861,39 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
                 continue
             decoded = rs.decode_hash(data)
 
-            status = (decoded.get("status") or "unknown").lower().strip()
-            links_count = len(rs.parse_links_dicts(decoded))
+            status = (decoded.get("status") or "unknown").strip().lower()
+            links_count = _safe_int(decoded.get("links_count", "0"), 0)
 
-            if status in {"ready", "completed"} and links_count > 0:
+            # pending = pas de liens prêts
+            if links_count > 0:
                 continue
 
-            try:
-                progress = float(decoded.get("progress", "0") or 0)
-            except ValueError:
-                progress = 0.0
+            size = _safe_int(decoded.get("size", "0"), 0)
+            downloaded = _safe_int(decoded.get("downloaded", "0"), 0)
+
+            progress_raw = _safe_float(decoded.get("progress", "0"), 0.0)
+            if progress_raw <= 0 and size > 0 and downloaded > 0:
+                progress_raw = (downloaded / max(size, 1)) * 100.0
+            progress = min(max(progress_raw, 0.0), 100.0)
 
             torrents.append(
                 {
                     "id": item_id,
                     "kind": kind,
+                    "type": (decoded.get("type") or kind),
                     "name": decoded.get("name", "Nom inconnu"),
                     "status": status,
                     "progress": progress,
+                    "size": size,
+                    "downloaded": downloaded,
+                    "timestamp": _safe_float(decoded.get("timestamp", time.time()), time.time()),
+                    "links": rs.parse_links_dicts(decoded),
+                    "links_count": links_count,
                     "app_status": (decoded.get("app_status") or "").strip(),
                     "nas_error": (decoded.get("nas_error") or "").strip(),
+                    "sent_to_nas": (decoded.get("sent_to_nas") or "false").strip().lower(),
+                    "sent_to_nas_at": (decoded.get("sent_to_nas_at") or "").strip(),
+                    "nas_last_attempt": (decoded.get("nas_last_attempt") or "").strip(),
                 }
             )
 
@@ -875,6 +901,18 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
 
     @app.route("/api/completed_torrents", methods=["GET"])
     def api_completed_torrents():
+        def _safe_int(x, default=0) -> int:
+            try:
+                return int(float(x))
+            except Exception:
+                return default
+
+        def _safe_float(x, default=0.0) -> float:
+            try:
+                return float(x)
+            except Exception:
+                return default
+
         torrents = []
         keys = rs.iter_all_items_keys(rdb)
 
@@ -887,33 +925,153 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
                 continue
             decoded = rs.decode_hash(data)
 
-            status = (decoded.get("status") or "unknown").lower().strip()
-            links = rs.parse_links_dicts(decoded)
-            links_count = len(links)
+            status = (decoded.get("status") or "unknown").strip().lower()
+            links_count = _safe_int(decoded.get("links_count", "0"), 0)
 
-            if status not in {"ready", "completed"} or links_count <= 0:
+            # completed = liens prêts
+            if links_count <= 0:
                 continue
 
-            try:
-                progress = float(decoded.get("progress", "0") or 0)
-            except ValueError:
-                progress = 0.0
+            links = rs.parse_links_dicts(decoded)
+
+            size = _safe_int(decoded.get("size", "0"), 0)
+            downloaded = _safe_int(decoded.get("downloaded", "0"), 0)
+
+            progress_raw = _safe_float(decoded.get("progress", "100"), 100.0)
+            if progress_raw <= 0 and size > 0 and downloaded > 0:
+                progress_raw = (downloaded / max(size, 1)) * 100.0
+            progress = min(max(progress_raw, 0.0), 100.0)
 
             torrents.append(
                 {
                     "id": item_id,
                     "kind": kind,
+                    "type": (decoded.get("type") or kind),
                     "name": decoded.get("name", "Nom inconnu"),
                     "status": status,
                     "progress": progress,
+                    "size": size,
+                    "downloaded": downloaded,
+                    "timestamp": _safe_float(decoded.get("timestamp", time.time()), time.time()),
                     "links": links,
                     "links_count": links_count,
                     "app_status": (decoded.get("app_status") or "").strip(),
                     "nas_error": (decoded.get("nas_error") or "").strip(),
+                    "sent_to_nas": (decoded.get("sent_to_nas") or "false").strip().lower(),
+                    "sent_to_nas_at": (decoded.get("sent_to_nas_at") or "").strip(),
+                    "nas_last_attempt": (decoded.get("nas_last_attempt") or "").strip(),
                 }
             )
 
         return jsonify(torrents)
+
+    @app.route("/api/status", methods=["GET"])
+    @require_admin
+    def status_api():
+        if not bool(getattr(s, "status_route_enabled", True)):
+            abort(404)
+
+        http_timeout = int(getattr(s, "status_http_timeout", 6) or 6)
+        dsm_timeout = int(getattr(s, "status_dsm_timeout", 6) or 6)
+        ad_ping_path = str(getattr(s, "ad_ping_path", "/v4/ping") or "/v4/ping")
+
+        # 1) AllDebrid ping
+        ad_ping_ok, ad_ping = _ad_request("GET", ad_ping_path, data=None, timeout=http_timeout)
+
+        # 2) Endpoints tests
+        endpoint_tests = [
+            ("user", "GET", s.ad_endpoints["user"], None),
+            ("magnet_status", "POST", s.ad_endpoints["magnet_status"], {"id[]": [0]}),
+            ("magnet_files", "POST", s.ad_endpoints["magnet_files"], {"id[]": [0]}),
+            ("link_unlock", "POST", s.ad_endpoints["link_unlock"], {"link": "http://example.invalid"}),
+        ]
+
+        ad_endpoints = []
+        endpoints_discontinued = False
+        endpoints_timeout_or_network = False
+
+        for name, method, path, payload in endpoint_tests:
+            ok, info = _ad_request(method, path, data=payload, timeout=http_timeout)
+
+            state = "ok"
+            color = "green"
+
+            if not ok:
+                code = info.get("code")
+                if code == "DISCONTINUED":
+                    state = "discontinued"
+                    color = "red"
+                    endpoints_discontinued = True
+                else:
+                    state = info.get("kind") or "error"
+                    color = "yellow"
+                    endpoints_timeout_or_network = True
+
+            if ok and info.get("deprecated"):
+                state = "deprecated"
+                color = "yellow"
+
+            ad_endpoints.append(
+                {
+                    "name": name,
+                    "method": method,
+                    "path": path,
+                    "color": color,
+                    "state": state,
+                    "http_status": info.get("http_status"),
+                    "error_code": info.get("error_code"),
+                }
+            )
+
+        # 3) Premium info (cached)
+        premium = get_premium_info_cached(s, rdb, ttl_seconds=300)
+        days_left = None
+        premium_until_ts = premium.get("premium_until_ts")
+        if premium_until_ts:
+            try:
+                now_ts = int(time.time())
+                days_left = max(-9999, int((int(premium_until_ts) - now_ts) / 86400))
+            except Exception:
+                days_left = None
+
+        premium_color, premium_label = _status_color_from_days(days_left)
+        premium_ok = bool(premium.get("ok"))
+
+        # 4) Redis ping
+        redis_info = {"ok": False, "message": "unknown"}
+        try:
+            pong = rdb.ping()
+            redis_info = {"ok": bool(pong), "message": "OK" if pong else "PING failed"}
+        except Exception as e:
+            redis_info = {"ok": False, "message": str(e)}
+
+        # 5) NAS ping
+        nas_info = synology_ping_safe(timeout=dsm_timeout)
+
+        # 6) Overall
+        overall = "green"
+        if endpoints_discontinued:
+            overall = "red"
+        elif (not ad_ping_ok) or endpoints_timeout_or_network or (not redis_info["ok"]) or (nas_info.get("enabled") and not nas_info.get("ok")) or (not premium_ok):
+            overall = "yellow"
+
+        return jsonify(
+            {
+                "now": datetime.now().isoformat(),
+                "overall": overall,
+                "ad_ping_ok": ad_ping_ok,
+                "ad_ping": ad_ping,
+                "ad_endpoints": ad_endpoints,
+                "premium": premium,
+                "premium_days_left": days_left,
+                "premium_color": premium_color,
+                "premium_label": premium_label,
+                "redis_info": redis_info,
+                "nas_info": nas_info,
+                "nas_enabled": bool(s.nas_enabled),
+            }
+        )
+
 
     # -------------------------
     # Admin tools routes

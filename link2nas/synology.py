@@ -89,6 +89,74 @@ def send_to_download_station(s: Settings, links: list[str]) -> bool:
         except Exception:
             pass
 
+def synology_ping_safe(timeout: int = 6) -> dict:
+    """
+    Ping minimal DSM : login puis logout.
+    - Pas de création de tâche (aucun side effect)
+    """
+    if not NAS_ENABLED:
+        return {"enabled": False, "ok": None, "message": "NAS disabled"}
+
+    base = str(os.getenv("SYNOLOGY_URL", "")).strip().rstrip("/")
+    if not base:
+        return {"enabled": True, "ok": False, "message": "SYNOLOGY_URL missing"}
+
+    login_url = f"{base}/webapi/auth.cgi"
+    logout_url = f"{base}/webapi/auth.cgi"
+
+    http = requests.Session()
+    sid = None
+    try:
+        r = http.post(
+            login_url,
+            data={
+                "api": "SYNO.API.Auth",
+                "version": "3",
+                "method": "login",
+                "account": os.getenv("SYNOLOGY_USER", ""),
+                "passwd": os.getenv("SYNOLOGY_PASSWORD", ""),
+                "session": "DownloadStation",
+                "format": "sid",
+            },
+            timeout=timeout,
+        )
+        r.raise_for_status()
+        js = r.json()
+        if not js.get("success"):
+            code = (js.get("error") or {}).get("code")
+            return {"enabled": True, "ok": False, "message": f"DSM login failed (code={code})"}
+
+        sid = (js.get("data") or {}).get("sid")
+        if not sid:
+            return {"enabled": True, "ok": False, "message": "DSM login ok but SID missing"}
+
+        return {"enabled": True, "ok": True, "message": "DSM OK"}
+
+    except requests.exceptions.Timeout:
+        return {"enabled": True, "ok": False, "message": "DSM timeout"}
+    except Exception as e:
+        return {"enabled": True, "ok": False, "message": str(e)}
+    finally:
+        if sid:
+            try:
+                http.post(
+                    logout_url,
+                    data={
+                        "api": "SYNO.API.Auth",
+                        "version": "3",
+                        "method": "logout",
+                        "session": "DownloadStation",
+                        "_sid": sid,
+                    },
+                    timeout=timeout,
+                )
+            except Exception:
+                pass
+        try:
+            http.close()
+        except Exception:
+            pass
+
 
 def send_to_download_station_safe(s: Settings, links: list[str]) -> tuple[bool, dict]:
     links = [str(x).strip() for x in (links or []) if str(x).strip()]
