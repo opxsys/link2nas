@@ -97,6 +97,40 @@ deploy/systemd/README.md
 
 ---
 
+## Documentation d’utilisation & API
+
+La documentation fonctionnelle complète est disponible ici :
+
+👉 **[`Link2NAS_Documentation_Usage_API.md`](./docs/Usage-API.md)**
+
+Elle couvre :
+
+- 📄 **Pages et parcours utilisateur**
+  - `/` (UI principale)
+  - `/admin` (interface admin)
+  - `/status` (page état global)
+- 🔌 **API REST réelle**
+  - routes exactes (`GET` / `POST`)
+  - payloads attendus
+  - exemples `curl`
+- 🔄 **Workflow interne**
+  - différence `status` vs `app_status`
+  - règles de terminaison
+  - unlock AllDebrid JIT
+  - verrous Redis
+- ⚙️ **Configuration complète (`.env`)**
+  - variables obligatoires / optionnelles
+  - valeurs par défaut
+  - impact sur le comportement
+- 🔐 **Sécurité & limites**
+  - Basic Auth
+  - recommandations reverse-proxy
+  - ce que l’application ne fait pas
+
+👉 **À lire avant toute intégration (extension, API, automatisation).**
+---
+s
+
 ## Sécurité
 
 - ❌ Aucun secret dans le code
