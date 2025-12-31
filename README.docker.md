@@ -25,6 +25,47 @@ Deux conteneurs sont utilisés :
 
 ---
 
+## Tags Docker disponibles
+
+- **latest**  
+  → Dernière version publiée  
+  → Peut évoluer sans préavis  
+  → Usage recommandé uniquement en **test**
+
+- **v1**  
+  → Dernière version stable de la branche 1.x  
+  → **Tag recommandé en production**
+
+- **v1.x.y** (ex: `v1.3.0`)  
+  → Version figée et immuable  
+  → Pour pinner une version précise
+
+---
+
+## Recommandation
+
+👉 **En production, utilisez le tag `v1`**
+
+Il pointe toujours vers la dernière version stable **sans casser votre déploiement**.
+
+---
+
+## Politique de versionnement
+
+- Changement cassant → **v2**
+- Nouvelle fonctionnalité → **v1.(x+1)**
+- Correctif → **v1.x.(y+1)**
+- Le tag **v1** est automatiquement mis à jour à chaque release stable
+
+---
+
+## Où trouver les images
+
+📦 GitHub Container Registry (GHCR)  
+https://github.com/opxsys/link2nas/pkgs/container/link2nas
+
+---
+
 ## Variables `.env`
 
 L’image **n’embarque aucun secret**.  

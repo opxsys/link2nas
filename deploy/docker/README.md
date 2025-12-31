@@ -1,228 +1,166 @@
-# Link2NAS
+# Link2NAS – Image Docker (GHCR)
 
-Link2NAS est un service **auto‑hébergé**, robuste et production‑ready, permettant d’envoyer automatiquement des **liens et magnets AllDebrid** vers un **NAS Synology (Download Station)**.
+Cette image Docker permet d’exécuter **Link2NAS** sans installation Python ni systemd.
+Elle est destinée à une utilisation **simple, reproductible et isolée** via Docker ou Docker Compose.
 
-L’architecture est volontairement **séparée** (web / scheduler), **stateless côté applicatif**, avec un stockage d’état centralisé via **Redis**.
-
-> Objectif : fiabilité, clarté, zéro bricolage, et un déploiement propre (systemd ou Docker).
-
----
-
-## Fonctionnalités principales
-
-- 🔗 Support complet **AllDebrid**
-  - Magnets
-  - Liens directs
-  - Déverrouillage JIT (just‑in‑time)
-- 📦 Envoi automatique vers **Synology Download Station**
-- 🖥️ Interface web Flask
-  - UI admin
-  - Vue statut détaillée (AllDebrid, Redis, NAS)
-- ⏱️ Scheduler **APScheduler indépendant**
-  - Aucun job dans le process web
-- 🧠 Stockage d’état via **Redis**
-- 🔐 Sécurité stricte
-  - secrets uniquement via `.env`
-  - aucun secret loggé
-  - masquage automatique des valeurs sensibles
-- 🧩 Extension Chrome (optionnelle)
-- 🚀 Déploiement :
-  - **systemd (recommandé en bare‑metal / VPS)**
-  - **Docker / docker‑compose**
+Link2NAS agit comme un **pont entre AllDebrid et un NAS Synology (Download Station)**, avec :
+- une **interface web**
+- un **scheduler séparé** pour le traitement automatique
 
 ---
 
-## Architecture
+## À quoi sert l’image
 
-```
-/opt/link2nas
-├── app.py                  # Entrée Gunicorn (web)
-├── scheduler_runner.py     # Entrée scheduler (APScheduler)
-├── link2nas/
-│   ├── config.py           # Configuration centralisée (Settings)
-│   ├── webapp.py           # Routes Flask + API
-│   ├── scheduler.py        # Orchestration APScheduler
-│   ├── scheduler_jobs.py   # Jobs métier
-│   ├── redis_store.py      # Accès Redis
-│   ├── alldebrid.py        # API AllDebrid
-│   ├── synology.py         # API Synology Download Station
-│   ├── status.py           # Health / status global
-│   ├── auth.py             # Auth admin
-│   └── utils.py
-├── templates/
-├── static/
-├── extension/              # Extension Chrome (optionnelle)
-├── deploy/
-│   ├── docker/             # Déploiement Docker
-│   └── systemd/            # Déploiement systemd
-├── .env.example
-└── requirements.txt
-```
+L’image Docker Link2NAS permet de :
+
+- Ajouter des **liens directs ou magnets AllDebrid**
+- Générer automatiquement les liens de téléchargement
+- Envoyer les téléchargements vers **Synology Download Station**
+- Gérer l’état via **Redis**
+- Exécuter le tout sans dépendance locale (Python, venv, systemd)
+
+Deux conteneurs sont utilisés :
+- **link2nas-web** : interface web
+- **link2nas-scheduler** : traitement automatique (jobs)
 
 ---
 
-## Prérequis
+## Variables `.env`
 
-- Linux (testé Debian / Ubuntu)
-- Python **3.10+**
-- Redis
-- Compte **AllDebrid**
-- NAS **Synology** avec Download Station
-- systemd **ou** Docker
+L’image **n’embarque aucun secret**.  
+Toute la configuration se fait via un fichier `.env`.
+
+Variables principales :
+
+```env
+# Web
+FLASK_SECRET_KEY=change_me
+ADMIN_USER=admin
+ADMIN_PASS=change_me
+
+# AllDebrid
+ALLDEBRID_APIKEY=xxxxxxxxxxxxxxxx
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# NAS
+NAS_ENABLED=true
+SYNOLOGY_URL=http://nas:5000
+SYNOLOGY_USER=admin
+SYNOLOGY_PASSWORD=change_me
+
+# Scheduler
+SCHEDULER_ENABLED=true
+```
+
+➡️ Un fichier **`.env.example`** est fourni dans le dépôt.  
+➡️ Le fichier `.env` peut être placé **où vous voulez** (chemin libre dans `docker-compose.yml`).
 
 ---
 
-## Installation (classique)
+## Exemple `docker-compose.yml`
 
-### 1. Cloner le dépôt
+```yaml
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  link2nas-web:
+    image: ghcr.io/opxsys/link2nas:latest
+    container_name: link2nas-web
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  link2nas-scheduler:
+    image: ghcr.io/opxsys/link2nas:latest
+    container_name: link2nas-scheduler
+    env_file:
+      - .env
+    environment:
+      SCHEDULER_ENABLED: "1"
+    depends_on:
+      - redis
+    restart: unless-stopped
+```
+
+Lancement :
 
 ```bash
-git clone https://github.com/<user>/link2nas.git
-cd link2nas
-```
-
-### 2. Virtualenv
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 3. Configuration
-
-```bash
-cp .env.example .env
-nano .env
-```
-
-⚠️ **Tous les secrets sont obligatoires** :
-
-- `FLASK_SECRET_KEY`
-- `ADMIN_PASS`
-- `ALLDEBRID_APIKEY`
-- `SYNOLOGY_PASSWORD`
-
----
-
-## Lancement en développement
-
-```bash
-set -a
-source .env
-set +a
-python app.py
-```
-
-👉 Web : http://localhost:5000
-
----
-
-## Déploiement systemd (recommandé)
-
-Les fichiers sont fournis dans `deploy/systemd/`.
-
-### Installation
-
-```bash
-cd deploy/systemd
-sudo ./install.sh
-```
-
-Cela installe et active :
-
-- `link2nas-web.service`
-- `link2nas-scheduler.service`
-
-### Gestion
-
-```bash
-systemctl status link2nas-web
-systemctl status link2nas-scheduler
-
-journalctl -u link2nas-web -f
-journalctl -u link2nas-scheduler -f
-```
-
----
-
-## Déploiement Docker
-
-Voir le README dédié :
-
-```
-deploy/docker/README.md
-```
-
-En résumé :
-
-```bash
-cd deploy/docker
-cp .env.example .env
 docker compose up -d
 ```
 
-Aucune image pré‑buildée : le `Dockerfile` est utilisé automatiquement.
+---
+
+## Ports exposés
+
+| Port | Description |
+|-----:|------------|
+| 5000 | Interface Web Link2NAS |
+
+---
+
+## Volumes
+
+Aucun volume **obligatoire**.
+
+Optionnel (recommandé en production) :
+- logs Docker (driver)
+- sauvegarde Redis si Redis est externalisé
+
+---
+
+## Web + Scheduler (2 conteneurs)
+
+Pourquoi deux conteneurs ?
+
+- **Séparation claire des responsabilités**
+- Le scheduler peut être redémarré sans impacter le web
+- Évite les effets de bord (jobs bloquants, locks)
+
+| Conteneur | Rôle |
+|----------|------|
+| link2nas-web | Interface web Flask |
+| link2nas-scheduler | Jobs AllDebrid / NAS |
+
+---
+
+## Deux modes d’utilisation
+
+### 1️⃣ Utiliser l’image GHCR (recommandé)
+- Pas de build
+- Mise à jour simple
+- Déploiement rapide
+
+### 2️⃣ Construire l’image soi-même
+- À partir du `Dockerfile`
+- Utile pour fork ou customisation
 
 ---
 
 ## Sécurité
 
-- ❌ Aucun secret dans le code
-- ❌ Aucun secret dans les logs
-- ✅ `.env` ignoré par git
-- ✅ `Settings.__repr__()` masque les secrets
-
-Test rapide :
-
-```bash
-python - <<'EOF'
-from link2nas.config import Settings
-s = Settings.from_env()
-print(s)
-EOF
-```
+- ❌ Aucun secret dans l’image
+- ❌ Aucun secret dans le dépôt
+- ✅ Secrets uniquement via `.env`
+- ✅ Compatible reverse-proxy (Traefik, Nginx, etc.)
 
 ---
 
-## Variables importantes
+## Support
 
-| Variable | Description |
-|--------|-------------|
-| `NAS_ENABLED` | Active l’envoi vers le NAS |
-| `SCHEDULER_ENABLED` | Activé uniquement côté scheduler |
-| `ADMIN_UI_ENABLED` | Active l’interface admin |
-| `MAX_UNLOCK_PER_RUN` | Limite AllDebrid par cycle |
-| `STATUS_ROUTE_ENABLED` | Active `/api/status` |
+Projet personnel, **stable et utilisé en production**.  
+À utiliser librement, à vos risques et périls 😉
 
 ---
 
-## Philosophie
-
-- Un process = un rôle
-- Pas de logique métier dans l’UI
-- Pas de scheduler dans Gunicorn
-- Redis comme source de vérité
-- Déploiement lisible et auditable
-
----
-
-## Licence
-
-Projet personnel.  
-Utilisation libre, modifications libres.  
-Pas de garantie. Tu assumes.
-
----
-
-## Statut
-
-✅ Fonctionnel  
-✅ Stable  
-🚧 Extension Chrome en évolution  
-
----
-
-## Auteur
-
-© 2025 – Link2NAS contributors
+© 2025 – Link2NAS
