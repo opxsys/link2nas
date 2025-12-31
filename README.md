@@ -1,5 +1,11 @@
 # Link2NAS
 
+[![Latest Release](https://img.shields.io/github/v/release/opxsys/link2nas?label=release)](https://github.com/opxsys/link2nas/releases/latest)
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io/opxsys/link2nas-blue?logo=docker)](https://github.com/opxsys/link2nas/pkgs/container/link2nas)
+[![Docker Build](https://github.com/opxsys/link2nas/actions/workflows/docker.yml/badge.svg)](https://github.com/opxsys/link2nas/actions/workflows/docker.yml)
+
+Link2NAS est un service auto-hébergé…
+
 Link2NAS est un service **auto‑hébergé**, robuste et production‑ready, permettant d’envoyer automatiquement des **liens et magnets AllDebrid** vers un **NAS Synology (Download Station)**.
 
 L’architecture est volontairement **séparée** (web / scheduler), **stateless côté applicatif**, avec un stockage d’état centralisé via **Redis**.
