@@ -2,8 +2,8 @@ name: Build & Push Docker image
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+    tags: [ "v*" ]
   workflow_dispatch:
 
 jobs:
@@ -28,12 +28,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute tags
+        id: meta
+        shell: bash
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/link2nas"
+          TAGS="${IMAGE}:${{ github.sha }}"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG_NAME="${GITHUB_REF_NAME}"   # ex: v1.3.1
+            TAGS="${TAGS}"$'\n'"${IMAGE}:${TAG_NAME}"
+          fi
+
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            TAGS="${TAGS}"$'\n'"${IMAGE}:latest"
+          fi
+
+          echo "tags<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$TAGS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/docker/Dockerfile
           push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/link2nas:latest
-            ghcr.io/${{ github.repository_owner }}/link2nas:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
