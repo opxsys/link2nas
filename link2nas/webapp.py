@@ -392,7 +392,9 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
             completed_refresh_url=url_for("api_completed_torrents"),
             is_admin=is_admin,
         )
-
+        if is_admin:
+            ctx["alldebrid_premium"] = get_premium_info_cached(s, rdb, ttl_seconds=300)
+            
         return ctx
 
 
