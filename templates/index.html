@@ -1,398 +1,909 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <title>Gestion des Downloads</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous">
-<style>
-  :root{
-    --primary:#0d6efd;--success:#198754;--warning:#ffc107;--danger:#dc3545;--info:#0dcaf0;
-    --light:#f8f9fa;--dark:#212529;--secondary:#6c757d;
-    --file-icon:#6c757d;--file-hover:#eef1f4;
-    --card-bg:#ffffff;--page-bg:#f5f5f5;--border:#e5e7eb;--shadow:0 2px 10px rgba(0,0,0,.06);--radius:10px
-  }
-  @media (prefers-color-scheme:dark){
-    :root{--card-bg:#1f242b;--page-bg:#0e1116;--dark:#e6e7ea;--secondary:#9aa3ad;--border:#2a313a;--file-hover:#222a33;--shadow:0 2px 14px rgba(0,0,0,.4)}
-    a{color:#8ab4ff}
-  }
-  *{box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans";max-width:1200px;margin:0 auto;padding:20px;background:var(--page-bg);color:var(--dark);line-height:1.55}
-  .header-container{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-  .yggbrowser-link{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:999px;text-decoration:none;color:var(--dark);background:var(--card-bg);box-shadow:var(--shadow)}
-  .yggbrowser-link:hover{border-color:var(--primary)}
+  <head>
+    <meta charset="utf-8" />
+    <title>Gestion des Downloads</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  /* Flash */
-  .flash-messages{position:fixed;top:16px;right:16px;width:min(360px,92vw);z-index:1000}
-  .flash-message{display:flex;gap:10px;align-items:center;padding:12px 14px;margin-bottom:10px;border-radius:8px;box-shadow:var(--shadow);background:var(--card-bg);border-left:4px solid transparent;animation:fadeIn .18s ease-out}
-  .flash-success{border-left-color:var(--success)}.flash-warning{border-left-color:var(--warning)}.flash-error{border-left-color:var(--danger)}.flash-info{border-left-color:var(--info)}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+    <!--
+      Perf: preconnect to the CDN hosting FontAwesome assets.
+      Note: crossorigin is required for preconnect to be effective.
+    -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
 
-  /* Form */
-  form{background:var(--card-bg);padding:20px;border-radius:var(--radius);margin-bottom:22px;box-shadow:var(--shadow);border:1px solid var(--border)}
-  .form-group{display:grid;gap:8px;margin-bottom:14px}
-  input[type=text],textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--page-bg);color:var(--dark)}
-  textarea{min-height:70px;resize:vertical}
-  button[type=submit]{background:var(--primary);color:#fff;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
-  button:disabled{opacity:.6;cursor:not-allowed}
+    <!--
+      Icons: Font Awesome (CDN).
+      If you want strict CSP later, you’ll likely self-host this or pin SRI.
+    -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      crossorigin="anonymous"
+    />
 
-  .message{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:8px;background:var(--card-bg);border:1px solid var(--border);box-shadow:var(--shadow)}
+    <style>
+      /* ============================================================
+         Theme tokens (light + dark)
+         ============================================================ */
+      :root {
+        --primary: #0d6efd;
+        --success: #198754;
+        --warning: #ffc107;
+        --danger: #dc3545;
+        --info: #0dcaf0;
 
-  /* Pending table */
-  .torrent-table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden}
-  .torrent-table th,.torrent-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
-  .torrent-table thead th{background:var(--file-hover);font-weight:600}
-  .action-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);cursor:pointer}
-  .action-btn:hover{border-color:var(--primary)}
-  .status-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:.85rem;border:1px solid var(--border);background:var(--file-hover)}
-  .status-ready{border-color:var(--success)}.status-downloading{border-color:var(--primary)}.status-in{border-color:var(--secondary)}
-  .progress-container{width:100%;height:22px;background:var(--page-bg);border:1px solid var(--border);border-radius:8px;overflow:hidden}
-  .progress-bar{height:100%;background:linear-gradient(90deg,var(--success),#218838);color:#fff;text-align:center;line-height:22px;font-weight:600;font-size:.82rem}
+        --light: #f8f9fa;
+        --dark: #212529;
+        --secondary: #6c757d;
 
-  /* Buttons */
-  .btn{border:1px solid var(--border);background:var(--card-bg);padding:8px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
-  .btn--nas{background:#6f42c1;color:#fff;border-color:#6f42c1}
-  .btn--del{background:var(--danger);color:#fff;border-color:var(--danger)}
+        --file-icon: #6c757d;
+        --file-hover: #eef1f4;
 
-  /* Completed container */
-  .completed{
-    margin-top:18px;
-    border:1px solid var(--border);
-    border-radius:10px;
-    background:var(--card-bg);
-    box-shadow:var(--shadow);
-    overflow:hidden;
-  }
+        --card-bg: #ffffff;
+        --page-bg: #f5f5f5;
+        --border: #e5e7eb;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        --radius: 10px;
+      }
 
-  /* === NEW HEADER LAYOUT (title full + 2nd line meta) === */
-  .completed__row{
-    display:grid;
-    grid-template-columns: 1fr auto;   /* infos / actions */
-    gap:16px;
-    padding:14px 16px;
-    border-bottom:1px solid var(--border);
-    align-items:start;
-  }
-  .completed__row:last-child{border-bottom:none}
+      /* OS-level dark mode */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --card-bg: #1f242b;
+          --page-bg: #0e1116;
+          --dark: #e6e7ea;
+          --secondary: #9aa3ad;
+          --border: #2a313a;
+          --file-hover: #222a33;
+          --shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
+        }
 
-  .row__main{display:flex;flex-direction:column;gap:6px;min-width:0}
+        a {
+          color: #8ab4ff;
+        }
+      }
 
-  .row__title{
-    font-weight:800;
-    font-size:1.05rem;
-    line-height:1.3;
-    word-break:break-word; /* affiche le nom complet, peut aller à la ligne */
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-  }
+      * {
+        box-sizing: border-box;
+      }
 
-  .row__subtitle{
-    display:flex;
-    flex-wrap:wrap;
-    gap:12px;
-    color:var(--secondary);
-    font-size:.92rem;
-  }
-  .row__subtitle span{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    white-space:nowrap;
-  }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial,
+          "Noto Sans";
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: var(--page-bg);
+        color: var(--dark);
+        line-height: 1.55;
+      }
 
-  /* Actions : alignées, verticales, propres */
-  .row__actions{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    align-items:flex-end;
-    white-space:nowrap;
-  }
+      /* ============================================================
+         Header
+         ============================================================ */
+      .header-container {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
 
-  /* Files panel: occupe toute la ligne sous l'en-tête */
-  .details-wrap{
-    grid-column: 1 / -1;
-    margin-top:10px;
-  }
+      .yggbrowser-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        text-decoration: none;
+        color: var(--dark);
+        background: var(--card-bg);
+        box-shadow: var(--shadow);
+      }
 
-  details.files{
-    background:var(--page-bg);
-    border:1px dashed var(--border);
-    border-radius:10px;
-    padding:10px 12px;
-  }
-  details.files summary{
-    cursor:pointer;
-    list-style:none;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    user-select:none;
-    padding:8px 10px;
-    border-radius:10px;
-  }
-  details.files summary:hover{background:var(--file-hover)}
-  details.files summary::-webkit-details-marker{display:none}
+      .yggbrowser-link:hover {
+        border-color: var(--primary);
+      }
 
-  .files__top{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    margin:10px 0 8px;
-    flex-wrap:wrap;
-  }
+      /* ============================================================
+         Flash messages (fixed top-right toast-like)
+         ============================================================ */
+      .flash-messages {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        width: min(360px, 92vw);
+        z-index: 1000;
+      }
 
-  /* 6 par ligne sur desktop, responsive */
-  .files__grid{
-    display:grid;
-    gap:10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); /* mobile */
-  }
-  @media (min-width:520px){ .files__grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (min-width:720px){ .files__grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  @media (min-width:1024px){ .files__grid{ grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+      .flash-message {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        background: var(--card-bg);
+        border-left: 4px solid transparent;
+        animation: fadeIn 0.18s ease-out;
+      }
 
-  .file-item{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    padding:10px;
-    border-radius:10px;
-    background:var(--card-bg);
-    border:1px solid var(--border);
-  }
-  .file-item:hover{background:var(--file-hover)}
-  .file-item .file-icon{font-size:1.1rem;color:var(--file-icon)}
-  .file-actions{display:flex;gap:8px;margin-top:2px}
-  .icon-btn{
-    border:1px solid var(--border);
-    background:transparent;
-    cursor:pointer;
-    width:34px;height:34px;
-    border-radius:10px;
-    display:inline-flex;align-items:center;justify-content:center
-  }
-  .icon-btn:hover{border-color:var(--primary)}
+      .flash-success {
+        border-left-color: var(--success);
+      }
 
-  .is-hidden{display:none!important}
+      .flash-warning {
+        border-left-color: var(--warning);
+      }
 
-  /* Responsive: sur petit écran, actions passent en ligne */
-  @media (max-width:720px){
-    .completed__row{grid-template-columns:1fr}
-    .row__actions{flex-direction:row;align-items:center;justify-content:flex-start}
-  }
+      .flash-error {
+        border-left-color: var(--danger);
+      }
 
-  .status-error{
-    border-color: var(--danger);
-    color: var(--danger);
-    background: rgba(220,53,69,.08);
-  }
+      .flash-info {
+        border-left-color: var(--info);
+      }
 
-  .error-detail{
-    margin-top:6px;
-    padding:8px 10px;
-    border:1px solid rgba(220,53,69,.35);
-    border-left:4px solid var(--danger);
-    border-radius:10px;
-    background: rgba(220,53,69,.08);
-    color: var(--danger);
-    font-size:.92rem;
-    line-height:1.35;
-    word-break: break-word;
-    display:flex;
-    gap:8px;
-    align-items:flex-start;
-  }
-  .error-detail i{ margin-top:2px; }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
 
+      /* ============================================================
+         Form
+         ============================================================ */
+      form {
+        background: var(--card-bg);
+        padding: 20px;
+        border-radius: var(--radius);
+        margin-bottom: 22px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+      }
 
-  .ad-premium {
-    min-width: 280px;
-    padding: 10px 14px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--card-bg);
-    box-shadow: var(--shadow);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
+      .form-group {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
 
-  .ad-premium__title{
-    font-weight: 800;
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
+      input[type="text"],
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--page-bg);
+        color: var(--dark);
+      }
 
-  .ad-premium__line{
-    display:flex;
-    gap:10px;
-    align-items:center;
-    flex-wrap:wrap;
-    color: var(--secondary);
-    font-size: .95rem;
-  }
+      textarea {
+        min-height: 70px;
+        resize: vertical;
+      }
 
-  .ad-pill{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    font-weight: 700;
-  }
+      button[type="submit"] {
+        background: var(--primary);
+        color: #fff;
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+      }
 
-  .ad-ok    { border-color: var(--success); }
-  .ad-warn  { border-color: var(--warning); }
-  .ad-bad   { border-color: var(--danger); }
-  .ad-unk   { border-color: var(--secondary); }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
 
+      .message {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+      }
 
-  #copy-notification{position:fixed;bottom:20px;right:20px;padding:10px 14px;border-radius:8px;background:var(--success);color:#fff;display:none;z-index:1000}
-  a:focus,button:focus,summary:focus{outline:3px solid rgba(13,110,253,.45);outline-offset:2px}
-</style>
+      /* ============================================================
+         Pending table
+         ============================================================ */
+      .torrent-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 10px;
+        overflow: hidden;
+      }
 
-</head>
-<body>
-  <!-- Flash -->
-  <div class="flash-messages" id="flash-messages" aria-live="polite">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-        <div class="flash-message flash-{{ category }}">
-          <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
-          <span>{{ message }}</span>
-        </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-  </div>
+      .torrent-table th,
+      .torrent-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
 
-  <!-- Header -->
-  <div class="header-container">
-    <h1>Gestion des Downloads</h1>
+      .torrent-table thead th {
+        background: var(--file-hover);
+        font-weight: 600;
+      }
 
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+      .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        cursor: pointer;
+      }
 
+      .action-btn:hover {
+        border-color: var(--primary);
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--file-hover);
+      }
+
+      .status-ready {
+        border-color: var(--success);
+      }
+
+      .status-downloading {
+        border-color: var(--primary);
+      }
+
+      .status-in {
+        border-color: var(--secondary);
+      }
+
+      .progress-container {
+        width: 100%;
+        height: 22px;
+        background: var(--page-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--success), #218838);
+        color: #fff;
+        text-align: center;
+        line-height: 22px;
+        font-weight: 600;
+        font-size: 0.82rem;
+      }
+
+      /* ============================================================
+         Buttons (generic)
+         ============================================================ */
+      .btn {
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn--nas {
+        background: #6f42c1;
+        color: #fff;
+        border-color: #6f42c1;
+      }
+
+      .btn--del {
+        background: var(--danger);
+        color: #fff;
+        border-color: var(--danger);
+      }
+
+      /* ============================================================
+         Completed container
+         ============================================================ */
+      .completed {
+        margin-top: 18px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--card-bg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      /*
+        Completed row layout:
+        - first column: main info (title + metadata + optional error)
+        - second column: actions (copy/send/delete)
+      */
+      .completed__row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 16px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        align-items: start;
+      }
+
+      .completed__row:last-child {
+        border-bottom: none;
+      }
+
+      .row__main {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0; /* critical to allow children ellipsis/wrapping */
+      }
+
+      .row__title {
+        font-weight: 800;
+        font-size: 1.05rem;
+        line-height: 1.3;
+        word-break: break-word; /* allow long names to wrap */
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .row__subtitle {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        color: var(--secondary);
+        font-size: 0.92rem;
+      }
+
+      .row__subtitle span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+
+      .row__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+        white-space: nowrap;
+      }
+
+      /* Full-width details under row header */
+      .details-wrap {
+        grid-column: 1 / -1;
+        margin-top: 10px;
+      }
+
+      details.files {
+        background: var(--page-bg);
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+
+      details.files summary {
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        user-select: none;
+        padding: 8px 10px;
+        border-radius: 10px;
+      }
+
+      details.files summary:hover {
+        background: var(--file-hover);
+      }
+
+      details.files summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .files__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin: 10px 0 8px;
+        flex-wrap: wrap;
+      }
+
+      /*
+        Files grid responsiveness:
+        - mobile: 2 columns
+        - larger: 3-4 columns
+      */
+      .files__grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-width: 0;
+      }
+
+      @media (min-width: 520px) {
+        .files__grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (min-width: 720px) {
+        .files__grid {
+          grid-template-columns: repeat(3, minmax(240px, 1fr));
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .files__grid {
+          grid-template-columns: repeat(4, minmax(240px, 1fr));
+        }
+      }
+
+      .file-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 10px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .file-item:hover {
+        background: var(--file-hover);
+      }
+
+      .file-item .file-icon {
+        font-size: 1.1rem;
+        color: var(--file-icon);
+      }
+
+      .file-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 2px;
+      }
+
+      .icon-btn {
+        border: 1px solid var(--border);
+        background: transparent;
+        cursor: pointer;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .icon-btn:hover {
+        border-color: var(--primary);
+      }
+
+      .is-hidden {
+        display: none !important;
+      }
+
+      /* Small screen: actions stack horizontally */
+      @media (max-width: 720px) {
+        .completed__row {
+          grid-template-columns: 1fr;
+        }
+
+        .row__actions {
+          flex-direction: row;
+          align-items: center;
+          justify-content: flex-start;
+        }
+      }
+
+      /* NAS failure visual */
+      .status-error {
+        border-color: var(--danger);
+        color: var(--danger);
+        background: rgba(220, 53, 69, 0.08);
+      }
+
+      .error-detail {
+        margin-top: 6px;
+        padding: 8px 10px;
+        border: 1px solid rgba(220, 53, 69, 0.35);
+        border-left: 4px solid var(--danger);
+        border-radius: 10px;
+        background: rgba(220, 53, 69, 0.08);
+        color: var(--danger);
+        font-size: 0.92rem;
+        line-height: 1.35;
+        word-break: break-word;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .error-detail i {
+        margin-top: 2px;
+      }
+
+      /* ============================================================
+         AllDebrid premium card (admin header)
+         ============================================================ */
+      .ad-premium {
+        min-width: 280px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .ad-premium__title {
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .ad-premium__line {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        color: var(--secondary);
+        font-size: 0.95rem;
+      }
+
+      .ad-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        font-weight: 700;
+      }
+
+      .ad-ok {
+        border-color: var(--success);
+      }
+
+      .ad-warn {
+        border-color: var(--warning);
+      }
+
+      .ad-bad {
+        border-color: var(--danger);
+      }
+
+      .ad-unk {
+        border-color: var(--secondary);
+      }
+
+      /* ============================================================
+         Single-file view (when torrent has exactly 1 link)
+         ============================================================ */
+      .single-file {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 12px;
+        border-radius: 12px;
+        background: var(--page-bg);
+        border: 1px dashed var(--border);
+      }
+
+      .single-file__left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .single-file__icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border);
+        background: var(--card-bg);
+        flex: 0 0 auto;
+      }
+
+      .single-file__meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      /* Single file name: ellipsis */
+      .single-file__name {
+        font-weight: 800;
+        font-size: 0.98rem;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 680px;
+      }
+
+      .single-file__sub {
+        color: var(--secondary);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .single-file__actions {
+        display: flex;
+        gap: 8px;
+        flex: 0 0 auto;
+      }
+
+      .single-file__actions .icon-btn {
+        background: var(--card-bg);
+      }
+
+      /* Mobile: stack single-file card */
+      @media (max-width: 720px) {
+        .single-file {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .single-file__actions {
+          justify-content: flex-end;
+        }
+
+        .single-file__name {
+          max-width: 100%;
+        }
+      }
+
+      /* ============================================================
+         Grid filenames patch: keep names inside cards (2 lines max)
+         ============================================================ */
+      .file-item strong {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.25;
+        overflow-wrap: anywhere; /* break even for long tokens "_" "." */
+        word-break: break-word;
+      }
+
+      /* Bottom-right copy toast */
+      #copy-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: var(--success);
+        color: #fff;
+        display: none;
+        z-index: 1000;
+      }
+
+      /* A11y: focus ring on interactive elements */
+      a:focus,
+      button:focus,
+      summary:focus {
+        outline: 3px solid rgba(13, 110, 253, 0.45);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ============================================================
+         Flash messages (server-side via Flask flash())
+         - aria-live=polite: read updates without interrupting too much
+         ============================================================ -->
+    <div class="flash-messages" id="flash-messages" aria-live="polite">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+      {% for category, message in messages %}
+      <div class="flash-message flash-{{ category }}">
+        <i
+          class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"
+        ></i>
+        <span>{{ message }}</span>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
+    </div>
+
+    <!-- ============================================================
+         Header
+         - shows title
+         - admin-only: AllDebrid premium status card
+         ============================================================ -->
+    <div class="header-container">
+      <h1>Gestion des Downloads</h1>
+
+      <div
+        style="
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        "
+      >
         {% if is_admin %}
-          {% set ad = alldebrid_premium or {} %}
-          {% set now_ts = (datetime.utcnow().timestamp()|int) %}
-          {% set until_ts = ad.get('premium_until_ts') %}
-          {% set days_left = ((until_ts - now_ts) // 86400) if until_ts else none %}
+        {# AllDebrid premium info injected by backend #}
+        {% set ad = alldebrid_premium or {} %}
+        {% set now_ts = (datetime.utcnow().timestamp()|int) %}
+        {% set until_ts = ad.get('premium_until_ts') %}
+        {% set days_left = ((until_ts - now_ts) // 86400) if until_ts else none %}
 
-          {% if until_ts %}
-            {% if days_left < 0 %}
-              {% set cls = 'ad-bad' %}
-              {% set label = 'Expiré' %}
-              {% set icon = 'fa-triangle-exclamation' %}
-            {% elif days_left < 7 %}
-              {% set cls = 'ad-bad' %}
-              {% set label = days_left ~ ' j' %}
-              {% set icon = 'fa-triangle-exclamation' %}
-            {% elif days_left < 14 %}
-              {% set cls = 'ad-warn' %}
-              {% set label = days_left ~ ' j' %}
-              {% set icon = 'fa-clock' %}
-            {% else %}
-              {% set cls = 'ad-ok' %}
-              {% set label = days_left ~ ' j' %}
-              {% set icon = 'fa-circle-check' %}
+        {# Derive UI color/icon from remaining days #}
+        {% if until_ts %}
+        {% if days_left < 0 %}
+        {% set cls = 'ad-bad' %}
+        {% set label = 'Expiré' %}
+        {% set icon = 'fa-triangle-exclamation' %}
+        {% elif days_left < 7 %}
+        {% set cls = 'ad-bad' %}
+        {% set label = days_left ~ ' j' %}
+        {% set icon = 'fa-triangle-exclamation' %}
+        {% elif days_left < 14 %}
+        {% set cls = 'ad-warn' %}
+        {% set label = days_left ~ ' j' %}
+        {% set icon = 'fa-clock' %}
+        {% else %}
+        {% set cls = 'ad-ok' %}
+        {% set label = days_left ~ ' j' %}
+        {% set icon = 'fa-circle-check' %}
+        {% endif %}
+        {% else %}
+        {% set cls = 'ad-unk' %}
+        {% set label = 'Inconnu' %}
+        {% set icon = 'fa-circle-question' %}
+        {% endif %}
+
+        <div class="ad-premium">
+          <div class="ad-premium__title">
+            <i class="fa-solid fa-shield"></i>
+            AllDebrid
+          </div>
+
+          <div class="ad-premium__line">
+            <span class="ad-pill {{ cls }}">
+              <i class="fa-solid {{ icon }}"></i>
+              Premium: {{ label }}
+            </span>
+
+            {% if until_ts %}
+            <span title="premiumUntil={{ until_ts }}">
+              <i class="fa-regular fa-calendar"></i>
+              {{ until_ts|int|timestamp_to_datetime }}
+            </span>
             {% endif %}
-          {% else %}
-            {% set cls = 'ad-unk' %}
-            {% set label = 'Inconnu' %}
-            {% set icon = 'fa-circle-question' %}
-          {% endif %}
 
-          <div class="ad-premium">
-            <div class="ad-premium__title">
-              <i class="fa-solid fa-shield"></i>
-              AllDebrid
-            </div>
-
-            <div class="ad-premium__line">
-              <span class="ad-pill {{ cls }}">
-                <i class="fa-solid {{ icon }}"></i>
-                Premium: {{ label }}
-              </span>
-
-              {% if until_ts %}
-                <span title="premiumUntil={{ until_ts }}">
-                  <i class="fa-regular fa-calendar"></i>
-                  {{ until_ts|int|timestamp_to_datetime }}
-                </span>
-              {% endif %}
-
-              {% if ad.get('username') %}
-                <span><i class="fa-regular fa-user"></i> {{ ad.get('username') }}</span>
-              {% endif %}
-            </div>
-
-            {% if not ad.get('ok') and ad.get('error') %}
-              <div class="ad-premium__line" style="color:var(--danger)">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                {{ ad.get('error', {}).get('code','ERR') }}: {{ ad.get('error', {}).get('message','') }}
-              </div>
+            {% if ad.get('username') %}
+            <span><i class="fa-regular fa-user"></i> {{ ad.get('username') }}</span>
             {% endif %}
           </div>
+
+          {% if not ad.get('ok') and ad.get('error') %}
+          <div class="ad-premium__line" style="color: var(--danger)">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ ad.get('error', {}).get('code','ERR') }}: {{ ad.get('error', {}).get('message','') }}
+          </div>
+          {% endif %}
+        </div>
         {% endif %}
       </div>
-
-
-  </div>
-
-  <!-- Form -->
-  <form method="POST" novalidate>
-    <div class="form-group">
-      <label for="magnet_links">Liens Directs et/ou Magnétiques (max. 200 lignes!)</label>
-      <textarea id="magnet_links" name="magnet_links" placeholder="magnet:?xt=urn:btih:842783e3005495d5d1637f5364b59343c7844707
-https://1fichier.com/?abc123def456"></textarea>
     </div>
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="submit" name="action" value="generate" class="btn">
-        <i class="fa-solid fa-link"></i> Générer les Liens
-      </button>
+    <!-- ============================================================
+         Main input form
+         - Public: generate links (store in Redis)
+         - Admin: generate + send to NAS (direct now, magnet scheduled)
+         ============================================================ -->
+    <form method="POST" novalidate>
+      <div class="form-group">
+        <label for="magnet_links">
+          Liens Directs et/ou Magnétiques (max. 200 lignes!)
+        </label>
 
-      {% if is_admin %}
-      <button type="submit" name="action" value="generate_and_send" class="btn btn--nas">
-        <i class="fas fa-server"></i> Générer les liens + envoyer au NAS
-      </button>
-      {% endif %}
-    </div>
-  </form>
+        <textarea
+          id="magnet_links"
+          name="magnet_links"
+          placeholder="magnet:?xt=urn:btih:842783e3005495d5d1637f5364b59343c7844707
+https://1fichier.com/?abc123def456"
+        ></textarea>
+      </div>
 
-  <!-- ========================= -->
-  <!-- Pending -->
-  <!-- ========================= -->
-  {% if pending_torrents %}
-  <div id="pending-torrents-section" class="links-container"
-       {% if pending_refresh_url %} data-refresh-url="{{ pending_refresh_url }}"{% endif %}>
-    <h2>Torrents en cours de DL chez Alldebrid(<span id="pending-count">{{ pending_torrents|length }}</span>)</h2>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap">
+        <button type="submit" name="action" value="generate" class="btn">
+          <i class="fa-solid fa-link"></i>
+          Générer les Liens
+        </button>
 
-    <div class="message">
-      <i class="fas fa-info-circle"></i>
-      <span>Les torrents suivants sont en cours de téléchargement chez AllDebrid.</span>
-    </div>
+        {% if is_admin %}
+        <button type="submit" name="action" value="generate_and_send" class="btn btn--nas">
+          <i class="fas fa-server"></i>
+          Générer les liens + envoyer au NAS
+        </button>
+        {% endif %}
+      </div>
+    </form>
 
-    <table class="torrent-table">
-      <thead>
-        <tr>
-          <th>Nom du torrent</th>
-          <th>Statut</th>
-          <th>Progression</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="pending-tbody">
-        {% for torrent in pending_torrents %}
-        <tr data-torrent-id="{{ torrent.id }}" data-torrent-name="{{ torrent.name|e }}">
-          <td title="{{ torrent.name }}">{{ torrent.name|truncate(80) }}</td>
+    <!-- ============================================================
+         Pending section (links_count == 0)
+         - Table content can be refreshed by JS polling pending_refresh_url
+         ============================================================ -->
+    {% if pending_torrents %}
+    <div
+      id="pending-torrents-section"
+      class="links-container"
+      {% if pending_refresh_url %}data-refresh-url="{{ pending_refresh_url }}"{% endif %}
+    >
+      <h2>
+        Torrents en cours de DL chez Alldebrid
+        (<span id="pending-count">{{ pending_torrents|length }}</span>)
+      </h2>
+
+      <div class="message">
+        <i class="fas fa-info-circle"></i>
+        <span>Les torrents suivants sont en cours de téléchargement chez AllDebrid.</span>
+      </div>
+
+      <table class="torrent-table">
+        <thead>
+          <tr>
+            <th>Nom du torrent</th>
+            <th>Statut</th>
+            <th>Progression</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <!--
+          JS will rebuild this tbody when polling /api/pending_torrents.
+          Each <tr> carries data-torrent-id and name for action handlers.
+        -->
+        <tbody id="pending-tbody">
+          {% for torrent in pending_torrents %}
+          <tr data-torrent-id="{{ torrent.id }}" data-torrent-name="{{ torrent.name|e }}">
+            <td title="{{ torrent.name }}">{{ torrent.name|truncate(80) }}</td>
+
             <td>
               <span class="status-badge status-{{ torrent.status }}">
                 {% set st = (torrent.status or '') %}
@@ -402,792 +913,1067 @@ https://1fichier.com/?abc123def456"></textarea>
                 {% else %}{{ st|replace('_',' ')|capitalize }}{% endif %}
               </span>
             </td>
-          <td>
-            <div class="progress-container">
-              <div class="progress-bar" style="width: {{ torrent.progress }}%">{{ "%.1f"|format(torrent.progress) }}%</div>
-            </div>
-          </td>
-          <td>
-            <button class="action-btn js-refresh" data-torrent-id="{{ torrent.id }}"><i class="fas fa-rotate"></i> Actualiser</button>
-            {% if torrent.direct_download %}
-              <a class="action-btn" href="{{ torrent.direct_download }}" target="_blank" rel="noopener"><i class="fas fa-file-arrow-down"></i> .torrent</a>
-            {% endif %}
-            <button class="action-btn js-delete" data-torrent-id="{{ torrent.id }}" data-torrent-name="{{ torrent.name|e }}"><i class="fas fa-trash"></i> Supprimer</button>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
 
-  <!-- Pending empty (UNIQUE ID) -->
-  <div id="pending-empty" class="message" {% if pending_torrents %}style="display:none"{% endif %}>
-    <i class="fas fa-info-circle"></i><span>Aucun torrent en cours de téléchargement.</span>
-  </div>
+            <td>
+              <div class="progress-container">
+                <div class="progress-bar" style="width: {{ torrent.progress }}%">
+                  {{ "%.1f"|format(torrent.progress) }}%
+                </div>
+              </div>
+            </td>
 
-  <!-- ========================= -->
-  <!-- Completed -->
-  <!-- ========================= -->
-  {% if completed_torrents %}
+            <td>
+              <button class="action-btn js-refresh" data-torrent-id="{{ torrent.id }}">
+                <i class="fas fa-rotate"></i>
+                Actualiser
+              </button>
 
-  <!-- IMPORTANT: completed-section WRAPPE TOUT (header + liste) -->
-  <div id="completed-section">
+              {% if torrent.direct_download %}
+              <a
+                class="action-btn"
+                href="{{ torrent.direct_download }}"
+                target="_blank"
+                rel="noopener"
+              >
+                <i class="fas fa-file-arrow-down"></i>
+                .torrent
+              </a>
+              {% endif %}
 
-    <div style="margin-top:24px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-      <h2 style="margin:0">Downloads prêts (<span id="completed-count">{{ completed_torrents|length }}</span>)</h2>
+              <button
+                class="action-btn js-delete"
+                data-torrent-id="{{ torrent.id }}"
+                data-torrent-name="{{ torrent.name|e }}"
+              >
+                <i class="fas fa-trash"></i>
+                Supprimer
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
 
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <!-- COPIE GLOBAL (tous torrents) -->
-      <button class="btn js-copy-all-completed"
-              data-all-links='{{ (all_completed_links | tojson) | urlencode }}'>
-        <i class="fas fa-copy"></i> Copier tous les liens
-      </button>
-
-        <button class="btn btn--del js-delete-all-completed">
-          <i class="fas fa-trash"></i> Supprimer tous les downloads
-        </button>
-      </div>
+    <!-- Pending empty state (kept in DOM; toggled by JS) -->
+    <div id="pending-empty" class="message" {% if pending_torrents %}style="display:none"{% endif %}>
+      <i class="fas fa-info-circle"></i>
+      <span>Aucun torrent en cours de téléchargement.</span>
     </div>
 
-    <section class="completed" id="completed-list"
-      {% if completed_refresh_url %} data-refresh-url="{{ completed_refresh_url }}"{% endif %}>
+    <!-- ============================================================
+         Completed section (links_count > 0)
+         - Rendered server-side + refreshed by JS polling completed_refresh_url
+         ============================================================ -->
+    {% if completed_torrents %}
+    <div id="completed-section">
+      <div
+        style="
+          margin-top: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+        "
+      >
+        <h2 style="margin: 0">
+          Downloads prêts (<span id="completed-count">{{ completed_torrents|length }}</span>)
+        </h2>
 
-      {% for torrent in completed_torrents %}
-      {% set total = torrent.links|length if torrent.links else 0 %}
+        <div style="display: flex; gap: 10px; flex-wrap: wrap">
+          <!-- Copy ALL completed links (already URL-encoded JSON list) -->
+          <button
+            class="btn js-copy-all-completed"
+            data-all-links='{{ (all_completed_links | tojson) | urlencode }}'
+          >
+            <i class="fas fa-copy"></i>
+            Copier tous les liens
+          </button>
 
-      <div class="completed__row" data-torrent-id="{{ torrent.id }}" data-torrent-name="{{ torrent.name|e }}">
+          <button class="btn btn--del js-delete-all-completed">
+            <i class="fas fa-trash"></i>
+            Supprimer tous les downloads
+          </button>
+        </div>
+      </div>
 
-        <!-- INFOS (titre complet + 2e ligne) -->
-        <div class="row__main">
-          <div class="row__title">
-            <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-            {{ torrent.name }}
-          </div>
+      <section
+        class="completed"
+        id="completed-list"
+        {% if completed_refresh_url %}data-refresh-url="{{ completed_refresh_url }}"{% endif %}
+      >
+        {% for torrent in completed_torrents %}
+        {% set total = torrent.links|length if torrent.links else 0 %}
 
-          <div class="row__subtitle">
-            <span><i class="fa-solid fa-database"></i> {{ "%.2f"|format(torrent.size/1024/1024) }} Mo</span>
-            <span><i class="fa-solid fa-file"></i> {{ total }} fichier{{ 's' if total>1 }}</span>
-            <span><i class="fa-regular fa-clock"></i> {{ torrent.timestamp|timestamp_to_datetime }}</span>
+        <div
+          class="completed__row"
+          data-torrent-id="{{ torrent.id }}"
+          data-torrent-name="{{ torrent.name|e }}"
+        >
+          <!-- Main info -->
+          <div class="row__main">
+            <div class="row__title">
+              <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+              {{ torrent.name }}
+            </div>
 
-            {% set st = (torrent.status or 'ready') %}
-            <span class="status-badge {% if st == 'error' %}status-error{% endif %}">
-              <i class="fa-solid {% if st == 'error' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
-              {{ st|replace('_',' ')|capitalize }}
-            </span>
+            <!-- Metadata line -->
+            <div class="row__subtitle">
+              <span>
+                <i class="fa-solid fa-database"></i>
+                {{ "%.2f"|format(torrent.size/1024/1024) }} Mo
+              </span>
 
-            {% if is_admin %}
+              <span>
+                <i class="fa-solid fa-file"></i>
+                {{ total }} fichier{{ 's' if total>1 }}
+              </span>
+
+              <span>
+                <i class="fa-regular fa-clock"></i>
+                {{ torrent.timestamp|timestamp_to_datetime }}
+              </span>
+
+              {% set st = (torrent.status or 'ready') %}
+              <span class="status-badge {% if st == 'error' %}status-error{% endif %}">
+                <i class="fa-solid {% if st == 'error' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+                {{ st|replace('_',' ')|capitalize }}
+              </span>
+
+              {% if is_admin %}
               {% set app = (torrent.app_status or '') %}
               {% if app %}
-                <span class="status-badge {% if app == 'nas_failed' %}status-error{% endif %}"
-                      {% if app == 'nas_failed' and torrent.nas_error %}title="{{ torrent.nas_error|e }}"{% endif %}>
-                  <i class="fa-solid fa-cloud-arrow-up"></i>
-                  {% if app == 'nas_pending' %}NAS: en attente
-                  {% elif app == 'nas_sent' %}NAS: envoyé
-                  {% elif app == 'nas_failed' %}NAS: échec
-                  {% else %}NAS: {{ app }}
-                  {% endif %}
-                </span>
+              <span
+                class="status-badge {% if app == 'nas_failed' %}status-error{% endif %}"
+                {% if app == 'nas_failed' and torrent.nas_error %}title="{{ torrent.nas_error|e }}"{% endif %}
+              >
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                {% if app == 'nas_pending' %}NAS: en attente
+                {% elif app == 'nas_sent' %}NAS: envoyé
+                {% elif app == 'nas_failed' %}NAS: échec
+                {% else %}NAS: {{ app }}
+                {% endif %}
+              </span>
               {% endif %}
-            {% endif %}
-          </div>
+              {% endif %}
+            </div>
 
-          {% if is_admin and torrent.app_status == 'nas_failed' and torrent.nas_error %}
+            <!-- NAS error detail -->
+            {% if is_admin and torrent.app_status == 'nas_failed' and torrent.nas_error %}
             <div class="error-detail">
               <i class="fa-solid fa-triangle-exclamation"></i>
               <div><strong>Erreur NAS :</strong> {{ torrent.nas_error|e }}</div>
             </div>
-          {% endif %}
-        </div>
+            {% endif %}
+          </div>
 
+          <!-- Actions -->
+          <div class="row__actions">
+            {% if total > 0 %}
+            <button
+              class="btn js-copy-all"
+              data-all-links='{{ (torrent.links | map(attribute="link") | list | tojson) | urlencode }}'
+            >
+              <i class="fas fa-copy"></i>
+              Copier tous les liens
+            </button>
+            {% endif %}
 
-        <!-- ACTIONS -->
-        <div class="row__actions">
-          {% if total > 0 %}
-          <!-- COPIE PAR TORRENT (ENCODED) -->
-          <button class="btn js-copy-all"
-                  data-all-links='{{ (torrent.links | map(attribute="link") | list | tojson) | urlencode }}'>
-            <i class="fas fa-copy"></i> Copier tous les liens
-          </button>
-          {% endif %}
-
-          {% if is_admin %}
+            {% if is_admin %}
             {% set app = (torrent.app_status or '') %}
 
             {% if app == 'nas_sent' %}
-              <span class="status-badge status-ready"><i class="fa-solid fa-circle-check"></i> NAS envoyé</span>
+            <span class="status-badge status-ready">
+              <i class="fa-solid fa-circle-check"></i>
+              NAS envoyé
+            </span>
 
             {% elif app == 'nas_pending' %}
-              <button class="btn btn--nas js-nas" data-torrent-id="{{ torrent.id }}" disabled
-                      title="Envoi en cours (scheduler)">
-                <i class="fas fa-spinner fa-spin"></i> NAS: en attente
-              </button>
+            <button
+              class="btn btn--nas js-nas"
+              data-torrent-id="{{ torrent.id }}"
+              disabled
+              title="Envoi en cours (scheduler)"
+            >
+              <i class="fas fa-spinner fa-spin"></i>
+              NAS: en attente
+            </button>
 
             {% elif app == 'nas_failed' %}
-              <button class="btn btn--nas js-nas" data-torrent-id="{{ torrent.id }}"
-                      {% if torrent.nas_error %}title="{{ torrent.nas_error|e }}"{% endif %}>
-                <i class="fas fa-rotate-right"></i> Réessayer NAS
-              </button>
+            <button
+              class="btn btn--nas js-nas"
+              data-torrent-id="{{ torrent.id }}"
+              {% if torrent.nas_error %}title="{{ torrent.nas_error|e }}"{% endif %}
+            >
+              <i class="fas fa-rotate-right"></i>
+              Réessayer NAS
+            </button>
 
             {% else %}
-              <button class="btn btn--nas js-nas" data-torrent-id="{{ torrent.id }}">
-                <i class="fas fa-server"></i> Envoyer au NAS
-              </button>
+            <button class="btn btn--nas js-nas" data-torrent-id="{{ torrent.id }}">
+              <i class="fas fa-server"></i>
+              Envoyer au NAS
+            </button>
             {% endif %}
-          {% endif %}
+            {% endif %}
 
+            <button class="btn btn--del js-delete" data-torrent-id="{{ torrent.id }}">
+              <i class="fas fa-trash"></i>
+              Supprimer
+            </button>
+          </div>
 
-          <button class="btn btn--del js-delete" data-torrent-id="{{ torrent.id }}">
-            <i class="fas fa-trash"></i> Supprimer
-          </button>
-        </div>
+          <!-- Files panel (full width) -->
+          <div class="details-wrap">
+            {% if total == 1 %}
+            {% set f = (torrent.links[0] if torrent.links else {}) %}
+            {% set url = f.link %}
+            {% set fname = f.name or 'Fichier' %}
+            {% set fsize = f.size or 0 %}
+            {% set tooltip = (url ~ '\n' ~ (fsize|filesizeformat)) %}
 
-        <!-- FILES PANEL (pleine largeur) -->
-        <div class="details-wrap">
-          <details class="files">
-            <summary>
-              <i class="fa-solid fa-caret-down"></i>
-              Afficher les fichiers
-            </summary>
+            <div class="single-file" title="{{ tooltip|e }}">
+              <div class="single-file__left">
+                <div class="single-file__icon">
+                  <i class="fas fa-file" aria-hidden="true"></i>
+                </div>
 
-            {% if total > 0 %}
+                <div class="single-file__meta">
+                  <div class="single-file__name">{{ fname }}</div>
+                  <div class="single-file__sub">
+                    <span>
+                      <i class="fa-solid fa-weight-hanging"></i>
+                      {{ fsize|filesizeformat }}
+                    </span>
+                    <span><i class="fa-solid fa-link"></i> Lien direct</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="single-file__actions">
+                <a
+                  class="icon-btn"
+                  href="{{ url }}"
+                  target="_blank"
+                  rel="noopener"
+                  title="Télécharger"
+                >
+                  <i class="fas fa-download"></i>
+                </a>
+
+                <button class="icon-btn js-copy" data-link="{{ url }}" title="Copier">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            {% else %}
+            <details class="files">
+              <summary>
+                <i class="fa-solid fa-caret-down"></i>
+                Afficher les fichiers
+              </summary>
+
+              {% if total > 0 %}
               {% set initial_visible = 30 %}
 
               <div class="files__top">
                 <div class="files-count">{{ total }} fichier{{ 's' if total>1 }}</div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap">
-                  <!-- COPIE DANS LE PANEL (ENCODED) -->
-                  <button class="btn js-copy-all"
-                          data-all-links='{{ (torrent.links | map(attribute="link") | list | tojson) | urlencode }}'>
-                    <i class="fas fa-copy"></i> Copier tous les liens
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                  <button
+                    class="btn js-copy-all"
+                    data-all-links='{{ (torrent.links | map(attribute="link") | list | tojson) | urlencode }}'
+                  >
+                    <i class="fas fa-copy"></i>
+                    Copier tous les liens
                   </button>
 
                   {% if total > initial_visible %}
-                    <button class="btn js-show-more" data-step="30"><i class="fas fa-plus"></i> +30</button>
-                    <button class="btn js-show-all"><i class="fas fa-layer-group"></i> Tout</button>
+                  <button class="btn js-show-more" data-step="30">
+                    <i class="fas fa-plus"></i>
+                    +30
+                  </button>
+
+                  <button class="btn js-show-all">
+                    <i class="fas fa-layer-group"></i>
+                    Tout
+                  </button>
                   {% endif %}
                 </div>
               </div>
 
+              <!--
+                data-initial-visible controls how many file cards are visible initially.
+                Beyond that, items carry class "is-hidden" and are revealed in steps.
+              -->
               <div class="files__grid" data-initial-visible="{{ initial_visible }}">
                 {% for f in torrent.links %}
-                  {% set idx = loop.index %}
-                  {% set url = f.link %}
-                  {% set fname = f.name or ('Fichier ' ~ idx) %}
-                  {% set fsize = f.size or 0 %}
-                  {% set tooltip = (url ~ '\n' ~ (fsize|filesizeformat)) %}
+                {% set idx = loop.index %}
+                {% set url = f.link %}
+                {% set fname = f.name or ('Fichier ' ~ idx) %}
+                {% set fsize = f.size or 0 %}
+                {% set tooltip = (url ~ '\n' ~ (fsize|filesizeformat)) %}
 
-                  <div class="file-item{% if idx > initial_visible %} is-hidden{% endif %}"
-                       title="{{ tooltip|e }}">
-                    <div style="display:flex; gap:8px; align-items:center">
-                      <i class="fas fa-file file-icon"></i>
-                      <strong style="font-size:.95rem">{{ fname }}</strong>
-                    </div>
-
-                    <div class="file-actions">
-                      <a class="icon-btn"
-                         href="{{ url }}"
-                         target="_blank"
-                         rel="noopener"
-                         title="Télécharger">
-                        <i class="fas fa-download"></i>
-                      </a>
-
-                      <button class="icon-btn js-copy"
-                              data-link="{{ url }}"
-                              title="Copier">
-                        <i class="fas fa-copy"></i>
-                      </button>
-                    </div>
+                <div
+                  class="file-item{% if idx > initial_visible %} is-hidden{% endif %}"
+                  title="{{ tooltip|e }}"
+                >
+                  <div style="display: flex; gap: 8px; align-items: center">
+                    <i class="fas fa-file file-icon"></i>
+                    <strong style="font-size: 0.95rem">{{ fname }}</strong>
                   </div>
+
+                  <div class="file-actions">
+                    <a
+                      class="icon-btn"
+                      href="{{ url }}"
+                      target="_blank"
+                      rel="noopener"
+                      title="Télécharger"
+                    >
+                      <i class="fas fa-download"></i>
+                    </a>
+
+                    <button class="icon-btn js-copy" data-link="{{ url }}" title="Copier">
+                      <i class="fas fa-copy"></i>
+                    </button>
+                  </div>
+                </div>
                 {% endfor %}
               </div>
-            {% else %}
-              <div class="message" style="margin-top:10px">
-                <i class="fas fa-triangle-exclamation"></i><span>Aucun fichier disponible.</span>
+
+              {% else %}
+              <div class="message" style="margin-top: 10px">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>Aucun fichier disponible.</span>
               </div>
+              {% endif %}
+            </details>
             {% endif %}
-          </details>
+          </div>
         </div>
 
+        {% endfor %}
+      </section>
+    </div>
+    {% endif %}
 
-      </div>
+    <!-- Completed empty state (kept in DOM; toggled by JS) -->
+    <div id="completed-empty" class="message" {% if completed_torrents %}style="display:none"{% endif %}>
+      <i class="fas fa-info-circle"></i>
+      <span>Aucun torrent prêt.</span>
+    </div>
 
-      {% endfor %}
-    </section>
-  </div> <!-- /#completed-section -->
+    <!-- Copy notification (bottom-right) -->
+    <div id="copy-notification" role="status" aria-live="polite"></div>
 
-  {% endif %}
+    <script>
+      /*
+        Client-side behavior summary:
+        - Delegated click handlers for:
+          - copy one link / copy all
+          - NAS send (admin)
+          - delete item / delete all completed
+          - show more / show all files
+        - Polling (every 15s):
+          - refresh pending list (table)
+          - refresh completed list (cards)
+        - Keeps counters and empty-states in sync.
+      */
 
-  <!-- Completed empty -->
-  <div id="completed-empty" class="message" {% if completed_torrents %}style="display:none"{% endif %}>
-    <i class="fas fa-info-circle"></i><span>Aucun torrent prêt.</span>
-  </div>
+      window.IS_ADMIN = {{ 'true' if is_admin else 'false' }};
 
-  <div id="copy-notification" role="status" aria-live="polite"></div>
+      // Locks to prevent auto-refresh from rewriting UI while NAS send is in-flight.
+      window.UI_LOCK = { nas: new Set() };
 
+      const $ = (s, c = document) => c.querySelector(s);
+      const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
 
-
-<script>
-
-  window.IS_ADMIN = {{ 'true' if is_admin else 'false' }};
-
-  window.UI_LOCK = { nas: new Set() }; // ids en cours d'envoi
-
-  const $=(s,c=document)=>c.querySelector(s), $$=(s,c=document)=>Array.from(c.querySelectorAll(s));
-
-
-  function escapeHtml(s){
-    return String(s ?? '')
-      .replaceAll('&','&amp;')
-      .replaceAll('<','&lt;')
-      .replaceAll('>','&gt;')
-      .replaceAll('"','&quot;')
-      .replaceAll("'","&#039;");
-  }
-
-
-
-
-
-  function showNotification(message,type='success'){
-    const container=$('#flash-messages')||document.body;
-    const node=document.createElement('div');
-    node.className=`flash-message flash-${type}`;
-    const icon=type==='success'?'fa-check-circle':type==='error'?'fa-exclamation-circle':type==='warning'?'fa-exclamation-triangle':'fa-info-circle';
-    node.innerHTML=`<i class="fas ${icon}"></i><span></span>`;
-    node.querySelector('span').textContent=message;
-    container.appendChild(node);
-    setTimeout(()=>node.remove(),5000);
-  }
-
-  function copyToClipboard(text,button){
-    navigator.clipboard.writeText(text).then(()=>{
-      const toast=$('#copy-notification');
-      toast.textContent='Lien copié dans le presse-papiers';
-      toast.style.display='block';
-      setTimeout(()=>toast.style.display='none',1600);
-      if(button){
-        const i=button.querySelector('i');
-        button.disabled=true;
-        if(i){ i.classList.replace('fa-copy','fa-check'); }
-        setTimeout(()=>{ if(i){ i.classList.replace('fa-check','fa-copy'); } button.disabled=false; },1000);
-      }
-    }).catch(()=>showNotification('Impossible de copier le lien.','error'));
-  }
-
-  async function postJSON(url,payload){
-    const res=await fetch(url,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:payload?JSON.stringify(payload):undefined
-    });
-
-    let data = null;
-    try { data = await res.json(); } catch {}
-
-    if(!res.ok){
-      const msg = (data && (data.error || data.message)) ? (data.error || data.message) : ('HTTP '+res.status);
-      throw new Error(msg);
-    }
-    return data;
-  }
-
-
-  function withSpinner(btn,labelBusy,fn){
-    if(!btn) return fn();
-    const original=btn.innerHTML;
-    btn.disabled=true;
-    btn.innerHTML=`<i class="fas fa-spinner fa-spin"></i> ${labelBusy}`;
-    return fn().finally(()=>{ btn.disabled=false; btn.innerHTML=original; });
-  }
-
-  function syncCountsAndEmptyStates(){
-    const pendingBody = document.getElementById('pending-tbody');
-    const completedList = document.getElementById('completed-list');
-
-    const pendingRows = pendingBody ? pendingBody.querySelectorAll('tr').length : 0;
-    const completedRows = completedList ? completedList.querySelectorAll('.completed__row').length : 0;
-
-    const pendingCount = document.getElementById('pending-count');
-    const completedCount = document.getElementById('completed-count');
-    if (pendingCount) pendingCount.textContent = String(pendingRows);
-    if (completedCount) completedCount.textContent = String(completedRows);
-
-    // Pending empty state
-    const pendingSection = document.getElementById('pending-torrents-section');
-    const pendingEmpty = document.getElementById('pending-empty');
-    if (pendingSection && pendingEmpty){
-      if (pendingRows === 0){
-        pendingSection.style.display = 'none';
-        pendingEmpty.style.display = '';
-      }else{
-        pendingSection.style.display = '';
-        pendingEmpty.style.display = 'none';
-      }
-    }
-
-    // Completed empty state
-    const completedSection = document.getElementById('completed-section');
-    const completedEmpty = document.getElementById('completed-empty');
-    if (completedSection && completedEmpty){
-      if (completedRows === 0){
-        completedSection.style.display = 'none';
-        completedEmpty.style.display = '';
-      }else{
-        completedSection.style.display = '';
-        completedEmpty.style.display = 'none';
-      }
-    }
-  }
-
-  // Copier tous les liens de tous les torrents "prêts"
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.js-copy-all-completed');
-    if (!btn) return;
-
-    e.preventDefault();
-    try {
-      const raw = btn.getAttribute('data-all-links') || '';
-      const nested = JSON.parse(raw ? decodeURIComponent(raw) : '[]');
-      const links = (nested || []).flat().filter(Boolean);
-      if (!links.length) { showNotification('Aucun lien à copier.', 'warning'); return; }
-      navigator.clipboard.writeText(links.join('\n'));
-      showNotification(`${links.length} lien(s) copiés.`, 'success');
-    } catch {
-      showNotification('Impossible de copier tous les liens.', 'error');
-    }
-  });
-
-  // Supprimer tous les torrents "prêts"
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.js-delete-all-completed');
-    if (!btn) return;
-
-    e.preventDefault();
-    if (!confirm('Supprimer TOUS les Downloads prêts ?')) return;
-
-    withSpinner(btn, 'Suppression…', async () => {
-      try {
-        const data = await postJSON('/delete_all_completed');
-        if (data.success) {
-          showNotification(`${data.deleted ?? 'Tous'} torrent(s) supprimé(s).`, 'success');
-          const list = document.getElementById('completed-list');
-          if (list) list.innerHTML = '';
-          syncCountsAndEmptyStates();
-        } else {
-          showNotification(`Échec: ${data.error || 'inconnu'}`, 'error');
-        }
-      } catch {
-        showNotification('Erreur réseau lors de la suppression.', 'error');
-      }
-    });
-  });
-
-  // Delegation
-  document.addEventListener('click', (e) => {
-    const copy = e.target.closest('.js-copy');
-    if (copy) { e.preventDefault(); copyToClipboard(copy.getAttribute('data-link'), copy); return; }
-
-    const copyAll = e.target.closest('.js-copy-all');
-    if (copyAll) {
-      e.preventDefault();
-      try {
-        const links = JSON.parse(decodeURIComponent(copyAll.getAttribute('data-all-links') || '%5B%5D'));
-        if (links.length) { copyToClipboard(links.join('\n'), copyAll); showNotification(`${links.length} lien(s) copiés.`, 'success'); }
-      } catch {
-        showNotification('Impossible de copier tous les liens.', 'error');
-      }
-      return;
-    }
-
-    const more = e.target.closest('.js-show-more');
-    if (more) {
-      e.preventDefault();
-      const cont = more.closest('.files').querySelector('.files__grid');
-      const step = parseInt(more.getAttribute('data-step') || '30', 10);
-      const hidden = cont.querySelectorAll('.is-hidden');
-      hidden.forEach((el, i) => { if (i < step) el.classList.remove('is-hidden'); });
-      if (cont.querySelectorAll('.is-hidden').length === 0) { more.disabled = true; more.textContent = 'Tout affiché'; }
-      return;
-    }
-
-    const all = e.target.closest('.js-show-all');
-    if (all) {
-      e.preventDefault();
-      const cont = all.closest('.files').querySelector('.files__grid');
-      cont.querySelectorAll('.is-hidden').forEach(el => el.classList.remove('is-hidden'));
-      const mb = all.closest('.files').querySelector('.js-show-more');
-      if (mb) { mb.disabled = true; mb.textContent = 'Tout affiché'; }
-      all.disabled = true;
-      return;
-    }
-
-    const nas = e.target.closest('.js-nas');
-    if (nas) {
-      e.preventDefault();
-      const id = nas.getAttribute('data-torrent-id');
-      const row = nas.closest('.completed__row');
-      const name = row ? row.getAttribute('data-torrent-name') : '';
-
-      function setNasSubtitle(text, title) {
-        const subtitle = row?.querySelector('.row__subtitle');
-        if (!subtitle) return;
-
-        let nasSpan = Array.from(subtitle.querySelectorAll('span'))
-          .find(s => s.querySelector('.fa-cloud-arrow-up'));
-
-        if (!nasSpan) {
-          nasSpan = document.createElement('span');
-          subtitle.appendChild(nasSpan);
-        }
-        if (title) nasSpan.setAttribute('title', title);
-        else nasSpan.removeAttribute('title');
-
-        nasSpan.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> ${text}`;
+      // Escape helper for JS-generated HTML (used in refreshCompletedOnce()).
+      function escapeHtml(s) {
+        return String(s ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
       }
 
-      window.UI_LOCK.nas.add(String(id));
+      // Toast-like notification (reuses flash container).
+      function showNotification(message, type = 'success') {
+        const container = $('#flash-messages') || document.body;
 
-      withSpinner(nas, 'Envoi…', async () => {
+        const node = document.createElement('div');
+        node.className = `flash-message flash-${type}`;
+
+        const icon =
+          type === 'success'
+            ? 'fa-check-circle'
+            : type === 'error'
+            ? 'fa-exclamation-circle'
+            : type === 'warning'
+            ? 'fa-exclamation-triangle'
+            : 'fa-info-circle';
+
+        node.innerHTML = `<i class="fas ${icon}"></i><span></span>`;
+        node.querySelector('span').textContent = message;
+        container.appendChild(node);
+
+        setTimeout(() => node.remove(), 5000);
+      }
+
+      // Clipboard helper + small visual feedback.
+      function copyToClipboard(text, button) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            const toast = $('#copy-notification');
+            toast.textContent = 'Lien copié dans le presse-papiers';
+            toast.style.display = 'block';
+
+            setTimeout(() => (toast.style.display = 'none'), 1600);
+
+            if (button) {
+              const i = button.querySelector('i');
+              button.disabled = true;
+
+              if (i) i.classList.replace('fa-copy', 'fa-check');
+
+              setTimeout(() => {
+                if (i) i.classList.replace('fa-check', 'fa-copy');
+                button.disabled = false;
+              }, 1000);
+            }
+          })
+          .catch(() => showNotification('Impossible de copier le lien.', 'error'));
+      }
+
+      // POST JSON helper with basic error mapping.
+      async function postJSON(url, payload) {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload ? JSON.stringify(payload) : undefined,
+        });
+
+        let data = null;
         try {
-          const data = await postJSON(`/send_to_nas/${id}`);
+          data = await res.json();
+        } catch {}
 
-          if (data && data.success) {
-            // IMPORTANT: send_to_nas => nas_pending, pas nas_sent
-            showNotification(`Torrent ${name || id} planifié (NAS en attente).`, 'success');
+        if (!res.ok) {
+          const msg =
+            data && (data.error || data.message) ? data.error || data.message : 'HTTP ' + res.status;
+          throw new Error(msg);
+        }
+        return data;
+      }
 
-            // UI: remplacer le bouton par un "pending" désactivé
-            const pendingBtn = document.createElement('button');
-            pendingBtn.className = 'btn btn--nas';
-            pendingBtn.disabled = true;
-            pendingBtn.title = 'Envoi en cours (scheduler)';
-            pendingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> NAS: en attente';
-            nas.replaceWith(pendingBtn);
+      // Temporary spinner wrapper for buttons.
+      function withSpinner(btn, labelBusy, fn) {
+        if (!btn) return fn();
 
-            setNasSubtitle('NAS: en attente');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${labelBusy}`;
+
+        return fn().finally(() => {
+          btn.disabled = false;
+          btn.innerHTML = original;
+        });
+      }
+
+      // Updates counters and toggles empty-states based on current DOM.
+      function syncCountsAndEmptyStates() {
+        const pendingBody = document.getElementById('pending-tbody');
+        const completedList = document.getElementById('completed-list');
+
+        const pendingRows = pendingBody ? pendingBody.querySelectorAll('tr').length : 0;
+        const completedRows = completedList ? completedList.querySelectorAll('.completed__row').length : 0;
+
+        const pendingCount = document.getElementById('pending-count');
+        const completedCount = document.getElementById('completed-count');
+
+        if (pendingCount) pendingCount.textContent = String(pendingRows);
+        if (completedCount) completedCount.textContent = String(completedRows);
+
+        const pendingSection = document.getElementById('pending-torrents-section');
+        const pendingEmpty = document.getElementById('pending-empty');
+
+        if (pendingSection && pendingEmpty) {
+          if (pendingRows === 0) {
+            pendingSection.style.display = 'none';
+            pendingEmpty.style.display = '';
           } else {
-            showNotification(`Échec de l’envoi: ${(data && data.error) ? data.error : 'inconnu'}`, 'error');
+            pendingSection.style.display = '';
+            pendingEmpty.style.display = 'none';
           }
-        } catch (err) {
-          showNotification(`Échec de l’envoi: ${err.message}`, 'error');
-        } finally {
-          // Dé-lock dans tous les cas (succès/erreur/exception)
-          window.UI_LOCK.nas.delete(String(id));
+        }
+
+        const completedSection = document.getElementById('completed-section');
+        const completedEmpty = document.getElementById('completed-empty');
+
+        if (completedSection && completedEmpty) {
+          if (completedRows === 0) {
+            completedSection.style.display = 'none';
+            completedEmpty.style.display = '';
+          } else {
+            completedSection.style.display = '';
+            completedEmpty.style.display = 'none';
+          }
+        }
+      }
+
+      // Copy ALL completed links (global)
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.js-copy-all-completed');
+        if (!btn) return;
+
+        e.preventDefault();
+
+        try {
+          const raw = btn.getAttribute('data-all-links') || '';
+          const nested = JSON.parse(raw ? decodeURIComponent(raw) : '[]');
+          const links = (nested || []).flat().filter(Boolean);
+
+          if (!links.length) {
+            showNotification('Aucun lien à copier.', 'warning');
+            return;
+          }
+
+          navigator.clipboard.writeText(links.join('\n'));
+          showNotification(`${links.length} lien(s) copiés.`, 'success');
+        } catch {
+          showNotification('Impossible de copier tous les liens.', 'error');
         }
       });
 
+      // Delete ALL completed
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.js-delete-all-completed');
+        if (!btn) return;
 
-      return;
-    }
+        e.preventDefault();
+        if (!confirm('Supprimer TOUS les Downloads prêts ?')) return;
 
+        withSpinner(btn, 'Suppression…', async () => {
+          try {
+            const data = await postJSON('/delete_all_completed');
 
+            if (data.success) {
+              showNotification(`${data.deleted ?? 'Tous'} torrent(s) supprimé(s).`, 'success');
+              const list = document.getElementById('completed-list');
+              if (list) list.innerHTML = '';
+              syncCountsAndEmptyStates();
+            } else {
+              showNotification(`Échec: ${data.error || 'inconnu'}`, 'error');
+            }
+          } catch {
+            showNotification('Erreur réseau lors de la suppression.', 'error');
+          }
+        });
+      });
 
-    const del = e.target.closest('.js-delete');
-    if (del) {
-      e.preventDefault();
+      // Delegated actions (copy, show more, NAS, delete, refresh)
+      document.addEventListener('click', (e) => {
+        const copy = e.target.closest('.js-copy');
+        if (copy) {
+          e.preventDefault();
+          copyToClipboard(copy.getAttribute('data-link'), copy);
+          return;
+        }
 
-      const row = del.closest('.completed__row, tr') || del.closest('[data-torrent-id]');
-      const id = row?.getAttribute('data-torrent-id') || del.getAttribute('data-torrent-id');
+        const copyAll = e.target.closest('.js-copy-all');
+        if (copyAll) {
+          e.preventDefault();
 
-      let rawName = '';
-      if (row && row.tagName === 'TR') rawName = (row.querySelector('td')?.textContent || '').trim();
-      if (!rawName) rawName = (row?.getAttribute('data-torrent-name') || del.getAttribute('data-torrent-name') || '').trim();
+          try {
+            const links = JSON.parse(
+              decodeURIComponent(copyAll.getAttribute('data-all-links') || '%5B%5D')
+            );
 
-      const name = rawName.replace(/^["']|["']$/g, '');
-      const label = name || id;
+            if (links.length) {
+              copyToClipboard(links.join('\n'), copyAll);
+              showNotification(`${links.length} lien(s) copiés.`, 'success');
+            }
+          } catch {
+            showNotification('Impossible de copier tous les liens.', 'error');
+          }
+          return;
+        }
 
-      if (!confirm(`Supprimer "${label}" ?`)) return;
+        const more = e.target.closest('.js-show-more');
+        if (more) {
+          e.preventDefault();
 
-      withSpinner(del, 'Suppression…', async () => {
+          const cont = more.closest('.files').querySelector('.files__grid');
+          const step = parseInt(more.getAttribute('data-step') || '30', 10);
+
+          const hidden = cont.querySelectorAll('.is-hidden');
+          hidden.forEach((el, i) => {
+            if (i < step) el.classList.remove('is-hidden');
+          });
+
+          if (cont.querySelectorAll('.is-hidden').length === 0) {
+            more.disabled = true;
+            more.textContent = 'Tout affiché';
+          }
+          return;
+        }
+
+        const all = e.target.closest('.js-show-all');
+        if (all) {
+          e.preventDefault();
+
+          const cont = all.closest('.files').querySelector('.files__grid');
+          cont.querySelectorAll('.is-hidden').forEach((el) => el.classList.remove('is-hidden'));
+
+          const mb = all.closest('.files').querySelector('.js-show-more');
+          if (mb) {
+            mb.disabled = true;
+            mb.textContent = 'Tout affiché';
+          }
+
+          all.disabled = true;
+          return;
+        }
+
+        // Admin-only: schedule NAS send for this torrent
+        const nas = e.target.closest('.js-nas');
+        if (nas) {
+          e.preventDefault();
+
+          const id = nas.getAttribute('data-torrent-id');
+          const row = nas.closest('.completed__row');
+          const name = row ? row.getAttribute('data-torrent-name') : '';
+
+          function setNasSubtitle(text, title) {
+            const subtitle = row?.querySelector('.row__subtitle');
+            if (!subtitle) return;
+
+            let nasSpan = Array.from(subtitle.querySelectorAll('span')).find((s) =>
+              s.querySelector('.fa-cloud-arrow-up')
+            );
+
+            if (!nasSpan) {
+              nasSpan = document.createElement('span');
+              subtitle.appendChild(nasSpan);
+            }
+
+            if (title) nasSpan.setAttribute('title', title);
+            else nasSpan.removeAttribute('title');
+
+            nasSpan.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> ${text}`;
+          }
+
+          window.UI_LOCK.nas.add(String(id));
+
+          withSpinner(nas, 'Envoi…', async () => {
+            try {
+              const data = await postJSON(`/send_to_nas/${id}`);
+
+              if (data && data.success) {
+                // Note: send_to_nas schedules (nas_pending), not immediate success.
+                showNotification(`Torrent ${name || id} planifié (NAS en attente).`, 'success');
+
+                const pendingBtn = document.createElement('button');
+                pendingBtn.className = 'btn btn--nas';
+                pendingBtn.disabled = true;
+                pendingBtn.title = 'Envoi en cours (scheduler)';
+                pendingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> NAS: en attente';
+                nas.replaceWith(pendingBtn);
+
+                setNasSubtitle('NAS: en attente');
+              } else {
+                showNotification(`Échec de l’envoi: ${(data && data.error) ? data.error : 'inconnu'}`, 'error');
+              }
+            } catch (err) {
+              showNotification(`Échec de l’envoi: ${err.message}`, 'error');
+            } finally {
+              window.UI_LOCK.nas.delete(String(id));
+            }
+          });
+
+          return;
+        }
+
+        // Delete one item (pending or completed)
+        const del = e.target.closest('.js-delete');
+        if (del) {
+          e.preventDefault();
+
+          const row = del.closest('.completed__row, tr') || del.closest('[data-torrent-id]');
+          const id = row?.getAttribute('data-torrent-id') || del.getAttribute('data-torrent-id');
+
+          let rawName = '';
+          if (row && row.tagName === 'TR') rawName = (row.querySelector('td')?.textContent || '').trim();
+          if (!rawName) rawName = (row?.getAttribute('data-torrent-name') || del.getAttribute('data-torrent-name') || '').trim();
+
+          const name = rawName.replace(/^["']|["']$/g, '');
+          const label = name || id;
+
+          if (!confirm(`Supprimer "${label}" ?`)) return;
+
+          withSpinner(del, 'Suppression…', async () => {
+            try {
+              const data = await postJSON(`/delete_torrent/${id}`);
+
+              if (data.success) {
+                showNotification(data.message || `Torrent "${label}" supprimé.`, 'success');
+                row?.remove();
+                syncCountsAndEmptyStates();
+              } else {
+                showNotification(`Échec suppression "${label}": ${data.error || 'inconnu'}`, 'error');
+              }
+            } catch (err) {
+              showNotification(`Erreur réseau suppression "${label}".`, 'error');
+            }
+          });
+
+          return;
+        }
+
+        // Manual refresh: currently does a full reload
+        const ref = e.target.closest('.js-refresh');
+        if (ref) {
+          e.preventDefault();
+          withSpinner(ref, 'Actualisation…', async () => location.reload());
+        }
+      });
+
+      // ------------------------------------------------------------
+      // Auto refresh (polling)
+      // ------------------------------------------------------------
+
+      async function refreshCompletedOnce() {
+        const listEl = document.getElementById('completed-list');
+        const url = listEl?.getAttribute('data-refresh-url');
+        if (!listEl || !url) return;
+
+        // Avoid rewriting the UI while NAS sends are pending.
+        if (window.UI_LOCK?.nas?.size) return;
+
+        function fmtBytes(n) {
+          const x = Number(n) || 0;
+          const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+          let v = x,
+            i = 0;
+
+          while (v >= 1024 && i < units.length - 1) {
+            v /= 1024;
+            i++;
+          }
+
+          return (i === 0 ? String(v | 0) : v.toFixed(2)) + ' ' + units[i];
+        }
+
         try {
-          const data = await postJSON(`/delete_torrent/${id}`);
-          if (data.success) {
-            showNotification(data.message || `Torrent "${label}" supprimé.`, 'success');
-            row?.remove();
+          const res = await fetch(url, { headers: { Accept: 'application/json' } });
+          if (!res.ok) return;
+
+          const torrents = await res.json();
+          if (!Array.isArray(torrents)) return;
+
+          if (torrents.length === 0) {
+            listEl.innerHTML = '';
             syncCountsAndEmptyStates();
-          } else {
-            showNotification(`Échec suppression "${label}": ${data.error || 'inconnu'}`, 'error');
+            return;
           }
-        } catch (err) {
-          showNotification(`Erreur réseau suppression "${label}".`, 'error');
-        }
-      });
 
-      return;
-    }
+          listEl.innerHTML = '';
 
-    const ref = e.target.closest('.js-refresh');
-    if (ref) { e.preventDefault(); withSpinner(ref, 'Actualisation…', async () => { location.reload(); }); return; }
-  });
+          for (const t of torrents) {
+            const id = t.id;
+            const name = t.name || 'Inconnu';
 
+            const files = Array.isArray(t.links) ? t.links : [];
+            const total = files.length;
 
+            const totalSize = files.reduce((acc, f) => {
+              const s = f && typeof f === 'object' ? Number(f.size || 0) : 0;
+              return acc + (Number.isFinite(s) ? s : 0);
+            }, 0);
 
+            const st = t.status || 'ready';
 
-  // Auto refresh pending (met à jour la table + compteurs)
-// --- refresh COMPLETED (prêts) ---
-async function refreshCompletedOnce(){
-  const listEl = document.getElementById('completed-list');
-  const url = listEl?.getAttribute('data-refresh-url');
-  if(!listEl || !url) return;
+            const appStatus = String(t.app_status || '').trim();
+            const nasError = String(t.nas_error || '').trim();
 
-  if (window.UI_LOCK?.nas?.size) return;
+            const allUrls = files
+              .map((f) => (f && typeof f === 'object' ? f.link || '' : ''))
+              .filter(Boolean);
 
+            const row = document.createElement('div');
+            row.className = 'completed__row';
+            row.setAttribute('data-torrent-id', id);
+            row.setAttribute('data-torrent-name', name);
 
-  function fmtBytes(n){
-    const x = Number(n) || 0;
-    const units = ['B','KB','MB','GB','TB'];
-    let v = x, i = 0;
-    while(v >= 1024 && i < units.length-1){ v /= 1024; i++; }
-    return (i === 0 ? String(v|0) : v.toFixed(2)) + ' ' + units[i];
-  }
+            row.innerHTML = `
+              <div class="row__main">
+                <div class="row__title">
+                  <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                  ${escapeHtml(name)}
+                </div>
 
-  try{
-    const res = await fetch(url, { headers:{'Accept':'application/json'} });
-    if(!res.ok) return;
+                <div class="row__subtitle">
+                  <span>
+                    <i class="fa-solid fa-file"></i>
+                    ${total} fichier${total > 1 ? 's' : ''} • ${fmtBytes(totalSize)}
+                  </span>
 
-    const torrents = await res.json();
+                  <span class="status-badge ${String(st).toLowerCase() === 'error' ? 'status-error' : ''}">
+                    <i class="fa-solid ${String(st).toLowerCase() === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i>
+                    ${escapeHtml(String(st).replaceAll('_', ' '))}
+                  </span>
 
+                  ${
+                    window.IS_ADMIN && appStatus
+                      ? `
+                    <span class="status-badge ${appStatus === 'nas_failed' ? 'status-error' : ''}"
+                          ${appStatus === 'nas_failed' && nasError ? `title="${escapeHtml(nasError)}"` : ''}>
+                      <i class="fa-solid fa-cloud-arrow-up"></i>
+                      ${
+                        appStatus === 'nas_pending'
+                          ? 'NAS: en attente'
+                          : appStatus === 'nas_sent'
+                          ? 'NAS: envoyé'
+                          : appStatus === 'nas_failed'
+                          ? 'NAS: échec'
+                          : 'NAS: ' + escapeHtml(appStatus)
+                      }
+                    </span>
+                  `
+                      : ''
+                  }
+                </div>
 
-    if(!Array.isArray(torrents)) return;
-
-    if(torrents.length === 0){
-      listEl.innerHTML = '';
-      syncCountsAndEmptyStates();
-      return;
-    }
-
-    listEl.innerHTML = '';
-
-    for(const t of torrents){
-      const id = t.id;
-      const name = t.name || 'Inconnu';
-
-      const files = Array.isArray(t.links) ? t.links : [];   // [{link,name,size}, ...]
-      const total = files.length;
-
-      const totalSize = files.reduce((acc, f) => {
-        const s = (f && typeof f === 'object') ? Number(f.size || 0) : 0;
-        return acc + (Number.isFinite(s) ? s : 0);
-      }, 0);
-
-      const st = (t.status || 'ready');
-
-      const appStatus = String(t.app_status || '').trim();
-      const nasError  = String(t.nas_error  || '').trim();
-
-      // Pour le bouton "copier tous les liens" (liste d'URLs uniquement)
-      const allUrls = files
-        .map(f => (f && typeof f === 'object' ? (f.link || '') : ''))
-        .filter(Boolean);
-
-      const row = document.createElement('div');
-      row.className = 'completed__row';
-      row.setAttribute('data-torrent-id', id);
-      row.setAttribute('data-torrent-name', name);
-
-      row.innerHTML = `
-        <div class="row__main">
-          <div class="row__title">
-            <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-            ${escapeHtml(name)}
-          </div>
-
-          <div class="row__subtitle">
-
-            <span>
-              <i class="fa-solid fa-file"></i>
-              ${total} fichier${total>1?'s':''} • ${fmtBytes(totalSize)}
-            </span>
-
-            <span class="status-badge ${String(st).toLowerCase()==='error' ? 'status-error' : ''}">
-              <i class="fa-solid ${String(st).toLowerCase()==='error' ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i>
-              ${escapeHtml(String(st).replaceAll('_',' '))}
-            </span>
-
-            ${window.IS_ADMIN && appStatus ? `
-              <span class="status-badge ${appStatus==='nas_failed' ? 'status-error' : ''}"
-                    ${appStatus==='nas_failed' && nasError ? `title="${escapeHtml(nasError)}"` : ''}>
-                <i class="fa-solid fa-cloud-arrow-up"></i>
                 ${
-                  appStatus==='nas_pending' ? 'NAS: en attente' :
-                  appStatus==='nas_sent'    ? 'NAS: envoyé' :
-                  appStatus==='nas_failed'  ? 'NAS: échec'  :
-                  'NAS: ' + escapeHtml(appStatus)
+                  window.IS_ADMIN && appStatus === 'nas_failed' && nasError
+                    ? `
+                  <div class="error-detail">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div><strong>Erreur NAS :</strong> ${escapeHtml(nasError)}</div>
+                  </div>
+                `
+                    : ''
                 }
-              </span>
-            ` : ''}
-          </div>
-
-          ${window.IS_ADMIN && appStatus==='nas_failed' && nasError ? `
-            <div class="error-detail">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-              <div><strong>Erreur NAS :</strong> ${escapeHtml(nasError)}</div>
-            </div>
-          ` : ''}
-        </div>
-
-        <div class="row__actions">
-          ${allUrls.length ? `<button class="btn js-copy-all" data-all-links='${encodeURIComponent(JSON.stringify(allUrls))}'>
-            <i class="fas fa-copy"></i> Copier tous les liens
-          </button>` : ''}
-
-          ${window.IS_ADMIN ? (() => {
-            if (appStatus === 'nas_sent') {
-              return `<span class="status-badge status-ready"><i class="fa-solid fa-circle-check"></i> NAS envoyé</span>`;
-            }
-            if (appStatus === 'nas_pending') {
-              return `<button class="btn btn--nas js-nas" data-torrent-id="${escapeHtml(id)}" disabled
-                        title="Envoi en cours (scheduler)">
-                        <i class="fas fa-spinner fa-spin"></i> NAS: en attente
-                      </button>`;
-            }
-            if (appStatus === 'nas_failed') {
-              return `<button class="btn btn--nas js-nas" data-torrent-id="${escapeHtml(id)}"
-                        ${nasError ? `title="${escapeHtml(nasError)}"` : ''}>
-                        <i class="fas fa-rotate-right"></i> Réessayer NAS
-                      </button>`;
-            }
-            return `<button class="btn btn--nas js-nas" data-torrent-id="${escapeHtml(id)}">
-                      <i class="fas fa-server"></i> Envoyer au NAS
-                    </button>`;
-          })() : ''}
-
-          <button class="btn btn--del js-delete" data-torrent-id="${escapeHtml(id)}">
-            <i class="fas fa-trash"></i> Supprimer
-          </button>
-        </div>
-
-        <div class="details-wrap">
-          <details class="files">
-            <summary><i class="fa-solid fa-caret-down"></i> Afficher les fichiers</summary>
-
-            ${total>0 ? `
-              <div class="files__top">
-                <div class="files-count">${total} fichier${total>1?'s':''}</div>
               </div>
 
-              <div class="files__grid">
-                ${files.map((f, i) => {
-                  const url = (f && typeof f === 'object') ? (f.link || '') : '';
-                  const fname = (f && typeof f === 'object') ? (f.name || `Fichier ${i+1}`) : `Fichier ${i+1}`;
-                  const fsize = (f && typeof f === 'object') ? (f.size || 0) : 0;
-                  const tip = `${url}\n${fmtBytes(fsize)}`;
+              <div class="row__actions">
+                ${
+                  allUrls.length
+                    ? `<button class="btn js-copy-all" data-all-links='${encodeURIComponent(JSON.stringify(allUrls))}'>
+                         <i class="fas fa-copy"></i> Copier tous les liens
+                       </button>`
+                    : ''
+                }
 
-                  return `
-                    <div class="file-item" title="${escapeHtml(tip)}">
-                      <div style="display:flex; gap:8px; align-items:center">
-                        <i class="fas fa-file file-icon"></i>
-                        <strong style="font-size:.95rem">${escapeHtml(fname)}</strong>
-                      </div>
-                      <div class="file-actions">
-                        <a class="icon-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener" title="Télécharger">
-                          <i class="fas fa-download"></i>
-                        </a>
-                        <button class="icon-btn js-copy" data-link="${escapeHtml(url)}" title="Copier">
-                          <i class="fas fa-copy"></i>
-                        </button>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
+                ${
+                  window.IS_ADMIN
+                    ? (() => {
+                        if (appStatus === 'nas_sent') {
+                          return `<span class="status-badge status-ready"><i class="fa-solid fa-circle-check"></i> NAS envoyé</span>`;
+                        }
+                        if (appStatus === 'nas_pending') {
+                          return `<button class="btn btn--nas js-nas" data-torrent-id="${escapeHtml(id)}" disabled title="Envoi en cours (scheduler)">
+                                    <i class="fas fa-spinner fa-spin"></i> NAS: en attente
+                                  </button>`;
+                        }
+                        if (appStatus === 'nas_failed') {
+                          return `<button class="btn btn--nas js-nas" data-torrent-id="${escapeHtml(id)}" ${nasError ? `title="${escapeHtml(nasError)}"` : ''}>
+                                    <i class="fas fa-rotate-right"></i> Réessayer NAS
+                                  </button>`;
+                        }
+                        return `<button class="btn btn--nas js-nas" data-torrent-id="${escapeHtml(id)}">
+                                  <i class="fas fa-server"></i> Envoyer au NAS
+                                </button>`;
+                      })()
+                    : ''
+                }
+
+                <button class="btn btn--del js-delete" data-torrent-id="${escapeHtml(id)}">
+                  <i class="fas fa-trash"></i> Supprimer
+                </button>
               </div>
-            ` : `
-              <div class="message" style="margin-top:10px">
-                <i class="fas fa-triangle-exclamation"></i><span>Aucun fichier disponible.</span>
+
+              <div class="details-wrap">
+                ${
+                  total === 1
+                    ? (() => {
+                        const f = files[0] || {};
+                        const url = String(f.link || '');
+                        const fname = String(f.name || 'Fichier');
+                        const fsize = Number(f.size || 0);
+                        const tip = `${url}\n${fmtBytes(fsize)}`;
+
+                        return `
+                          <div class="single-file" title="${escapeHtml(tip)}">
+                            <div class="single-file__left">
+                              <div class="single-file__icon"><i class="fas fa-file" aria-hidden="true"></i></div>
+
+                              <div class="single-file__meta">
+                                <div class="single-file__name">${escapeHtml(fname)}</div>
+                                <div class="single-file__sub">
+                                  <span><i class="fa-solid fa-weight-hanging"></i> ${fmtBytes(fsize)}</span>
+                                  <span><i class="fa-solid fa-link"></i> Lien direct</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="single-file__actions">
+                              <a class="icon-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener" title="Télécharger">
+                                <i class="fas fa-download"></i>
+                              </a>
+                              <button class="icon-btn js-copy" data-link="${escapeHtml(url)}" title="Copier">
+                                <i class="fas fa-copy"></i>
+                              </button>
+                            </div>
+                          </div>
+                        `;
+                      })()
+                    : `
+                      <details class="files">
+                        <summary><i class="fa-solid fa-caret-down"></i> Afficher les fichiers</summary>
+                        ${
+                          total > 0
+                            ? `
+                              <div class="files__top">
+                                <div class="files-count">${total} fichier${total > 1 ? 's' : ''}</div>
+                              </div>
+
+                              <div class="files__grid">
+                                ${files
+                                  .map((f, i) => {
+                                    const url = f && typeof f === 'object' ? f.link || '' : '';
+                                    const fname = f && typeof f === 'object' ? f.name || `Fichier ${i + 1}` : `Fichier ${i + 1}`;
+                                    const fsize = f && typeof f === 'object' ? f.size || 0 : 0;
+                                    const tip = `${url}\n${fmtBytes(fsize)}`;
+
+                                    return `
+                                      <div class="file-item" title="${escapeHtml(tip)}">
+                                        <div style="display:flex; gap:8px; align-items:center">
+                                          <i class="fas fa-file file-icon"></i>
+                                          <strong style="font-size:.95rem">${escapeHtml(fname)}</strong>
+                                        </div>
+                                        <div class="file-actions">
+                                          <a class="icon-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener" title="Télécharger">
+                                            <i class="fas fa-download"></i>
+                                          </a>
+                                          <button class="icon-btn js-copy" data-link="${escapeHtml(url)}" title="Copier">
+                                            <i class="fas fa-copy"></i>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    `;
+                                  })
+                                  .join('')}
+                              </div>
+                            `
+                            : `
+                              <div class="message" style="margin-top:10px">
+                                <i class="fas fa-triangle-exclamation"></i><span>Aucun fichier disponible.</span>
+                              </div>
+                            `
+                        }
+                      </details>
+                    `
+                }
               </div>
-            `}
-          </details>
-        </div>
-      `;
+            `;
 
+            listEl.appendChild(row);
+          }
 
-      listEl.appendChild(row);
-    }
-
-    syncCountsAndEmptyStates();
-  }catch(e){}
-}
-
-// ---------- AUTO REFRESH (1 seul timer) ----------
-
-let __refreshInFlight = false;
-
-// PENDING refresh (version globale)
-async function refreshOnce(){
-  const section = document.getElementById('pending-torrents-section');
-  const url = section?.getAttribute('data-refresh-url');
-  if(!url) return;
-
-  try{
-    const res = await fetch(url, { headers:{'Accept':'application/json'} });
-    if(!res.ok) return;
-
-    const list = await res.json();
-    const tbody = document.getElementById('pending-tbody');
-    if(!tbody) return;
-
-    // Si pending vide => ok, on laisse refreshCompletedOnce gérer l’affichage
-    tbody.innerHTML = '';
-
-    if (Array.isArray(list)) {
-      for(const t of list){
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-torrent-id', t.id);
-        tr.setAttribute('data-torrent-name', t.name || '');
-
-        const s = String(t.status || '').toLowerCase();
-        const st = (s === 'in_queue') ? 'En file'
-                 : (s === 'downloading') ? 'Téléchargement'
-                 : (s === 'ready' || s === 'completed') ? 'Prêt'
-                 : String(t.status || '').replaceAll('_',' ');
-
-        const p = Number(t.progress || 0);
-        const pSafe = isFinite(p) ? Math.min(Math.max(p, 0), 100) : 0;
-
-        tr.innerHTML=`
-          <td title="${t.name}">${(t.name||'').length>80?(t.name||'').slice(0,77)+'…':(t.name||'')}</td>
-          <td><span class="status-badge status-${escapeHtml(String(t.status||''))}">${st}</span></td>
-          <td>
-            <div class="progress-container">
-              <div class="progress-bar" style="width:${pSafe}%">${pSafe.toFixed(1)}%</div>
-            </div>
-          </td>
-          <td>
-            <button class="action-btn js-refresh" data-torrent-id="${escapeHtml(t.id)}"><i class="fas fa-rotate"></i> Actualiser</button>
-            ${t.direct_download?`<a class="action-btn" href="${escapeHtml(t.direct_download)}" target="_blank" rel="noopener"><i class="fas fa-file-arrow-down"></i> .torrent</a>`:''}
-            <button class="action-btn js-delete" data-torrent-id="${escapeHtml(t.id)}">
-              <i class="fas fa-trash"></i> Supprimer
-            </button>
-          </td>`;
-        tbody.appendChild(tr);
+          syncCountsAndEmptyStates();
+        } catch {}
       }
-    }
 
-    syncCountsAndEmptyStates();
-  }catch(e){}
-}
+      async function refreshOnce() {
+        const section = document.getElementById('pending-torrents-section');
+        const url = section?.getAttribute('data-refresh-url');
+        if (!url) return;
 
-// Un seul “tick” qui refresh pending puis completed, sans concurrence
-async function refreshAllOnce() {
-  if (__refreshInFlight) return;
-  __refreshInFlight = true;
-  try {
-    await refreshOnce();
-    await refreshCompletedOnce();
-  } finally {
-    __refreshInFlight = false;
-  }
-}
+        try {
+          const res = await fetch(url, { headers: { Accept: 'application/json' } });
+          if (!res.ok) return;
 
-// Boot + 1 seul timer
-refreshAllOnce();
-setInterval(refreshAllOnce, 15000);
+          const list = await res.json();
+          const tbody = document.getElementById('pending-tbody');
+          if (!tbody) return;
 
+          tbody.innerHTML = '';
 
-  // Init
-  syncCountsAndEmptyStates();
-</script>
+          if (Array.isArray(list)) {
+            for (const t of list) {
+              const tr = document.createElement('tr');
+              tr.setAttribute('data-torrent-id', t.id);
+              tr.setAttribute('data-torrent-name', t.name || '');
 
-</body>
+              const s = String(t.status || '').toLowerCase();
+              const st =
+                s === 'in_queue'
+                  ? 'En file'
+                  : s === 'downloading'
+                  ? 'Téléchargement'
+                  : s === 'ready' || s === 'completed'
+                  ? 'Prêt'
+                  : String(t.status || '').replaceAll('_', ' ');
+
+              const p = Number(t.progress || 0);
+              const pSafe = isFinite(p) ? Math.min(Math.max(p, 0), 100) : 0;
+
+              tr.innerHTML = `
+                <td title="${t.name}">${(t.name || '').length > 80 ? (t.name || '').slice(0, 77) + '…' : (t.name || '')}</td>
+                <td><span class="status-badge status-${escapeHtml(String(t.status || ''))}">${st}</span></td>
+                <td>
+                  <div class="progress-container">
+                    <div class="progress-bar" style="width:${pSafe}%">${pSafe.toFixed(1)}%</div>
+                  </div>
+                </td>
+                <td>
+                  <button class="action-btn js-refresh" data-torrent-id="${escapeHtml(t.id)}"><i class="fas fa-rotate"></i> Actualiser</button>
+                  ${
+                    t.direct_download
+                      ? `<a class="action-btn" href="${escapeHtml(t.direct_download)}" target="_blank" rel="noopener"><i class="fas fa-file-arrow-down"></i> .torrent</a>`
+                      : ''
+                  }
+                  <button class="action-btn js-delete" data-torrent-id="${escapeHtml(t.id)}">
+                    <i class="fas fa-trash"></i> Supprimer
+                  </button>
+                </td>
+              `;
+
+              tbody.appendChild(tr);
+            }
+          }
+
+          syncCountsAndEmptyStates();
+        } catch {}
+      }
+
+      // Single in-flight guard to avoid overlapping polls.
+      let __refreshInFlight = false;
+
+      async function refreshAllOnce() {
+        if (__refreshInFlight) return;
+        __refreshInFlight = true;
+        try {
+          await refreshOnce();
+          await refreshCompletedOnce();
+        } finally {
+          __refreshInFlight = false;
+        }
+      }
+
+      // Boot + polling
+      refreshAllOnce();
+      setInterval(refreshAllOnce, 15000);
+
+      // First sync in case SSR rendered nothing for one section.
+      syncCountsAndEmptyStates();
+    </script>
+  </body>
 </html>

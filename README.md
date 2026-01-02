@@ -4,76 +4,108 @@
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io/opxsys/link2nas-blue?logo=docker)](https://github.com/opxsys/link2nas/pkgs/container/link2nas)
 [![Docker Build](https://github.com/opxsys/link2nas/actions/workflows/docker.yml/badge.svg)](https://github.com/opxsys/link2nas/actions/workflows/docker.yml)
 
-Link2NAS est un service auto-hébergé…
+**Link2NAS** est un service **auto-hébergé**, robuste et orienté production, permettant d’envoyer automatiquement des **liens et magnets AllDebrid** vers un **NAS Synology (Download Station)**.
 
-Link2NAS est un service **auto‑hébergé**, robuste et production‑ready, permettant d’envoyer automatiquement des **liens et magnets AllDebrid** vers un **NAS Synology (Download Station)**.
+L’architecture est volontairement **séparée** (web / scheduler), **stateless côté applicatif**, avec un **état centralisé dans Redis**.
 
-L’architecture est volontairement **séparée** (web / scheduler), **stateless côté applicatif**, avec un stockage d’état centralisé via **Redis**.
-
-> Objectif : fiabilité, clarté, zéro bricolage, et un déploiement propre (systemd ou Docker).
+> Objectif : fiabilité, clarté, zéro bricolage, et déploiement propre (Docker ou systemd).
 
 ---
 
 ## Fonctionnalités principales
 
-- 🔗 Support complet **AllDebrid**
+- 🔗 **Support AllDebrid complet**
   - Magnets
   - Liens directs
-  - Déverrouillage JIT (just‑in‑time)
-- 📦 Envoi automatique vers **Synology Download Station**
-- 🖥️ Interface web Flask
-  - UI admin
-  - Vue statut détaillée (AllDebrid, Redis, NAS)
-- ⏱️ Scheduler **APScheduler indépendant**
+  - Déverrouillage JIT (just-in-time)
+  - Gestion des redirectors / multi-liens
+- 📦 **Envoi automatique vers Synology Download Station**
+  - Support mono-fichier et multi-fichiers
+  - Création de dossiers FileStation si nécessaire
+  - Fallbacks maîtrisés sur les formats de destination DSM
+- 🖥️ **Interface web Flask**
+  - UI principale
+  - Interface admin
+  - Page statut détaillée (AllDebrid / Redis / DSM)
+- ⏱️ **Scheduler APScheduler indépendant**
   - Aucun job dans le process web
-- 🧠 Stockage d’état via **Redis**
-- 🔐 Sécurité stricte
-  - secrets uniquement via `.env`
-  - aucun secret loggé
-  - masquage automatique des valeurs sensibles
-- 🧩 Extension Chrome (optionnelle)
-- 🚀 Déploiement :
-  - **Docker / docker‑compose (recommandé)**
-  - **systemd (bare‑metal / VPS)**
+  - Verrous Redis pour éviter les doublons
+- 🧠 **Redis comme source de vérité**
+  - État applicatif
+  - État NAS (dossier, mode DSM retenu)
+- 🔐 **Sécurité stricte**
+  - Secrets uniquement via `.env`
+  - Aucun secret loggé
+  - Redaction automatique des URLs sensibles
+- 🧩 **Extension navigateur (Chrome)**
+- 🚀 **Déploiement**
+  - Docker / docker-compose (**recommandé**)
+  - systemd (bare-metal / VPS)
 
 ---
 
-## Architecture
+## Architecture globale
 
 ```
 /opt/link2nas
-├── app.py                  # Entrée Gunicorn (web)
+├── app.py                  # Entrée web (Gunicorn / Flask)
 ├── scheduler_runner.py     # Entrée scheduler (APScheduler)
-├── link2nas/
-│   ├── config.py
-│   ├── webapp.py
-│   ├── scheduler.py
-│   ├── scheduler_jobs.py
-│   ├── redis_store.py
-│   ├── alldebrid.py
-│   ├── synology.py
-│   ├── status.py
-│   ├── auth.py
-│   └── utils.py
-├── templates/
-├── static/
-├── extension/
+├── link2nas/               # Cœur applicatif
+│   ├── config.py           # Chargement Settings (env → objets)
+│   ├── logging_setup.py    # Logging centralisé
+│   ├── alldebrid.py        # Client AllDebrid + redirectors
+│   ├── redis_store.py      # Modèle d’état Redis
+│   ├── nas_send.py         # Pipeline NAS (DSM + idempotence)
+│   ├── synology_fs.py      # DSM WebAPI (Auth / FileStation / DS)
+│   ├── synology.py         # Helpers legacy + ping DSM
+│   ├── scheduler_jobs.py  # Logique métier scheduler
+│   ├── status_checks.py   # Probes AllDebrid / Redis / DSM
+│   ├── status.py           # Routes statut
+│   ├── auth.py             # Auth admin (factory basée sur Settings)
+│   ├── webapp.py           # App Flask + routes
+│   ├── web_auth.py         # Décorateurs auth web
+│   ├── web_helpers.py      # Helpers UI / redaction / payloads
+│   ├── web_process.py      # Traitement des items (direct / batch)
+│   └── web_admin_tools.py  # Outils admin (delete, maintenance)
+├── templates/              # Templates Jinja2
+├── static/                 # Assets statiques
+├── extension/              # Extensions navigateur
 ├── deploy/
-│   ├── docker/
-│   └── systemd/
-├── .env.example
+│   ├── docker/             # Déploiement Docker
+│   └── systemd/            # Services systemd
+├── docs/
+│   └── Usage-API.md        # Documentation API & workflows
+├── CHANGELOG.md            # Historique des changements
+├── TODO.md                 # Backlog technique (actionnable)
+├── .env.example            # Configuration d’exemple
 └── requirements.txt
 ```
 
 ---
+
 
 ## Prérequis
 
 - Linux (testé Debian / Ubuntu)
 - Compte **AllDebrid**
 - NAS **Synology** avec Download Station
+- **Redis**
 - **Docker** ou **systemd**
-- Redis (interne ou externe)
+
+---
+
+## Configuration minimale
+
+Variables indispensables dans `.env` :
+
+- `FLASK_SECRET_KEY`
+- `ALLDEBRID_APIKEY`
+- `SYNOLOGY_URL`
+- `SYNOLOGY_USER`
+- `SYNOLOGY_PASSWORD`
+- `REDIS_HOST`
+
+👉 Voir **`.env.example`** pour la liste complète, commentée et structurée.
 
 ---
 
@@ -81,22 +113,21 @@ L’architecture est volontairement **séparée** (web / scheduler), **stateless
 
 ### 🐳 Docker
 
-Deux modes sont possibles :
-- **Utiliser l’image Docker officielle (GHCR)**  
-- **Construire localement via docker‑compose**
+Deux options :
+- Utiliser l’image officielle (GHCR)
+- Construire localement via `docker-compose`
 
-👉 Voir la documentation complète :
-- `deploy/README.md`
+📖 Documentation :
 - `deploy/docker/README.md`
-- `README.docker.md` (image Docker uniquement)
+- `README.docker.md`
 
 ---
 
 ## Déploiement systemd (installation native)
 
-Pour une intégration système fine (serveur dédié, contraintes spécifiques).
+Pour un contrôle fin du système (VPS, serveur dédié).
 
-👉 Voir :
+📖 Voir :
 ```
 deploy/systemd/README.md
 ```
@@ -105,35 +136,29 @@ deploy/systemd/README.md
 
 ## Documentation d’utilisation & API
 
-La documentation fonctionnelle complète est disponible ici :
+📘 **[`docs/Usage-API.md`](./docs/Usage-API.md)**
 
-👉 **[`Link2NAS_Documentation_Usage_API.md`](./docs/Usage-API.md)**
+Contenu :
+- Parcours UI (`/`, `/admin`, `/status`)
+- API REST réelle (routes, payloads, exemples `curl`)
+- Workflow interne (status vs app_status, NAS pipeline)
+- Configuration complète `.env`
+- Sécurité et limites connues
 
-Elle couvre :
+👉 **Lecture recommandée avant toute intégration.**
 
-- 📄 **Pages et parcours utilisateur**
-  - `/` (UI principale)
-  - `/admin` (interface admin)
-  - `/status` (page état global)
-- 🔌 **API REST réelle**
-  - routes exactes (`GET` / `POST`)
-  - payloads attendus
-  - exemples `curl`
-- 🔄 **Workflow interne**
-  - différence `status` vs `app_status`
-  - règles de terminaison
-  - unlock AllDebrid JIT
-  - verrous Redis
-- ⚙️ **Configuration complète (`.env`)**
-  - variables obligatoires / optionnelles
-  - valeurs par défaut
-  - impact sur le comportement
-- 🔐 **Sécurité & limites**
-  - Basic Auth
-  - recommandations reverse-proxy
-  - ce que l’application ne fait pas
+---
 
-👉 **À lire avant toute intégration (extension, API, automatisation).**
+## Changelog & roadmap
+
+- 📄 **`CHANGELOG.md`**
+  - Historique détaillé des versions
+  - Refactors majeurs (AllDebrid, NAS, DSM, UI)
+- 🛠️ **`TODO.md`**
+  - Backlog technique priorisé
+  - Améliorations sans bullshit
+  - Points de durcissement, perf, observabilité
+
 ---
 
 ## Sécurité
@@ -141,7 +166,8 @@ Elle couvre :
 - ❌ Aucun secret dans le code
 - ❌ Aucun secret dans les logs
 - ✅ `.env` ignoré par git
-- ✅ Masquage automatique des secrets dans les logs
+- ✅ Redaction automatique des URLs sensibles
+- ⚠️ Basic Auth → **HTTPS fortement recommandé**
 
 ---
 
@@ -150,16 +176,9 @@ Elle couvre :
 - Un process = un rôle
 - Pas de scheduler dans Gunicorn
 - Redis comme source de vérité
+- NAS traité de façon idempotente
 - Déploiement explicite et auditable
-- Zéro magie cachée
-
----
-
-## Licence
-
-Projet personnel.  
-Utilisation libre, modifications libres.  
-Aucune garantie. Tu assumes.
+- Pas de magie cachée
 
 ---
 
@@ -167,7 +186,15 @@ Aucune garantie. Tu assumes.
 
 ✅ Fonctionnel  
 ✅ Stable  
-🚧 Extension Chrome en évolution  
+🚧 Extension navigateur en évolution  
+
+---
+
+## Licence
+
+Projet personnel.  
+Utilisation et modification libres.  
+Aucune garantie. Tu assumes.
 
 ---
 

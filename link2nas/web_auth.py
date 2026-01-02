@@ -1,4 +1,4 @@
-# link2nas/auth.py
+# link2nas/web_auth.py
 from __future__ import annotations
 
 import secrets
@@ -9,18 +9,12 @@ from flask import Response, abort, request
 
 from .config import Settings
 
-# Type générique pour les decorators Flask
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-# ============================================================
-# HTTP helpers
-# ============================================================
-
 def _unauthorized(realm: str) -> Response:
     """
-    Retourne une réponse HTTP 401 conforme au mécanisme Basic Auth.
-    Le realm est injecté dynamiquement depuis la configuration.
+    HTTP 401 response for Basic Auth.
     """
     return Response(
         "Auth required",
@@ -29,37 +23,25 @@ def _unauthorized(realm: str) -> Response:
     )
 
 
-# ============================================================
-# Admin authentication (Basic Auth)
-# ============================================================
-
 def make_require_admin(s: Settings):
     """
-    Fabrique un decorator @require_admin lié à une instance Settings.
+    Build a @require_admin decorator bound to Settings.
 
-    Choix d'architecture :
-    - Pas de dépendance à des variables globales ou env
-    - Toute la politique d'auth dépend de Settings
-    - Permet des tests unitaires simples (Settings mockable)
-
-    Règles :
-    - ADMIN désactivé → 404 (surface d'attaque réduite)
-    - Mot de passe manquant → 401 (fail closed)
-    - Comparaison en temps constant (secrets.compare_digest)
+    Rules:
+    - admin disabled => 404 (hide admin surface)
+    - missing config => 401 (fail closed)
+    - constant-time comparisons
     """
 
     def require_admin(f: F) -> F:
         @wraps(f)
         def wrapper(*args, **kwargs):
-            # Autorise les pré-requêtes CORS sans authentification
             if request.method == "OPTIONS":
                 return ("", 204)
 
-            # Feature admin totalement désactivée
             if not s.admin_enabled:
                 abort(404)
 
-            # Admin activé mais configuration invalide → refus
             if not (s.admin_user and s.admin_pass):
                 return _unauthorized(s.admin_realm)
 
@@ -67,10 +49,8 @@ def make_require_admin(s: Settings):
             if not auth:
                 return _unauthorized(s.admin_realm)
 
-            # Comparaison constante pour éviter les timing attacks
             ok_user = secrets.compare_digest(auth.username or "", s.admin_user)
             ok_pass = secrets.compare_digest(auth.password or "", s.admin_pass)
-
             if not (ok_user and ok_pass):
                 return _unauthorized(s.admin_realm)
 
