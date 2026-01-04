@@ -101,7 +101,6 @@ def normalize_ds_destination(dest: str, default: str) -> str:
 # Module defaults (pure constants; do not read env here)
 # ==============================================================================
 
-DEFAULT_APP_VERSION = "dev"
 DEFAULT_LOG_LEVEL = "INFO"
 
 DEFAULT_NOISY_PATHS = {
