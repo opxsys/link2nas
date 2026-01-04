@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 Format: Keep a Changelog  
 The project does not strictly follow SemVer (version is informational).
 
+## [1.3.3] - 2026-01-04
+### Fixed
+- UI: bouton global "Copier tous les liens" (Completed) copie désormais correctement la liste complète.
+
+### Changed
+- Docker: la version applicative est désormais fixée au build (APP_VERSION injectée dans l’image), le `.env` ne peut plus l’écraser.
+
 ## [1.3.3] – 2026-01-03
 
 ### Fixed

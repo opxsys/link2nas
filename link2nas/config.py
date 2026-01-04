@@ -11,6 +11,11 @@ from dataclasses import dataclass
 # - "Required" env vars are enforced only inside Settings.from_env().
 # ==============================================================================
 
+try:
+    from ._version import __version__ as APP_VERSION
+except Exception:
+    APP_VERSION = "dev"
+
 
 def env_str(name: str, default: str | None = None) -> str:
     """
@@ -232,7 +237,7 @@ class Settings:
         # ------------------------------
         # Core app (secret is REQUIRED)
         # ------------------------------
-        app_version = env_str("APP_VERSION", DEFAULT_APP_VERSION)
+        app_version = APP_VERSION
         flask_secret_key = env_str("FLASK_SECRET_KEY", None)
 
         log_level = env_str("LOG_LEVEL", DEFAULT_LOG_LEVEL).upper().strip() or DEFAULT_LOG_LEVEL

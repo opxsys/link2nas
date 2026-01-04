@@ -39,6 +39,7 @@ build/
 
 # Ignore runtime env files explicitly
 deploy/**/.env
+link2nas/_version.py
 
 # Keep deploy structure & helpers
 !deploy/
