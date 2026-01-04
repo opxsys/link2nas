@@ -2,8 +2,8 @@ name: Build & Push Docker image
 
 on:
   push:
-    branches: [ "main" ]
-    tags: [ "v*" ]
+    branches: ["main"]
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
@@ -28,25 +28,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute tags
+      - name: Compute tags + app version
         id: meta
         shell: bash
         run: |
           IMAGE="ghcr.io/${{ github.repository_owner }}/link2nas"
           TAGS="${IMAGE}:${{ github.sha }}"
+          APP_VERSION="dev"
 
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            TAG_NAME="${GITHUB_REF_NAME}"   # ex: v1.3.1
+            TAG_NAME="${GITHUB_REF_NAME}"   # ex: v1.3.3
             TAGS="${TAGS}"$'\n'"${IMAGE}:${TAG_NAME}"
+            APP_VERSION="${TAG_NAME}"
           fi
 
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             TAGS="${TAGS}"$'\n'"${IMAGE}:latest"
+            # Option B (recommandé pour ton NAS): latest = dernier tag vX.Y.Z
+            APP_VERSION=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "dev")
           fi
 
           echo "tags<<EOF" >> "$GITHUB_OUTPUT"
           echo "$TAGS" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
+
+          echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+
+          echo "Computed APP_VERSION=${APP_VERSION}"
+          echo "Computed TAGS:"
+          echo "$TAGS"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -56,4 +66,4 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            APP_VERSION=${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
+            APP_VERSION=${{ steps.meta.outputs.app_version }}
