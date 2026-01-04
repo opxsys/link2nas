@@ -986,7 +986,7 @@ https://1fichier.com/?abc123def456"
           <!-- Copy ALL completed links (already URL-encoded JSON list) -->
           <button
             class="btn js-copy-all-completed"
-            data-all-links='{{ (all_completed_links | tojson) | urlencode }}'
+            data-all-links='{{ all_completed_links | tojson }}'
           >
             <i class="fas fa-copy"></i>
             Copier tous les liens
@@ -1435,18 +1435,21 @@ https://1fichier.com/?abc123def456"
         e.preventDefault();
 
         try {
-          const raw = btn.getAttribute('data-all-links') || '';
-          const nested = JSON.parse(raw ? decodeURIComponent(raw) : '[]');
-          const links = (nested || []).flat().filter(Boolean);
+          const raw = btn.getAttribute('data-all-links') || '[]';
+          const parsed = JSON.parse(raw);
+
+          const links = Array.isArray(parsed)
+            ? parsed.flatMap((x) => (Array.isArray(x) ? x : [x])).filter(Boolean)
+            : [];
 
           if (!links.length) {
             showNotification('Aucun lien à copier.', 'warning');
             return;
           }
 
-          navigator.clipboard.writeText(links.join('\n'));
+          copyToClipboard(links.join('\n'), btn);
           showNotification(`${links.length} lien(s) copiés.`, 'success');
-        } catch {
+        } catch (err) {
           showNotification('Impossible de copier tous les liens.', 'error');
         }
       });

@@ -191,14 +191,12 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
         pending_torrents.sort(key=lambda x: x["timestamp"], reverse=True)
         completed_torrents.sort(key=lambda x: x["timestamp"], reverse=True)
 
-        all_completed_links = []
-        if is_admin:
-            all_completed_links = [
-                f.get("link")
-                for t in completed_torrents
-                for f in (t.get("links") or [])
-                if isinstance(f, dict) and f.get("link")
-            ]
+        all_completed_links = [
+            f.get("link")
+            for t in completed_torrents
+            for f in (t.get("links") or [])
+            if isinstance(f, dict) and f.get("link")
+        ]
 
         ctx = dict(
             pending_torrents=pending_torrents,
