@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -32,31 +34,25 @@ jobs:
         id: meta
         shell: bash
         run: |
+          set -euo pipefail
           IMAGE="ghcr.io/${{ github.repository_owner }}/link2nas"
           TAGS="${IMAGE}:${{ github.sha }}"
           APP_VERSION="dev"
 
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            TAG_NAME="${GITHUB_REF_NAME}"   # ex: v1.3.3
-            TAGS="${TAGS}"$'\n'"${IMAGE}:${TAG_NAME}"
+            TAG_NAME="${GITHUB_REF_NAME}"
+            TAGS="${TAGS}"$'\n'"${IMAGE}:${TAG_NAME}"$'\n'"${IMAGE}:latest"
             APP_VERSION="${TAG_NAME}"
-          fi
-
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+          elif [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             TAGS="${TAGS}"$'\n'"${IMAGE}:latest"
-            # Option B (recommandé pour ton NAS): latest = dernier tag vX.Y.Z
-            APP_VERSION=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "dev")
+            # latest sur main = dernier tag (si présent), sinon dev
+            APP_VERSION="$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo dev)"
           fi
 
           echo "tags<<EOF" >> "$GITHUB_OUTPUT"
           echo "$TAGS" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-
           echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
-
-          echo "Computed APP_VERSION=${APP_VERSION}"
-          echo "Computed TAGS:"
-          echo "$TAGS"
 
       - name: Build and push
         uses: docker/build-push-action@v6

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 Format: Keep a Changelog  
 The project does not strictly follow SemVer (version is informational).
 
-## [1.3.3] - 2026-01-04
+## [1.3.4] - 2026-01-04
 
 ### Fixed
 - Correction du bouton global **« Copier tous les liens »** (Completed) :
@@ -21,8 +21,8 @@ The project does not strictly follow SemVer (version is informational).
 
 ### Changed
 - La version applicative est désormais **figée au build Docker** :
-  - injection automatique de la version dans `link2nas/_version.py`
-  - suppression de toute dépendance à `APP_VERSION` dans le `.env`
+  - Version applicative figée dans l’image Docker (injectée au build), le `.env` ne peut plus l’écraser.
+  - CI: `latest` suit la dernière release (tag `vX.Y.Z`) et embarque la bonne `APP_VERSION`.
 - `/api/capabilities` reflète toujours la version réelle de l’image en cours d’exécution.
 
 ### Docker
