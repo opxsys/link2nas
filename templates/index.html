@@ -1679,7 +1679,17 @@ https://1fichier.com/?abc123def456"
 
           const torrents = await res.json();
           if (!Array.isArray(torrents)) return;
+          // --- Keep global "copy all completed" button in sync with refreshed list
+          const globalBtn = document.querySelector('.js-copy-all-completed');
+          if (globalBtn) {
+            const allLinks = torrents
+              .flatMap((t) => (Array.isArray(t.links) ? t.links : []))
+              .map((f) => (f && typeof f === 'object' ? (f.link || '') : ''))
+              .filter(Boolean);
 
+            // Must be RAW JSON (same format as SSR template)
+            globalBtn.setAttribute('data-all-links', JSON.stringify(allLinks));
+          }
           if (torrents.length === 0) {
             listEl.innerHTML = '';
             syncCountsAndEmptyStates();
@@ -1768,7 +1778,7 @@ https://1fichier.com/?abc123def456"
               <div class="row__actions">
                 ${
                   allUrls.length
-                    ? `<button class="btn js-copy-all" data-all-links='${encodeURIComponent(JSON.stringify(allUrls))}'>
+                    ? `<button class="btn js-copy-all" data-all-links="${escapeHtml(JSON.stringify(allUrls))}">
                          <i class="fas fa-copy"></i> Copier tous les liens
                        </button>`
                     : ''
