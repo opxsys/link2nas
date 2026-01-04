@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 Format: Keep a Changelog  
 The project does not strictly follow SemVer (version is informational).
 
+## [1.3.3] – 2026-01-03
+
+### Fixed
+- Correction du bouton global **“Copier tous les liens”** dans l’UI :
+  - le bouton prenait une structure JSON encodée incorrecte
+  - résultat : “Aucun lien à copier” alors que des liens existaient
+- Alignement **template ↔ JavaScript ↔ webapp**
+  - `data-all-links` désormais transmis comme JSON brut
+  - parsing JS robuste (support listes plates / imbriquées)
+- Comportement cohérent entre :
+  - bouton global “Copier tous les liens”
+  - bouton “Copier tous les liens” par torrent
+  - boutons de copie individuelle
+
+### Technical
+- Simplification du contrat `all_completed_links` entre backend et template
+- Suppression des doubles encodages (`tojson | urlencode`)
+- Aucun impact sur Redis, AllDebrid ou pipeline NAS
+
+### Notes
+- Pas de régression fonctionnelle
+- Release purement **UI / frontend logic**
+
 ## [1.3.2] - 2026-01-02
 ### Added
 - `link2nas/nas_send.py`: pipeline NAS robuste (Redis item -> DSM DownloadStation) :
