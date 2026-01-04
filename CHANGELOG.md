@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 Format: Keep a Changelog  
 The project does not strictly follow SemVer (version is informational).
 
+## [1.3.5] - 2026-01-04
+
+### Added
+- La version applicative est désormais exposée dans :
+  - l’API `/api/status`
+  - la page HTML `/status`
+- Vérification immédiate de la version réellement déployée (image Docker effective).
+
+### Fixed
+- Le bouton global **« Copier tous les liens »** inclut désormais les magnets complétés apparus dynamiquement, sans rechargement de page.
+
+### Docker
+- `APP_VERSION` injectée au build et figée dans l’image.
+- Le tag `latest` pointe toujours vers le dernier tag stable (`vX.Y.Z`).
+- Suppression de toute dépendance à `APP_VERSION` côté `.env`.
+
 ## [1.3.4] - 2026-01-04
 
 ### Fixed

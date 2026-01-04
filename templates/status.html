@@ -73,7 +73,10 @@
   <div class="top">
     <div>
       <h1>Link2NAS — Status</h1>
-      <div class="muted">Dernière génération : {{ now.strftime("%Y-%m-%d %H:%M:%S") }}</div>
+      <div class="muted">
+        Version : <span class="mono">{{ app_version }}</span>
+        — Dernière génération : {{ now.strftime("%Y-%m-%d %H:%M:%S") }}
+      </div>
     </div>
     <div class="pill">
       <span class="dot {{ overall }}"></span>

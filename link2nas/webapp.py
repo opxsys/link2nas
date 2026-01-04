@@ -319,6 +319,7 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
         snap = build_status_snapshot(s, rdb)
         return render_template(
             "status.html",
+            app_version=s.app_version,
             now=snap["now"],
             overall=snap["overall"],
             ad_ping_ok=snap["ad_ping_ok"],
@@ -552,6 +553,7 @@ def create_app(s: Settings, template_folder: str | None = None, static_folder: s
         snap = build_status_snapshot(s, rdb)
         return jsonify(
             {
+                "version": s.app_version,
                 "now": snap["now"].isoformat(),
                 "overall": snap["overall"],
                 "ad_ping_ok": snap["ad_ping_ok"],
