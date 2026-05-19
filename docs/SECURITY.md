@@ -1,0 +1,173 @@
+# Security
+
+Link2NAS is a self-hosted application. The operator is responsible for the security of their deployment: network exposure, access control, secrets management, and system hardening are outside the scope of the application itself.
+
+This document describes the current security model, known trade-offs, and deployment recommendations.
+
+---
+
+## 1. Security model
+
+Link2NAS is designed to be self-hosted, preferably on a **trusted private network** or behind a **reverse proxy with access control**. It is not hardened for direct public internet exposure without additional measures.
+
+Key responsibilities of the operator:
+- Run the application behind HTTPS in production.
+- Restrict access at the network or reverse-proxy level if needed.
+- Protect secrets and the database from unauthorized access.
+
+---
+
+## 2. Authentication
+
+The frontend authenticates requests using a **session token sent as an HTTP header** (`X-Api-Key`). This token is issued at login and stored in the browser.
+
+**Current storage:** `localStorage`
+
+- Cookies with `HttpOnly` + `SameSite` would be more resistant to token theft via XSS, but are not used today.
+- The main risk with `localStorage` is that a **cross-site scripting (XSS)** vulnerability in the frontend could allow a malicious script to read and exfiltrate the token.
+
+**Mitigations in place:**
+- The frontend does not load any third-party scripts.
+- The backend validates the token on every request.
+
+**Recommendation:** Do not install unknown browser extensions or inject untrusted scripts into the page. If you extend the frontend, audit any third-party dependency carefully.
+
+**Future improvement:** Moving to `HttpOnly` + `SameSite=Strict` session cookies would remove token access from JavaScript entirely. This would also require adding CSRF protection (see below).
+
+---
+
+## 3. CSRF
+
+CSRF is **not the primary risk in the current model.** The `X-Api-Key` header is not sent automatically by the browser — unlike cookies — so cross-origin requests cannot be authenticated without explicit JavaScript cooperation.
+
+If authentication is ever migrated to cookies, **CSRF protection must be added at the same time**.
+
+---
+
+## 4. Secrets and encryption
+
+### Application secrets
+
+| Variable | Requirement |
+|---|---|
+| `FLASK_SECRET_KEY` | Required in production. Must be a strong random string (min 20 chars). Not a placeholder. |
+| `V2_SECRET_ENCRYPTION_KEY` | Required in production. Must be a valid **Fernet** key. |
+
+Generate a valid Fernet key:
+```bash
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Starting with placeholders (`CHANGE_ME_*`, `change-me`, etc.) or a key shorter than 20 chars is **rejected at startup** when `DEBUG=false`.
+
+### Key rotation warning
+
+**Never lose or change `V2_SECRET_ENCRYPTION_KEY` without a migration strategy.** Secrets stored in the database (provider credentials, SMTP password, destination credentials) are encrypted with this key. Changing it without re-encrypting the data will make those secrets permanently unreadable.
+
+### What is encrypted
+
+- Provider API credentials (RealDebrid, AllDebrid, etc.)
+- SMTP password
+- Destination credentials
+
+### API keys
+
+User API keys are **hashed** (not stored in plaintext) and displayed only once at creation. A lost API key cannot be recovered — the user must generate a new one.
+
+---
+
+## 5. Environment files
+
+- **`.env`** — private. Contains real secrets. Never commit it.
+- **`.env.sample`** — public. Contains only documented placeholders. Safe to commit.
+
+Do not commit:
+- `.env` or any file containing real secrets
+- Database dumps or SQLite files
+- Log files
+- Local exports or debug output
+
+Run a secret scan before any public publication:
+```bash
+gitleaks detect --source . --verbose
+```
+If `gitleaks` is not available, use the grep patterns from the pre-publication checklist below.
+
+---
+
+## 6. Rate limiting and Redis
+
+Rate limiting is available and enabled by default (`V2_RATE_LIMIT_ENABLED=true`).
+
+| Mode | Behavior |
+|---|---|
+| No Redis | Falls back to in-process memory storage. Suitable for development or single-process deployments. |
+| Redis | Shared state across multiple workers. Recommended in production. |
+
+To require Redis at startup and refuse to start if unavailable:
+```env
+V2_RATE_LIMIT_REDIS_REQUIRED=true
+```
+
+---
+
+## 7. Workers and queues
+
+Link2NAS uses two separate RQ worker processes. Both must be running for full functionality:
+
+```bash
+# Main job queue
+python worker.py
+
+# Local download queue
+python -m backend.services_v2.local_download_worker
+```
+
+If the local-download worker is not running, local download jobs will be enqueued but not processed until the dedicated worker is started.
+
+---
+
+## 8. Deployment recommendations
+
+- **HTTPS:** Required in production. Use a reverse proxy (nginx, Caddy, Traefik) to terminate TLS.
+- **Reverse proxy:** Recommended even on a private network. Adds header control, logging, and rate limiting at the edge.
+- **Admin access:** Restrict the application to trusted users. The admin interface has destructive capabilities (user management, SMTP, system maintenance).
+- **Database backups:** Back up the SQLite file (or PostgreSQL database) regularly. The database contains encrypted secrets — a backup without the matching `V2_SECRET_ENCRYPTION_KEY` is not useful.
+- **Filesystem permissions:** Restrict access to `data/`, `logs/`, and `tmp/`. These directories may contain sensitive information.
+- **Log rotation:** Configure log rotation to avoid unbounded disk growth.
+- **Network isolation:** Do not expose Redis or PostgreSQL to the public internet. Bind them to localhost or a private network interface.
+
+---
+
+## 9. GitHub publication checklist
+
+Before pushing to a public repository:
+
+```bash
+# Scan for secrets in the current working tree
+gitleaks detect --source . --verbose
+
+# Check for untracked or modified files that should not be included
+git status
+
+# Verify no sensitive files are tracked
+git ls-files | grep -iE '\.env$|\.sqlite|\.sqlite3|\.db$|\.log$'
+
+# Verify .env.sample contains only placeholders
+grep -E 'CHANGE_ME|your-|example\.' .env.sample
+```
+
+Confirm:
+- [ ] `.env` is not tracked (`git ls-files .env` returns empty)
+- [ ] No SQLite database, log files, or local exports are tracked
+- [ ] `.env.sample` contains only placeholder values
+- [ ] `DEBUG=false` and real secrets are configured in the deployment environment, not in committed files
+- [ ] `FLASK_SECRET_KEY` and `V2_SECRET_ENCRYPTION_KEY` are not placeholders in production
+
+---
+
+## 10. Reporting security issues
+
+If you discover a security issue, please **open a GitHub issue** describing the problem without including any secrets, tokens, or private data in the report.
+
+If the issue requires confidential disclosure, contact the maintainer directly. A private reporting channel may be added in the future.

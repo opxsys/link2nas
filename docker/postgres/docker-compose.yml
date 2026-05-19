@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: link2nas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: link2nas_v2
+      POSTGRES_USER: link2nas
+      POSTGRES_PASSWORD: link2nas_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../../data/postgres:/var/lib/postgresql/data

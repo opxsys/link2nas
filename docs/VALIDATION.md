@@ -1,0 +1,157 @@
+# Validation checklist
+
+This document provides a checklist of checks to run locally before deploying or publishing Link2NAS.
+
+---
+
+## 1. Static checks
+
+### Python syntax
+```bash
+python3 -m compileall config.py app.py backend -q
+```
+
+No output means no syntax errors.
+
+### JavaScript syntax
+Requires `node` to be installed.
+
+```bash
+find frontend/js -name "*.js" -print0 | xargs -0 -n1 node --check
+```
+
+No output means no parse errors in any JS file.
+
+---
+
+## 2. Secret checks
+
+### Scan for secrets in the working tree
+Requires `gitleaks` to be installed ([github.com/gitleaks/gitleaks](https://github.com/gitleaks/gitleaks)).
+
+```bash
+gitleaks detect --source . --verbose
+```
+
+### Check for untracked or modified files
+```bash
+git status --short
+```
+
+### Check for sensitive files tracked in git
+```bash
+git ls-files | grep -iE '\.env$|\.sqlite|\.sqlite3|\.db$|\.log$'
+```
+
+This should return no output. If it does, remove those files from tracking before publication.
+
+---
+
+## 3. Environment checks
+
+- [ ] `.env` is not tracked: `git ls-files .env` returns empty
+- [ ] `.env.sample` is present and contains only placeholder values
+- [ ] `DEBUG=false` in the production environment
+- [ ] `FLASK_SECRET_KEY` is set, strong, and not a placeholder
+- [ ] `V2_SECRET_ENCRYPTION_KEY` is a valid Fernet key — verify with:
+  ```bash
+  python3 -c "
+  from cryptography.fernet import Fernet
+  import os
+  key = os.environ.get('V2_SECRET_ENCRYPTION_KEY', '')
+  Fernet(key.encode())
+  print('Valid Fernet key')
+  "
+  ```
+- [ ] `PUBLIC_BASE_URL` is set correctly (no trailing slash, reachable from the outside)
+
+---
+
+## 4. Runtime checks
+
+Run through these steps manually on a test instance before production deployment.
+
+### Auth
+- [ ] App starts without errors
+- [ ] Setup page appears on first run
+- [ ] Super Admin account can be created
+- [ ] Login and logout work correctly
+
+### Provider and destination
+- [ ] Add a debrid provider (RealDebrid or AllDebrid) in Settings
+- [ ] Provider test returns valid user info
+- [ ] Add a destination (or confirm links-only works)
+
+### Jobs
+- [ ] Create a job from a magnet link
+- [ ] Refresh the job status
+- [ ] Unrestrict links
+- [ ] Send to destination (or verify links appear in links-only mode)
+- [ ] Restart a failed job
+- [ ] Cancel a job
+- [ ] Delete a job
+
+### Workers
+- [ ] `python worker.py` is running and processes queued jobs
+- [ ] If local downloads are used: `python -m backend.services_v2.local_download_worker` is running
+- [ ] Local download job progresses and completes
+
+### Notifications
+- [ ] Configure a notification channel in Settings
+- [ ] Trigger a test notification from the Admin UI
+
+### Announcements
+- [ ] Create an announcement in Admin > Announcements
+- [ ] Announcement appears in the UI for users
+
+### Prowlarr (if used)
+- [ ] API key with `qbittorrent:write` scope created
+- [ ] Prowlarr test connection passes
+- [ ] Prowlarr sends a test torrent — job appears in Link2NAS
+
+---
+
+## 5. SQLite validation
+
+- [ ] Start the app with default `V2_DATABASE_BACKEND=sqlite`
+- [ ] Create a user, provider, destination, and job
+- [ ] Confirm data persists after restart
+- [ ] Back up the SQLite file and `V2_SECRET_ENCRYPTION_KEY` together
+
+---
+
+## 6. PostgreSQL validation
+
+If using PostgreSQL:
+
+- [ ] Set `V2_DATABASE_BACKEND=postgres` and `V2_POSTGRES_DSN`
+- [ ] Start the app — schema is applied automatically on first run
+- [ ] Run the same smoke tests as SQLite above
+- [ ] Confirm PostgreSQL is not exposed on a public network interface
+
+---
+
+## 7. Worker validation
+
+- [ ] `worker.py` is running and consuming the main queue (`RQ_QUEUE_NAME`)
+- [ ] `local_download_worker` is running and consuming the local-download queue (`RQ_LOCAL_DOWNLOAD_QUEUE_NAME`)
+- [ ] Redis is accessible from both worker processes
+- [ ] Queues drain normally — jobs do not pile up indefinitely
+- [ ] Check queue sizes from Admin > Control Center if available
+
+---
+
+## 8. Pre-publication checklist
+
+Before pushing to a public repository:
+
+- [ ] No `.env` file tracked in git
+- [ ] No SQLite database (`.sqlite3`, `.db`) tracked in git
+- [ ] No log files tracked in git
+- [ ] No local exports or debug output files tracked in git
+- [ ] `README.md` is present and accurate
+- [ ] `docs/SECURITY.md` is present
+- [ ] `.env.sample` contains only placeholder values — no real keys, emails, or IPs
+- [ ] `FLASK_SECRET_KEY` and `V2_SECRET_ENCRYPTION_KEY` in production are not placeholders
+- [ ] `LICENSE` file is present, or documented as to be defined
+- [ ] Secret scan completed (`gitleaks` or equivalent)

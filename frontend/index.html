@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Link2NAS</title>
+    <script>(function(){var t=localStorage.getItem("link2nas_theme")||"auto";if(t==="auto")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"night":"light";document.documentElement.dataset.theme=t;}());</script>
+    <link rel="stylesheet" href="/frontend/css/reset.css" />
+    <link rel="stylesheet" href="/frontend/css/theme.css" />
+    <link rel="stylesheet" href="/frontend/css/layout.css" />
+    <link rel="stylesheet" href="/frontend/css/components.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="app-header-brand">
+          <button
+            id="app-brand-btn"
+            type="button"
+            class="app-brand-btn"
+            aria-label="Go to home page"
+            data-i18n-aria-label="nav.go_home"
+          ><h1>Link2NAS</h1></button>
+          <p class="muted" id="app-subtitle"></p>
+        </div>
+
+        <button
+          id="nav-burger-btn"
+          type="button"
+          class="burger-btn"
+          aria-expanded="false"
+          aria-controls="nav-drawer"
+          aria-label="Open menu"
+          data-i18n-aria-label="nav.open_menu"
+        >
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+          <span class="burger-line"></span>
+        </button>
+      </header>
+
+      <div id="app-message"></div>
+      <div id="announcement-banner" hidden></div>
+      <section id="auth-page" class="page-view"></section>
+      <main id="main-app" class="app-main" hidden>
+        <section id="jobs-page" class="page-view">
+          <section id="create-job-panel" class="card"></section>
+
+          <section class="content-grid">
+            <section class="card jobs-column">
+              <div class="section-header">
+                <h2 id="jobs-title"></h2>
+                <div class="jobs-toolbar">
+                  <label>
+                    <span id="jobs-status-label"></span>
+                    <select id="jobs-status-filter">
+                      <option value="" data-i18n="filters.all"></option>
+                      <option value="created" data-i18n="status.created"></option>
+                      <option value="queued" data-i18n="status.queued"></option>
+                      <option value="source_added" data-i18n="status.source_added"></option>
+                      <option value="waiting_files_selection" data-i18n="status.waiting_files_selection"></option>
+                      <option value="downloading" data-i18n="status.downloading"></option>
+                      <option value="downloaded" data-i18n="status.downloaded"></option>
+                      <option value="ready" data-i18n="status.ready"></option>
+                      <option value="partially_ready" data-i18n="status.partially_ready"></option>
+                      <option value="completed" data-i18n="status.completed"></option>
+                      <option value="cancelled" data-i18n="status.cancelled"></option>
+                      <option value="failed" data-i18n="status.failed"></option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div id="jobs-list"></div>
+            </section>
+
+            <section class="card details-column">
+              <div class="section-header">
+                <h2 id="job-details-title"></h2>
+              </div>
+              <div id="job-details"></div>
+            </section>
+          </section>
+        </section>
+
+        <section id="prowlarr-page" class="page-view" hidden>
+          <section id="prowlarr-panel" class="card"></section>
+        </section>
+
+        <section id="control-center-page" class="page-view" hidden>
+          <section id="system-panel" class="card"></section>
+        </section>
+
+        <section id="settings-page" class="page-view" hidden>
+          <section id="settings-panel" class="card"></section>
+        </section>
+
+        <section id="announcements-page" class="page-view" hidden>
+          <section id="announcements-panel" class="card"></section>
+        </section>
+
+        <section id="admin-page" class="page-view" hidden>
+          <section id="users-panel" class="card"></section>
+        </section>
+      </main>
+    </div>
+
+    <!-- Nav drawer overlay -->
+    <div id="nav-drawer-overlay" class="nav-drawer-overlay"></div>
+
+    <!-- Nav drawer -->
+    <div
+      id="nav-drawer"
+      class="nav-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Navigation"
+    >
+      <div class="nav-drawer-inner">
+        <div class="nav-drawer-header">
+          <span class="nav-drawer-title" data-i18n="nav.navigation">Navigation</span>
+          <button
+            type="button"
+            id="nav-drawer-close"
+            class="btn nav-drawer-close-btn"
+            aria-label="Close menu"
+            data-i18n-aria-label="nav.close_menu"
+          >✕</button>
+        </div>
+
+        <nav id="main-nav" class="nav-drawer-nav" hidden>
+          <button type="button" class="btn nav-drawer-link" data-page="jobs" data-i18n="nav.jobs">Jobs</button>
+          <button type="button" class="btn nav-drawer-link" data-page="prowlarr" hidden>Prowlarr</button>
+          <button type="button" class="btn nav-drawer-link nav-announcements-btn" data-page="announcements">
+            <span data-i18n="announcements.title">Annonces</span>
+            <span id="announcements-badge" class="nav-badge" hidden></span>
+          </button>
+          <button type="button" class="btn nav-drawer-link" data-page="settings" data-i18n="nav.settings">Settings</button>
+          <button type="button" class="btn nav-drawer-link" data-page="control-center" data-i18n="nav.control_center">Control Center</button>
+          <button type="button" class="btn nav-drawer-link" data-page="admin" data-i18n="nav.admin">Admin</button>
+        </nav>
+
+        <div class="nav-drawer-separator"></div>
+
+        <div id="language-switch" class="nav-drawer-section">
+          <span class="nav-drawer-section-label" data-i18n="nav.language">Langue</span>
+          <div class="language-switch">
+            <button type="button" class="btn" data-lang="fr">FR</button>
+            <button type="button" class="btn" data-lang="en">EN</button>
+          </div>
+        </div>
+
+        <button id="logout-btn" type="button" class="btn nav-drawer-logout" hidden>
+          <span data-i18n="nav.logout">Déconnexion</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="app-modal" class="modal-backdrop" hidden>
+      <div class="modal-card">
+        <h3 id="app-modal-title"></h3>
+        <div id="app-modal-body"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="app-modal-cancel">Annuler</button>
+          <button type="button" class="btn btn-primary" id="app-modal-confirm">Valider</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/frontend/js/app.js"></script>
+  </body>
+</html>

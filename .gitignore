@@ -1,0 +1,28 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime/generated data
+data/
+!data/.gitkeep
+
+downloads/
+tmp/
+logs/
+
+.DS_Store
+
+# Local secrets / environment
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Local/private scripts
+scripts/local/
+scripts/private/
+scripts/**/*.local.sh
+scripts/**/*.secret.sh
+
+!.env.sample
+export_frontend_backend.txt
