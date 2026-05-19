@@ -180,6 +180,29 @@ def _get_password_reset_ttl_hours() -> int:
         return 2
     return service.get_password_reset_ttl_hours()
 
+
+def _get_user_or_404(user_id):
+    repo = current_app.config["USER_REPO_V2"]
+    user = repo.get_by_id(user_id)
+    if not user:
+        return None, None, (jsonify({"error": "User not found"}), 404)
+    return user, repo, None
+
+
+def _resolve_app_name() -> str:
+    app_svc = _app_settings_service()
+    return app_svc.get_effective_app_name(
+        env_fallback=getattr(current_app.config.get("SETTINGS"), "APP_NAME", "")
+    ) if app_svc else "Link2NAS"
+
+
+def _check_smtp_available():
+    smtp_svc = current_app.config.get("SMTP_SERVICE_V2")
+    if not smtp_svc or not smtp_svc.is_email_sending_available():
+        return jsonify({"error": "Email sending is not configured."}), 503
+    return None
+
+
 @admin_users_bp.get("")
 def list_users():
     ctx, err = require_admin_user_management()
@@ -281,11 +304,9 @@ def update_user(user_id):
     if err:
         return err
 
-    repo = current_app.config["USER_REPO_V2"]
-    user = repo.get_by_id(user_id)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    user, repo, err = _get_user_or_404(user_id)
+    if err:
+        return err
 
     data = request.get_json(silent=True) or {}
 
@@ -356,11 +377,9 @@ def disable_user(user_id):
     if err:
         return err
 
-    repo = current_app.config["USER_REPO_V2"]
-    user = repo.get_by_id(user_id)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    user, repo, err = _get_user_or_404(user_id)
+    if err:
+        return err
 
     if user.id == ctx.user_id:
         return jsonify({"error": "You cannot disable yourself"}), 400
@@ -378,11 +397,9 @@ def enable_user(user_id):
     if err:
         return err
 
-    repo = current_app.config["USER_REPO_V2"]
-    user = repo.get_by_id(user_id)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    user, repo, err = _get_user_or_404(user_id)
+    if err:
+        return err
 
     user.is_active = True
     user.updated_at = now()
@@ -397,11 +414,9 @@ def verify_user_email(user_id):
     if err:
         return err
 
-    repo = current_app.config["USER_REPO_V2"]
-    user = repo.get_by_id(user_id)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    user, repo, err = _get_user_or_404(user_id)
+    if err:
+        return err
 
     user.email_verified_at = now()
     user.email_verification_token = None
@@ -425,11 +440,9 @@ def reset_user_password(user_id):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    repo = current_app.config["USER_REPO_V2"]
-    user = repo.get_by_id(user_id)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    user, repo, err = _get_user_or_404(user_id)
+    if err:
+        return err
 
     user.password_hash = generate_password_hash(password)
     user.force_password_change = True
@@ -508,9 +521,9 @@ def send_user_invitation_email(user_id):
     if not user.email:
         return jsonify({"error": "User has no email"}), 400
 
-    smtp_svc = current_app.config.get("SMTP_SERVICE_V2")
-    if not smtp_svc or not smtp_svc.is_email_sending_available():
-        return jsonify({"error": "Email sending is not configured."}), 503
+    err = _check_smtp_available()
+    if err:
+        return err
 
     token, raw_token = token_service.create_token(
         user_id=user.id,
@@ -521,10 +534,7 @@ def send_user_invitation_email(user_id):
 
     invitation_url = token_service.build_invitation_url(raw_token)
 
-    app_svc = _app_settings_service()
-    app_name = app_svc.get_effective_app_name(
-        env_fallback=getattr(current_app.config.get("SETTINGS"), "APP_NAME", "")
-    ) if app_svc else "Link2NAS"
+    app_name = _resolve_app_name()
 
     svc = _email_template_svc()
     if svc:
@@ -610,9 +620,9 @@ def send_user_password_reset_email(user_id):
     if not user.email:
         return jsonify({"error": "User has no email"}), 400
 
-    smtp_svc = current_app.config.get("SMTP_SERVICE_V2")
-    if not smtp_svc or not smtp_svc.is_email_sending_available():
-        return jsonify({"error": "Email sending is not configured."}), 503
+    err = _check_smtp_available()
+    if err:
+        return err
 
     token, raw_token = token_service.create_token(
         user_id=user.id,
@@ -623,10 +633,7 @@ def send_user_password_reset_email(user_id):
 
     reset_url = token_service.build_password_reset_url(raw_token)
 
-    app_svc = _app_settings_service()
-    app_name = app_svc.get_effective_app_name(
-        env_fallback=getattr(current_app.config.get("SETTINGS"), "APP_NAME", "")
-    ) if app_svc else "Link2NAS"
+    app_name = _resolve_app_name()
 
     svc = _email_template_svc()
     if svc:
