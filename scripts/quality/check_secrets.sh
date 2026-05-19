@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 if command -v gitleaks >/dev/null 2>&1; then
   echo "[check_secrets] Running gitleaks..."
-  gitleaks detect --source . --verbose
+  gitleaks detect --source . --config .gitleaks.toml --verbose
 else
   echo "[check_secrets] WARNING: gitleaks not installed; skipping gitleaks scan"
 fi

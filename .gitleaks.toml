@@ -1,0 +1,5 @@
+[allowlist]
+description = "Allow documented Link2NAS configuration variable names"
+regexes = [
+  '''self\.V2_SECRET_ENCRYPTION_KEY''',
+]
