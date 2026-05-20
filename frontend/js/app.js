@@ -1,4 +1,5 @@
 import { applyTheme, applyCurrentUserTheme } from "./core/theme.js";
+import { getToken, clearToken, startInactivityWatch } from "./core/session.js";
 import { state } from "./state.js";
 import { renderJobDetails } from "./render/job-details.js";
 import { loadJobs } from "./actions/jobs.js";
@@ -73,36 +74,8 @@ import {
   rerenderAppForLanguageChange,
 } from "./controllers/navigation-controller.js";
 
-let inactivityTimer;
 let publicEventsBound = false;
 let globalEventsBound = false;
-const DEFAULT_SESSION_INACTIVITY_MINUTES = 30;
-
-
-function getSessionInactivityMinutes() {
-  const raw = Number(state.currentUser?.session_inactivity_minutes);
-
-  if (Number.isFinite(raw) && raw >= 5) {
-    return raw;
-  }
-
-  return DEFAULT_SESSION_INACTIVITY_MINUTES;
-}
-
-function resetInactivityTimer() {
-  clearTimeout(inactivityTimer);
-
-  const minutes = getSessionInactivityMinutes();
-
-  inactivityTimer = setTimeout(() => {
-    localStorage.removeItem("link2nas_token");
-    location.reload();
-  }, minutes * 60 * 1000);
-}
-
-["click", "mousemove", "keydown"].forEach((eventName) => {
-  document.addEventListener(eventName, resetInactivityTimer);
-});
 
 function bindGlobalEvents() {
   if (globalEventsBound) return;
@@ -363,7 +336,7 @@ function bindGlobalEvents() {
 
     state.currentUser = null;
     updateAuthVisibility();
-    localStorage.removeItem("link2nas_token");
+    clearToken();
     location.reload();
   });
 }
@@ -414,7 +387,7 @@ async function bootstrap() {
 
   renderStaticTexts();
   bindPublicEvents();
-  resetInactivityTimer();
+  startInactivityWatch();
   updateAuthVisibility();
   hideAdminIfNeeded();
 
@@ -423,7 +396,7 @@ async function bootstrap() {
     return;
   }
 
-  const existingToken = localStorage.getItem("link2nas_token");
+  const existingToken = getToken();
 
   /*
    * Important:
@@ -437,7 +410,7 @@ async function bootstrap() {
     applyCurrentUserTheme(state.currentUser);
 
     if (state.currentUser?.single_user_mode) {
-      localStorage.removeItem("link2nas_token");
+      clearToken();
       state.activeAdminTab = state.activeAdminTab === "users"
         ? "maintenance"
         : state.activeAdminTab;
@@ -463,7 +436,7 @@ async function bootstrap() {
     return;
   } catch {
     if (existingToken) {
-      localStorage.removeItem("link2nas_token");
+      clearToken();
     }
   }
 
