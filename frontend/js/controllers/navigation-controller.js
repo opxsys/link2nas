@@ -8,31 +8,19 @@ import { loadJobs, selectJob } from "../actions/jobs.js";
 import { showMainApp } from "../render/auth.js";
 import { loadSettings } from "./settings-controller.js";
 import { loadAdmin, initEmailTemplatesPanel } from "./admin-controller.js";
-
-let _bindGlobalEvents;
-let _bindBannerEvents;
-let _startPolling;
-let _renderAnnouncementBanner;
-let _pickBannerAnnouncement;
-let _updateAnnouncementBadge;
-let _loadAnnouncements;
-
-export function initNavigation({
-  bindGlobalEvents,
-  bindBannerEvents,
-  startPolling,
+import { startPolling } from "./jobs-controller.js";
+import {
+  loadAnnouncements,
   renderAnnouncementBanner,
   pickBannerAnnouncement,
   updateAnnouncementBadge,
-  loadAnnouncements,
-}) {
+  bindBannerEvents,
+} from "./announcements-controller.js";
+
+let _bindGlobalEvents;
+
+export function initNavigation({ bindGlobalEvents }) {
   _bindGlobalEvents = bindGlobalEvents;
-  _bindBannerEvents = bindBannerEvents;
-  _startPolling = startPolling;
-  _renderAnnouncementBanner = renderAnnouncementBanner;
-  _pickBannerAnnouncement = pickBannerAnnouncement;
-  _updateAnnouncementBadge = updateAnnouncementBadge;
-  _loadAnnouncements = loadAnnouncements;
 }
 
 export function hideAdminIfNeeded() {
@@ -210,8 +198,8 @@ export function renderStaticTexts() {
 export async function rerenderAppForLanguageChange() {
   renderStaticTexts();
   renderPageVisibility();
-  _renderAnnouncementBanner(_pickBannerAnnouncement(state.announcements));
-  _updateAnnouncementBadge(state.announcements);
+  renderAnnouncementBanner(pickBannerAnnouncement(state.announcements));
+  updateAnnouncementBadge(state.announcements);
   renderCreateJobForm();
   renderJobDetails(state.selectedJob);
   await loadSystemInfo();
@@ -233,7 +221,7 @@ export async function rerenderAppForLanguageChange() {
   }
 
   if (state.activePage === "announcements") {
-    await _loadAnnouncements();
+    await loadAnnouncements();
   }
 
   if (state.activePage === "prowlarr") {
@@ -246,7 +234,7 @@ export async function enterMainApplication({ useHomePage = false } = {}) {
   showMainApp();
   renderJobDetails(null);
   _bindGlobalEvents();
-  _bindBannerEvents();
+  bindBannerEvents();
 
   await loadSettings();
 
@@ -267,5 +255,5 @@ export async function enterMainApplication({ useHomePage = false } = {}) {
     renderProwlarrPanel();
   }
 
-  _startPolling();
+  startPolling();
 }
