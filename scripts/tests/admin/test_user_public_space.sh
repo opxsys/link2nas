@@ -2,9 +2,13 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:5000}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@link2nas.local}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-${ADMIN_PASS:-change-me-strong-password}}"
 USER_EMAIL="${USER_EMAIL:-}"
 USER_PASSWORD="${USER_PASSWORD:-}"
 USERDATA_DIR="${USERDATA_DIR:-./data/userdata}"
+ADMIN_TOKEN=""
+CREATED_USER_ID=""
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -102,8 +106,35 @@ elif [[ -n "$USER_EMAIL" && -n "$USER_PASSWORD" ]]; then
   fi
   echo "[OK] Login successful"
 else
-  echo "[ERROR] Set USER_API_KEY or (USER_EMAIL + USER_PASSWORD) to authenticate"
-  exit 1
+  echo "[INFO] No USER_API_KEY or USER_EMAIL set; creating a temporary user via admin login"
+  _ADMIN_LOGIN="$(api POST "/api/v2/auth/login" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")"
+  ADMIN_TOKEN="$(echo "$_ADMIN_LOGIN" | jq -r '.token // empty')"
+  if [[ -z "$ADMIN_TOKEN" || "$ADMIN_TOKEN" == "null" ]]; then
+    echo "[ERROR] Admin login failed"
+    echo "        response: $_ADMIN_LOGIN"
+    exit 1
+  fi
+  _TEMP_EMAIL="pub-space-test-$(date +%s)-$RANDOM@test.local"
+  _TEMP_PASS="TestPassword123!"
+  _CREATE="$(api POST "/api/v2/admin/users" \
+    "{\"email\":\"$_TEMP_EMAIL\",\"password\":\"$_TEMP_PASS\",\"creation_mode\":\"password\",\"can_use_local_space\":true,\"email_verified\":true}" \
+    "$ADMIN_TOKEN")"
+  CREATED_USER_ID="$(echo "$_CREATE" | jq -r '.id // empty')"
+  if [[ -z "$CREATED_USER_ID" || "$CREATED_USER_ID" == "null" ]]; then
+    echo "[ERROR] Could not create temporary user"
+    echo "        response: $_CREATE"
+    exit 1
+  fi
+  echo "[INFO] Temporary user created: $CREATED_USER_ID ($_TEMP_EMAIL)"
+  USER_EMAIL="$_TEMP_EMAIL"
+  USER_PASSWORD="$_TEMP_PASS"
+  LOGIN_RESP="$(api POST "/api/v2/auth/login" "{\"email\":\"$USER_EMAIL\",\"password\":\"$USER_PASSWORD\"}")"
+  TOKEN="$(echo "$LOGIN_RESP" | jq -r '.token // empty')"
+  if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
+    echo "[ERROR] Login for temporary user failed"
+    exit 1
+  fi
+  echo "[OK] Temporary user login successful"
 fi
 
 # --- Get user ID ---
@@ -393,6 +424,14 @@ if [[ "$FC" == "0" ]]; then
 else
   echo "[KO] Step 15: file_count=$FC, expected 0"
   FAILS=$((FAILS+1))
+fi
+
+# --- Cleanup: delete temporary user if created ---
+if [[ -n "$CREATED_USER_ID" ]]; then
+  echo ""
+  echo "--- Cleanup: delete temporary user"
+  rm -rf "${USERDATA_DIR}/${CREATED_USER_ID}" 2>/dev/null || true
+  api DELETE "/api/v2/admin/users/$CREATED_USER_ID" "" "$ADMIN_TOKEN" > /dev/null && echo "[INFO] Temporary user deleted" || true
 fi
 
 # --- Summary ---

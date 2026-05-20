@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# NOTE: This script requires PostgreSQL access via `docker exec` + psql.
+# It is NOT part of the SQLite runner (test_v3_sqlite.sh).
+# Run it manually against a PostgreSQL-backed instance with a known container name.
 
 BASE_URL="http://127.0.0.1:5000/api/v2"
 
-ADMIN_EMAIL="admin@link2nas.local"
-ADMIN_PASS="change-me-strong-password"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@link2nas.local}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-${ADMIN_PASS:-change-me-strong-password}}"
 
 USER_EMAIL="expire-token-test@local"
 USER_PASS="${USER_PASS:-TestPassword123!}"
@@ -19,7 +22,7 @@ PAST_EXPIRATION="2000-01-01T00:00:00+00:00"
 echo "=== LOGIN ADMIN ==="
 ADMIN_TOKEN=$(curl -s -X POST "$BASE_URL/auth/login" \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASS\"}" | jq -r '.token')
+  -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" | jq -r '.token')
 
 if [[ -z "$ADMIN_TOKEN" || "$ADMIN_TOKEN" == "null" ]]; then
   echo "[FAIL] Login admin impossible"

@@ -81,8 +81,17 @@ echo "=== test_user_local_space_permission.sh ==="
 echo ""
 
 if [[ -z "$ADMIN_API_KEY" ]]; then
-  echo "[ERROR] Set ADMIN_API_KEY to a super_admin API key"
-  exit 1
+  ADMIN_EMAIL="${ADMIN_EMAIL:-admin@link2nas.local}"
+  ADMIN_PASSWORD="${ADMIN_PASSWORD:-${ADMIN_PASS:-change-me-strong-password}}"
+  echo "[INFO] ADMIN_API_KEY not set, logging in as $ADMIN_EMAIL"
+  _LOGIN="$(api POST "/api/v2/auth/login" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")"
+  ADMIN_API_KEY="$(echo "$_LOGIN" | jq -r '.token // empty')"
+  if [[ -z "$ADMIN_API_KEY" || "$ADMIN_API_KEY" == "null" ]]; then
+    echo "[ERROR] Admin login failed"
+    echo "        response: $_LOGIN"
+    exit 1
+  fi
+  echo "[OK] Admin login successful"
 fi
 
 # --- Step 0: Create test user with can_use_local_space=false ---

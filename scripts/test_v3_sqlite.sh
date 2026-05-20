@@ -31,7 +31,6 @@ run_script "scripts/test_v3_smoke.sh"
 
 # --- Auth ---
 run_script "scripts/tests/auth/test_app_settings_auth_policy.sh"
-run_script "scripts/tests/auth/test_account_expired_existing_token.sh"
 run_script "scripts/tests/auth/test_email_verification.sh"
 
 # --- Admin ---
