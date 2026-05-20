@@ -10,7 +10,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-AdminPassword123!}"
 
 TOKEN=""
 TEST_USER_ID=""
-_TMPBODY=""
+_TMPBODY="$(mktemp)"
 TEST_EMAIL="check-admin-users-$(date +%s)@test.local"
 
 # -- helpers --
@@ -38,8 +38,7 @@ api_status() {
 # Writes body to $_TMPBODY; returns HTTP status code on stdout.
 # Safe with multi-line or pretty-printed JSON.
 api_full() {
-  [[ -n "$_TMPBODY" ]] && rm -f "$_TMPBODY" || true
-  _TMPBODY="$(mktemp)"
+  : > "$_TMPBODY"
   local method="$1" path="$2" data="${3:-}" token="${4:-}"
   local args=(-sS -X "$method" "$BASE_URL$path" -o "$_TMPBODY" -w "%{http_code}")
   [[ -n "$token" ]] && args+=(-H "X-Api-Key: $token")
