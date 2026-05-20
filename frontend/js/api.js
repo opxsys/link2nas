@@ -1,4 +1,5 @@
 import { API_BASE } from "./config.js";
+import { getToken } from "./core/session.js";
 
 export class ApiError extends Error {
   constructor(message, status = 0, data = null) {
@@ -11,7 +12,7 @@ export class ApiError extends Error {
 
 async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData;
-  const token = localStorage.getItem("link2nas_token");
+  const token = getToken();
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
