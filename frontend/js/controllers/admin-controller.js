@@ -1,3 +1,4 @@
+import { getToken } from "../core/session.js";
 import { state } from "../state.js";
 import { t } from "../i18n/index.js";
 import {
@@ -754,7 +755,7 @@ export async function handleAdminClick(button) {
   }
 
   if (action === "refresh-admin-maintenance") {
-    const token = localStorage.getItem("link2nas_token");
+    const token = getToken();
 
     if (!token && !state.currentUser?.single_user_mode) {
       showAppMessage(t("messages.session_expired"), "error");

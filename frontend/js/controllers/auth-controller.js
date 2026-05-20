@@ -1,3 +1,4 @@
+import { setToken } from "../core/session.js";
 import { state } from "../state.js";
 import { showAppMessage } from "../utils.js";
 import { t } from "../i18n/index.js";
@@ -116,7 +117,7 @@ export function bindAuthEvents() {
         password: form.password.value,
       });
 
-      localStorage.setItem("link2nas_token", result.token);
+      setToken(result.token);
       state.currentUser = result.user;
       _applyCurrentUserTheme(result.user);
       _updateAuthVisibility();
