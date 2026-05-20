@@ -994,4 +994,22 @@ export default {
   "admin.email_templates.key_announcement": "Annonce applicative",
   "admin.email_templates.key_notification_test": "Test canal notification",
   "admin.email_templates.key_notification_event": "Notification job",
+
+  "settings.api_keys.empty": "Aucune clé API créée.",
+  "settings.api_keys.confirm_revoke_title": "Révoquer la clé API",
+  "settings.api_keys.confirm_revoke_message": "Révoquer cette clé API ? Les intégrations qui l'utilisent ne fonctionneront plus.",
+  "settings.api_keys.confirm_delete_title": "Supprimer la clé API",
+  "settings.api_keys.confirm_delete_message": "Supprimer définitivement cette clé API ?",
+  "settings.providers.empty": "Aucun provider configuré.",
+  "settings.destinations.empty": "Aucune destination configurée.",
+  "settings.notifications.confirm_delete_channel_title": "Supprimer le canal",
+  "settings.notifications.confirm_delete_channel_message": "Supprimer ce canal de notification ? Les règles liées risquent de ne plus fonctionner.",
+  "settings.notifications.confirm_delete_rule_title": "Supprimer la règle",
+  "settings.notifications.confirm_delete_rule_message": "Supprimer cette règle de notification ?",
+
+  "auth.error.invalid_credentials": "Identifiants invalides.",
+  "auth.error.magic_login_send_failed": "Erreur lors de l'envoi du lien de connexion.",
+  "auth.error.token_missing": "Lien invalide ou manquant.",
+
+  "modal.expires_at": "Expire le {date}",
 };

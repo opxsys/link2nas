@@ -852,7 +852,7 @@ function renderTimeoutsSettingsPanel(timeoutSettings = null) {
     <section class="admin-section-card admin-tab-panel" data-admin-panel="timeouts" hidden>
       <div class="admin-section-title">
         <div>
-          <h3>Timeouts</h3>
+          <h3>${t("admin.tab.timeouts")}</h3>
           <p class="muted">${t("admin.timeouts.subtitle")}</p>
         </div>
         <span class="badge badge-ready">${t("admin.timeouts.configured")}</span>
@@ -936,7 +936,7 @@ function renderMaintenanceStatusPanel(maintenanceStatus = null) {
     <section class="admin-section-card admin-tab-panel" data-admin-panel="maintenance" hidden>
       <div class="admin-section-title">
         <div>
-          <h3>Maintenance</h3>
+          <h3>${t("admin.tab.maintenance")}</h3>
           <p class="muted">${t("admin.maintenance.subtitle")}</p>
         </div>
 
@@ -1020,7 +1020,7 @@ function renderRuntimeSettingsPanel(runtimeSettings = null) {
     <section class="admin-section-card admin-tab-panel" data-admin-panel="runtime" hidden>
       <div class="admin-section-title">
         <div>
-          <h3>Runtime</h3>
+          <h3>${t("admin.tab.runtime")}</h3>
           <p class="muted">${t("admin.runtime.subtitle")}</p>
         </div>
 
@@ -1616,7 +1616,7 @@ export function renderUsersPanel(
 
         ${
           singleUserMode
-            ? `<span class="badge badge-warning">Single-user mode</span>`
+            ? `<span class="badge badge-warning">${t("settings.account.single_user_title")}</span>`
             : ""
         }
       </div>

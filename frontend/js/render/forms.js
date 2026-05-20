@@ -101,7 +101,7 @@ function renderProviderSelect(providers) {
             ${provider.id === defaultProviderId ? "selected" : ""}
           >
             ${escapeHtml(formatProviderProfile(provider))}
-            ${provider.is_default ? " — défaut" : ""}
+            ${provider.is_default ? ` — ${t("settings.providers.label_default")}` : ""}
           </option>
         `).join("")}
       </select>
@@ -135,7 +135,7 @@ function renderDestinationSelect(destinations) {
                       ${destination.id === defaultDestinationId ? "selected" : ""}
                     >
                       ${escapeHtml(formatDestinationProfile(destination))}
-                      ${destination.is_default ? " — défaut" : ""}
+                      ${destination.is_default ? ` — ${t("settings.providers.label_default")}` : ""}
                     </option>
                   `).join("")}
                 </select>

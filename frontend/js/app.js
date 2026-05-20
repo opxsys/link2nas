@@ -222,8 +222,8 @@ function showLinkModal({
   message = "",
   link = "",
   expiresAt = null,
-  copyLabel = "Copier le lien",
-  closeLabel = "Fermer",
+  copyLabel = t("common.copy"),
+  closeLabel = t("common.close"),
 } = {}) {
   return new Promise((resolve) => {
     const absoluteLink = toAbsoluteAppUrl(link);
@@ -245,7 +245,7 @@ function showLinkModal({
       ${message ? `<p class="muted">${escapeForModalHtml(message)}</p>` : ""}
       ${
         expiresAt
-          ? `<p class="muted">Expire le : ${escapeForModalHtml(formatDateForModal(expiresAt))}</p>`
+          ? `<p class="muted">${escapeForModalHtml(t("modal.expires_at", { date: formatDateForModal(expiresAt) }))}</p>`
           : ""
       }
       <div class="code-block" style="margin-top:12px;">${escapeForModalHtml(absoluteLink)}</div>
@@ -371,8 +371,8 @@ function showSecretModal({
   title = t("modal.secret_title"),
   message = "",
   secret = "",
-  copyLabel = "Copier",
-  closeLabel = "Fermer",
+  copyLabel = t("common.copy"),
+  closeLabel = t("common.close"),
 } = {}) {
   return new Promise((resolve) => {
     const modal = document.getElementById("app-modal");
@@ -1474,7 +1474,7 @@ async function handleSettingsSubmit(form) {
       },
     });
 
-    showAppMessage(result.message || "Gotify OK", "success");
+    showAppMessage(result.message || t("messages.settings_channel_test_ok"), "success");
     return;
   }
 
@@ -1487,7 +1487,7 @@ async function handleSettingsSubmit(form) {
       },
     });
 
-    showAppMessage(result.message || "Webhook OK", "success");
+    showAppMessage(result.message || t("messages.settings_channel_test_ok"), "success");
     return;
   }
 
@@ -1724,7 +1724,7 @@ async function handleSettingsClick(button) {
 
   if (action === "test-destination-settings") {
     const result = await testDestinationFromSettings(button.dataset.destinationId);
-    showAppMessage(result.message || "Destination OK", "success");
+    showAppMessage(result.message || t("messages.settings_destination_tested"), "success");
     return;
   }
 
@@ -1848,10 +1848,10 @@ async function handleSettingsClick(button) {
     if (!configId) return;
 
     const confirmed = await showConfirmModal({
-      title: "Supprimer le canal",
-      message: "Supprimer ce canal de notification ? Les règles liées risquent de ne plus fonctionner.",
-      confirmLabel: "Supprimer",
-      cancelLabel: "Annuler",
+      title: t("settings.notifications.confirm_delete_channel_title"),
+      message: t("settings.notifications.confirm_delete_channel_message"),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
 
@@ -1886,10 +1886,10 @@ async function handleSettingsClick(button) {
     if (!ruleId) return;
 
     const confirmed = await showConfirmModal({
-      title: "Supprimer la règle",
-      message: "Supprimer cette règle de notification ?",
-      confirmLabel: "Supprimer",
-      cancelLabel: "Annuler",
+      title: t("settings.notifications.confirm_delete_rule_title"),
+      message: t("settings.notifications.confirm_delete_rule_message"),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
 
@@ -1930,10 +1930,10 @@ async function handleSettingsClick(button) {
     if (!keyId) return;
 
     const confirmed = await showConfirmModal({
-      title: "Révoquer la clé API",
-      message: "Révoquer cette clé API ? Les intégrations qui l’utilisent ne fonctionneront plus.",
-      confirmLabel: "Révoquer",
-      cancelLabel: "Annuler",
+      title: t("settings.api_keys.confirm_revoke_title"),
+      message: t("settings.api_keys.confirm_revoke_message"),
+      confirmLabel: t("settings.api_keys.revoke"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
 
@@ -1955,10 +1955,10 @@ async function handleSettingsClick(button) {
     if (!keyId) return;
 
     const confirmed = await showConfirmModal({
-      title: "Supprimer la clé API",
-      message: "Supprimer définitivement cette clé API ?",
-      confirmLabel: "Supprimer",
-      cancelLabel: "Annuler",
+      title: t("settings.api_keys.confirm_delete_title"),
+      message: t("settings.api_keys.confirm_delete_message"),
+      confirmLabel: t("common.delete"),
+      cancelLabel: t("common.cancel"),
       danger: true,
     });
 
@@ -2595,7 +2595,7 @@ async function handleAdminClick(button) {
       switchAdminTab("runtime");
       showAdminFeedback(
         "runtime",
-        result.last_error ? html(result.last_error) : t("messages.admin_dispatcher_refreshed"),
+        result.last_error ? result.last_error : t("messages.admin_dispatcher_refreshed"),
         result.last_error ? "info" : "success"
       );
     } catch (error) {
@@ -3355,7 +3355,7 @@ function bindGlobalEvents() {
     try {
       await handleSettingsSubmit(event.target);
     } catch (error) {
-      showAppMessage(error.message || "Erreur settings", "error");
+      showAppMessage(error.message || t("messages.settings_action_error"), "error");
     }
   });
 
@@ -3389,9 +3389,9 @@ function bindGlobalEvents() {
           config: {},
         });
 
-        showAppMessage(result.message || "Email OK", "success");
+        showAppMessage(result.message || t("messages.settings_channel_test_ok"), "success");
       } catch (error) {
-        showAppMessage(error.message || "Email KO", "error");
+        showAppMessage(error.message || t("messages.settings_action_error"), "error");
       }
       return;
     }
@@ -3402,7 +3402,7 @@ function bindGlobalEvents() {
     try {
       await handleSettingsClick(button);
     } catch (error) {
-      showAppMessage(error.message || "Erreur settings", "error");
+      showAppMessage(error.message || t("messages.settings_action_error"), "error");
     }
   });
 
@@ -3429,7 +3429,7 @@ function bindGlobalEvents() {
     try {
       await handleAdminSubmit(event.target);
     } catch (error) {
-      showAppMessage(error.message || "Erreur admin", "error");
+      showAppMessage(error.message || t("messages.admin_action_error"), "error");
     }
   });
 
@@ -3453,7 +3453,7 @@ function bindGlobalEvents() {
     try {
       await handleAdminClick(button);
     } catch (error) {
-      showAppMessage(error.message || "Erreur admin", "error");
+      showAppMessage(error.message || t("messages.admin_action_error"), "error");
     }
   });
 
@@ -3542,7 +3542,7 @@ function bindAuthEvents() {
       renderLoginForm(state.appInfo?.email_sending_available ?? true);
       bindAuthEvents();
     } catch (error) {
-      showAppMessage(error.message || "Erreur setup", "error");
+      showAppMessage(error.message || t("messages.settings_action_error"), "error");
     }
   });
 
@@ -3573,7 +3573,7 @@ function bindAuthEvents() {
 
       await enterMainApplication({ useHomePage: true });
     } catch (error) {
-      showAppMessage(error.message || "Identifiants invalides", "error");
+      showAppMessage(error.message || t("auth.error.invalid_credentials"), "error");
     }
   });
 
@@ -3602,7 +3602,7 @@ function bindAuthEvents() {
       renderLoginForm(state.appInfo?.email_sending_available ?? true);
       bindAuthEvents();
     } catch (error) {
-      showAppMessage(error.message || "Erreur envoi lien de connexion", "error");
+      showAppMessage(error.message || t("auth.error.magic_login_send_failed"), "error");
     }
   });
 
@@ -3621,7 +3621,7 @@ function bindAuthEvents() {
       renderLoginForm(state.appInfo?.email_sending_available ?? true);
       bindAuthEvents();
     } catch (error) {
-      showAppMessage(error.message || "Erreur activation compte", "error");
+      showAppMessage(error.message || t("messages.settings_action_error"), "error");
     }
   });
 
@@ -3676,7 +3676,7 @@ function bindAuthEvents() {
       await enterMainApplication({ useHomePage: true });
 
     } catch (error) {
-      showAppMessage(error.message || "Erreur changement mot de passe", "error");
+      showAppMessage(error.message || t("messages.settings_action_error"), "error");
     }
   });
 
@@ -3819,7 +3819,7 @@ async function handlePublicAccountRoute() {
   const token = getPublicTokenFromUrl();
 
   if (!token) {
-    renderInvalidToken("Token manquant.");
+    renderInvalidToken(t("auth.error.token_missing"));
     bindAuthEvents();
     return true;
   }

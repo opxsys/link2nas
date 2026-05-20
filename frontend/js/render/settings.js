@@ -233,7 +233,7 @@ function renderApiKeysHtml(apiKeys = []) {
                 </div>
               </article>
             `).join("")
-          : `<p class="muted">Aucune clé API créée.</p>`
+          : `<p class="muted">${t("settings.api_keys.empty")}</p>`
       }
     </div>
   `;
@@ -731,7 +731,7 @@ function renderProvidersHtml(providers = []) {
                 </div>
               </article>
             `).join("")
-          : `<p class="muted">Aucun provider configuré.</p>`
+          : `<p class="muted">${t("settings.providers.empty")}</p>`
       }
     </div>
   `;
@@ -793,7 +793,8 @@ function renderDestinationsHtml(destinations = [], canUseLocalSpace = true) {
       <label data-destination-field="synology">
         <span>${t("settings.destinations.form_dest_base")}</span>
         <input type="text" name="destination_base" placeholder="downloads" />
-      </labelnas.localbel class="checkbox-row" data-destination-field="synology">
+      </label>
+      <label class="checkbox-row" data-destination-field="synology">
         <input type="checkbox" name="verify_ssl" />
         <span>${t("settings.destinations.form_verify_ssl")}</span>
       </label>
@@ -886,7 +887,7 @@ function renderDestinationsHtml(destinations = [], canUseLocalSpace = true) {
                 </div>
               </article>
             `).join("")
-          : `<p class="muted">Aucune destination configurée.</p>`
+          : `<p class="muted">${t("settings.destinations.empty")}</p>`
       }
     </div>
   `;
@@ -915,7 +916,7 @@ function formatNotificationSeverity(severity) {
 
 function formatNotificationEventTypes(eventTypes = []) {
   if (!Array.isArray(eventTypes) || eventTypes.length === 0) {
-    return "Tous les événements";
+    return t("settings.notifications.meta_all_events");
   }
 
   return eventTypes.join(", ");
@@ -1417,7 +1418,7 @@ export function resetNotificationChannelForm() {
   form.is_default.checked = false;
 
   if (form.gotify_token) {
-    form.gotify_token.placeholder = "Token Gotify";
+    form.gotify_token.placeholder = t("settings.notifications.gotify_token_placeholder");
   }
 
   if (form.webhook_headers) {
