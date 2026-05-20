@@ -6,23 +6,10 @@ import { loadJobs } from "./actions/jobs.js";
 import { loadSystemInfo } from "./actions/system.js";
 import { showAppMessage } from "./utils.js";
 import { t } from "./i18n/index.js";
-import {
-  updateMe,
-  logout,
-  requestEmailVerification,
-  testNotificationConfig,
-} from "./api.js";
+import { updateMe, logout } from "./api.js";
 import { renderForcedPasswordChangeForm } from "./render/auth.js";
-import {
-  updateDestinationFields,
-  updateNotificationChannelFields,
-} from "./render/settings.js";
 import { renderProwlarrPanel } from "./render/prowlarr.js";
-import {
-  loadSettings,
-  handleSettingsSubmit,
-  handleSettingsClick,
-} from "./controllers/settings-controller.js";
+import { loadSettings } from "./controllers/settings-controller.js";
 import {
   loadAdmin,
   handleAdminSubmit,
@@ -34,6 +21,7 @@ import {
   loadEmailTemplateIntoPanel,
 } from "./controllers/admin-controller.js";
 import { bindJobsEvents } from "./controllers/jobs-controller.js";
+import { bindSettingsEvents } from "./events/settings-events.js";
 import {
   loadAnnouncements,
   bindAnnouncementsPageEvents,
@@ -178,75 +166,7 @@ function bindGlobalEvents() {
   });
 
   bindAnnouncementsPageEvents();
-
-  document.getElementById("settings-page")?.addEventListener("change", (event) => {
-    if (event.target?.id === "destination-name") {
-      updateDestinationFields();
-      return;
-    }
-
-  if (event.target?.id === "notification-channel") {
-    updateNotificationChannelFields();
-    return;
-  }
-  });
-
-  document.getElementById("settings-page")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    try {
-      await handleSettingsSubmit(event.target);
-    } catch (error) {
-      showAppMessage(error.message || t("messages.settings_action_error"), "error");
-    }
-  });
-
-  document.getElementById("settings-page")?.addEventListener("click", async (event) => {
-    const requestButton = event.target.closest("#request-email-verification-btn");
-    if (requestButton) {
-      if (!state.currentUser?.email_sending_available) {
-        showAppMessage(t("email.smtp_configure_hint"), "error");
-        return;
-      }
-
-      requestButton.disabled = true;
-
-      try {
-        const result = await requestEmailVerification();
-        showAppMessage(result.message || t("messages.email_verification_sent"), "success");
-      } catch (error) {
-        showAppMessage(error.message || t("messages.email_verification_error"), "error");
-      } finally {
-        requestButton.disabled = false;
-      }
-
-      return;
-    }
-
-    const testEmailButton = event.target.closest("#test-email-notification-btn");
-    if (testEmailButton) {
-      try {
-        const result = await testNotificationConfig({
-          channel: "email",
-          config: {},
-        });
-
-        showAppMessage(result.message || t("messages.settings_channel_test_ok"), "success");
-      } catch (error) {
-        showAppMessage(error.message || t("messages.settings_action_error"), "error");
-      }
-      return;
-    }
-
-    const button = event.target.closest("[data-settings-action], [data-action]");
-    if (!button) return;
-
-    try {
-      await handleSettingsClick(button);
-    } catch (error) {
-      showAppMessage(error.message || t("messages.settings_action_error"), "error");
-    }
-  });
+  bindSettingsEvents();
 
   document.getElementById("admin-page")?.addEventListener("change", (event) => {
     if (event.target?.id === "user-creation-mode") {
