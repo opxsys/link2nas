@@ -19,16 +19,12 @@ import { showAppMessage } from "./utils.js";
 import { t } from "./i18n/index.js";
 import {
   getSetupStatus,
-  createFirstAdmin,
-  login,
   getMe,
   logout,
-
+  updateMe,
   requestEmailVerification,
   getPublicTokenStatus,
-  acceptInvitation,
-  confirmPasswordReset,
-  requestMagicLogin,
+  testNotificationConfig,
   confirmMagicLogin,
   confirmEmailVerification,
   getPublicAppInfo,
@@ -80,7 +76,9 @@ import {
   updateUserCreationModeFields,
   initEmailTemplatesPanel,
   loadAntiAbuseSection,
+  loadEmailTemplateIntoPanel,
 } from "./controllers/admin-controller.js";
+import { initAuth, bindAuthEvents } from "./controllers/auth-controller.js";
 
 let inactivityTimer;
 let publicEventsBound = false;
@@ -89,6 +87,317 @@ const DEFAULT_SESSION_INACTIVITY_MINUTES = 30;
 
 
 const SEVERITY_ORDER = { critical: 0, warning: 1, info: 2 };
+
+function getPublicTokenFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return String(params.get("token") || "").trim();
+}
+
+function isInviteRoute() {
+  return window.location.pathname === "/invite";
+}
+
+function isPasswordResetRoute() {
+  return window.location.pathname === "/reset-password";
+}
+
+function isMagicLoginRoute() {
+  return window.location.pathname === "/magic-login";
+}
+
+function isEmailVerificationRoute() {
+  return window.location.pathname === "/verify-email";
+}
+
+function clearPublicAccountUrl() {
+  window.history.replaceState({}, "", "/");
+}
+
+async function enterMainApplication({ useHomePage = false } = {}) {
+  showMainApp();
+  renderJobDetails(null);
+  bindGlobalEvents();
+  bindBannerEvents();
+
+  await loadSettings();
+
+  if (useHomePage) {
+    state.activePage = resolveHomePage();
+    localStorage.setItem("link2nas_active_page", state.activePage);
+  } else if (state.activePage === "prowlarr" && !hasConfiguredProwlarr()) {
+    state.activePage = "jobs";
+    localStorage.setItem("link2nas_active_page", "jobs");
+  }
+
+  renderPageVisibility();
+
+  await loadSystemInfo();
+  await loadJobs();
+
+  if (state.activePage === "prowlarr") {
+    renderProwlarrPanel();
+  }
+
+  startPolling();
+}
+
+function getSessionInactivityMinutes() {
+  const raw = Number(state.currentUser?.session_inactivity_minutes);
+
+  if (Number.isFinite(raw) && raw >= 5) {
+    return raw;
+  }
+
+  return DEFAULT_SESSION_INACTIVITY_MINUTES;
+}
+
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+
+  const minutes = getSessionInactivityMinutes();
+
+  inactivityTimer = setTimeout(() => {
+    localStorage.removeItem("link2nas_token");
+    location.reload();
+  }, minutes * 60 * 1000);
+}
+
+["click", "mousemove", "keydown"].forEach((eventName) => {
+  document.addEventListener(eventName, resetInactivityTimer);
+});
+
+function hideAdminIfNeeded() {
+  const adminButton = document.querySelector('[data-page="admin"]');
+  const isSuperAdmin = state.currentUser?.role === "super_admin";
+
+  if (adminButton) {
+    adminButton.hidden = !isSuperAdmin;
+  }
+
+  if (!isSuperAdmin && state.activePage === "admin") {
+    state.activePage = "jobs";
+    localStorage.setItem("link2nas_active_page", "jobs");
+  }
+}
+
+function updateAuthVisibility() {
+  const isAuthenticated = Boolean(state.currentUser);
+  const mustChangePassword = Boolean(state.currentUser?.force_password_change);
+  const isSingleUserMode = Boolean(state.currentUser?.single_user_mode);
+
+  const mainNav = document.getElementById("main-nav");
+  if (mainNav) {
+    mainNav.hidden = !isAuthenticated || mustChangePassword;
+  }
+
+  const logoutButton = document.getElementById("logout-btn");
+  if (logoutButton) {
+    logoutButton.hidden = !isAuthenticated || isSingleUserMode;
+  }
+}
+
+function updateLanguageSwitchUI() {
+  document.querySelectorAll("#language-switch [data-lang]").forEach((button) => {
+    const isActive = button.dataset.lang === state.language;
+    button.classList.toggle("is-active", isActive);
+  });
+}
+
+function updateMainNavUI() {
+  updateProwlarrNavVisibility();
+
+  document.querySelectorAll("#main-nav [data-page]").forEach((button) => {
+    const isActive = button.dataset.page === state.activePage;
+    button.classList.toggle("is-active", isActive);
+  });
+}
+
+let _themeMediaListener = null;
+
+export function applyCurrentUserTheme(user) {
+  const theme = user?.ui_theme || "auto";
+  applyTheme(theme);
+  localStorage.setItem("link2nas_theme", theme);
+}
+
+function applyTheme(stored) {
+  if (_themeMediaListener) {
+    window.matchMedia("(prefers-color-scheme: dark)").removeEventListener("change", _themeMediaListener);
+    _themeMediaListener = null;
+  }
+  const valid = new Set(["auto", "light", "night", "high_contrast", "colorblind"]);
+  const pref = valid.has(stored) ? stored : "auto";
+  let resolved = pref;
+  if (pref === "auto") {
+    resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "light";
+    _themeMediaListener = (e) => {
+      document.documentElement.dataset.theme = e.matches ? "night" : "light";
+    };
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", _themeMediaListener);
+  }
+  document.documentElement.dataset.theme = resolved;
+}
+
+function openNavDrawer() {
+  const drawer = document.getElementById("nav-drawer");
+  const overlay = document.getElementById("nav-drawer-overlay");
+  const burgerBtn = document.getElementById("nav-burger-btn");
+
+  if (drawer) drawer.classList.add("is-open");
+  if (overlay) overlay.classList.add("is-open");
+  if (burgerBtn) burgerBtn.setAttribute("aria-expanded", "true");
+}
+
+function closeNavDrawer() {
+  const drawer = document.getElementById("nav-drawer");
+  const overlay = document.getElementById("nav-drawer-overlay");
+  const burgerBtn = document.getElementById("nav-burger-btn");
+
+  if (drawer) drawer.classList.remove("is-open");
+  if (overlay) overlay.classList.remove("is-open");
+  if (burgerBtn) burgerBtn.setAttribute("aria-expanded", "false");
+}
+
+export function updateProwlarrNavVisibility() {
+  const prowlarrButton = document.querySelector('[data-page="prowlarr"]');
+  if (!prowlarrButton) return;
+
+  prowlarrButton.hidden = !hasConfiguredProwlarr();
+}
+
+function resolveHomePage() {
+  const settings = state.integrationSettings || {};
+  const requested = settings.home_page || "jobs";
+
+  if (requested === "prowlarr") {
+    return hasConfiguredProwlarr() ? "prowlarr" : "jobs";
+  }
+
+  if (requested === "control-center") {
+    return "control-center";
+  }
+
+  return "jobs";
+}
+
+function setActivePage(page, persist = true) {
+  const target = page || "jobs";
+
+  state.activePage = target;
+
+  if (persist) {
+    localStorage.setItem("link2nas_active_page", target);
+  }
+
+  renderPageVisibility();
+}
+
+export function renderPageVisibility() {
+  if (state.activePage === "prowlarr" && !hasConfiguredProwlarr()) {
+    state.activePage = "jobs";
+    localStorage.setItem("link2nas_active_page", "jobs");
+  }
+
+  const jobsPage = document.getElementById("jobs-page");
+  const prowlarrPage = document.getElementById("prowlarr-page");
+  const controlCenterPage = document.getElementById("control-center-page");
+  const settingsPage = document.getElementById("settings-page");
+  const announcementsPage = document.getElementById("announcements-page");
+  const adminPage = document.getElementById("admin-page");
+
+  if (jobsPage) jobsPage.hidden = state.activePage !== "jobs";
+  if (prowlarrPage) prowlarrPage.hidden = state.activePage !== "prowlarr";
+  if (controlCenterPage) controlCenterPage.hidden = state.activePage !== "control-center";
+  if (settingsPage) settingsPage.hidden = state.activePage !== "settings";
+  if (announcementsPage) announcementsPage.hidden = state.activePage !== "announcements";
+  if (adminPage) adminPage.hidden = state.activePage !== "admin";
+
+  if (state.activePage === "prowlarr") {
+    renderProwlarrPanel();
+  }
+
+  updateMainNavUI();
+}
+
+export function renderStaticTexts() {
+  const appHeader = document.querySelector(".app-header h1");
+  if (appHeader && state.generalSettings?.app_name) {
+    appHeader.textContent = state.generalSettings.app_name;
+  }
+
+  const appSubtitle = document.getElementById("app-subtitle");
+  if (appSubtitle) {
+    appSubtitle.textContent = state.generalSettings?.app_tagline || t("app.subtitle");
+  }
+
+  const jobsTitle = document.getElementById("jobs-title");
+  if (jobsTitle) {
+    jobsTitle.textContent = t("common.jobs");
+  }
+
+  const jobsStatusLabel = document.getElementById("jobs-status-label");
+  if (jobsStatusLabel) {
+    jobsStatusLabel.textContent = t("common.status");
+  }
+
+  const jobDetailsTitle = document.getElementById("job-details-title");
+  if (jobDetailsTitle) {
+    jobDetailsTitle.textContent = t("common.details");
+  }
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.dataset.i18n;
+    if (key) {
+      el.textContent = t(key);
+    }
+  });
+
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+    const key = el.dataset.i18nAriaLabel;
+    if (key) {
+      el.setAttribute("aria-label", t(key));
+    }
+  });
+
+  document.documentElement.lang = state.language || "fr";
+  updateLanguageSwitchUI();
+  updateMainNavUI();
+}
+
+async function rerenderAppForLanguageChange() {
+  renderStaticTexts();
+  renderPageVisibility();
+  renderAnnouncementBanner(pickBannerAnnouncement(state.announcements));
+  updateAnnouncementBadge(state.announcements);
+  renderCreateJobForm();
+  renderJobDetails(state.selectedJob);
+  await loadSystemInfo();
+  await loadJobs();
+
+  if (state.selectedJobId) {
+    await selectJob(state.selectedJobId);
+  }
+
+  if (state.activePage === "settings") {
+    await loadSettings();
+  }
+
+  if (state.activePage === "admin") {
+    await loadAdmin();
+    if (state.activeAdminTab === "email-templates") {
+      await initEmailTemplatesPanel();
+    }
+  }
+
+  if (state.activePage === "announcements") {
+    await loadAnnouncements();
+  }
+
+  if (state.activePage === "prowlarr") {
+    renderProwlarrPanel();
+  }
+
+}
 
 function pickBannerAnnouncement(announcements) {
   const dismissed = state.dismissedAnnouncementBannerIds;
@@ -790,163 +1099,6 @@ function startPolling() {
   }, JOBS_POLL_MS);
 }
 
-export function bindAuthEvents() {
-  document.getElementById("setup-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-
-    try {
-      await createFirstAdmin({
-        email: form.email.value,
-        display_name: form.display_name.value,
-        password: form.password.value,
-      });
-
-      showAppMessage(t("messages.super_admin_created"), "success");
-      renderLoginForm(state.appInfo?.email_sending_available ?? true);
-      bindAuthEvents();
-    } catch (error) {
-      showAppMessage(error.message || t("messages.settings_action_error"), "error");
-    }
-  });
-
-  document.getElementById("login-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-
-    try {
-      const result = await login({
-        email: form.email.value,
-        password: form.password.value,
-      });
-
-      localStorage.setItem("link2nas_token", result.token);
-      state.currentUser = result.user;
-      applyCurrentUserTheme(result.user);
-      updateAuthVisibility();
-
-      if (result.user?.force_password_change) {
-        renderForcedPasswordChangeForm();
-        bindAuthEvents();
-        showAppMessage(t("messages.must_change_password"), "info");
-        return;
-      }
-
-      hideAdminIfNeeded();
-
-      await enterMainApplication({ useHomePage: true });
-    } catch (error) {
-      showAppMessage(error.message || t("auth.error.invalid_credentials"), "error");
-    }
-  });
-
-  document.getElementById("show-magic-login-btn")?.addEventListener("click", () => {
-    renderMagicLoginRequestForm();
-    bindAuthEvents();
-  });
-
-  document.getElementById("magic-login-request-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-    const email = String(form.email?.value || "").trim();
-
-    if (!email) {
-      showAppMessage(t("auth.error.email_required"), "error");
-      return;
-    }
-
-    try {
-      const result = await requestMagicLogin(email);
-      showAppMessage(
-        result.message || t("auth.magic_login_sent"),
-        "success"
-      );
-      renderLoginForm(state.appInfo?.email_sending_available ?? true);
-      bindAuthEvents();
-    } catch (error) {
-      showAppMessage(error.message || t("auth.error.magic_login_send_failed"), "error");
-    }
-  });
-
-  document.getElementById("accept-invitation-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-    const password = validatePasswordConfirmation(form);
-    if (!password) return;
-
-    try {
-      await acceptInvitation(form.token.value, password);
-
-      clearPublicAccountUrl();
-      showAppMessage(t("messages.account_activated"), "success");
-      renderLoginForm(state.appInfo?.email_sending_available ?? true);
-      bindAuthEvents();
-    } catch (error) {
-      showAppMessage(error.message || t("messages.settings_action_error"), "error");
-    }
-  });
-
-  document.getElementById("password-reset-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-    const password = validatePasswordConfirmation(form);
-    if (!password) return;
-
-    try {
-      await confirmPasswordReset(form.token.value, password);
-
-      clearPublicAccountUrl();
-      showAppMessage(t("messages.password_reset_done"), "success");
-      renderLoginForm(state.appInfo?.email_sending_available ?? true);
-      bindAuthEvents();
-    } catch (error) {
-      showAppMessage(error.message || t("auth.error.password_reset_failed"), "error");
-    }
-  });
-
-  document.getElementById("back-to-login-btn")?.addEventListener("click", () => {
-    clearPublicAccountUrl();
-    renderLoginForm(state.appInfo?.email_sending_available ?? true);
-    bindAuthEvents();
-  });
-
-  document.getElementById("forced-password-change-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-    const payload = validateForcedPasswordChangeForm(form);
-    if (!payload) return;
-
-    try {
-      await changeMyPassword(payload);
-
-      const me = await getMe();
-      state.currentUser = me;
-      applyCurrentUserTheme(me);
-      updateAuthVisibility();
-
-      if (me.force_password_change) {
-        showAppMessage(t("auth.error.password_change_not_finalized"), "error");
-        return;
-      }
-
-      hideAdminIfNeeded();
-
-      showAppMessage(t("messages.settings_password_changed"), "success");
-      await enterMainApplication({ useHomePage: true });
-
-    } catch (error) {
-      showAppMessage(error.message || t("messages.settings_action_error"), "error");
-    }
-  });
-
-}
-
 function bindPublicEvents() {
   if (publicEventsBound) return;
   publicEventsBound = true;
@@ -1263,6 +1415,14 @@ function showBatchResultPanel(results) {
     document.body.appendChild(panel);
   }
 }
+
+initAuth({
+  enterMainApplication,
+  hideAdminIfNeeded,
+  updateAuthVisibility,
+  clearPublicAccountUrl,
+  applyCurrentUserTheme,
+});
 
 bootstrap().catch((error) => {
   console.error(error);
