@@ -107,7 +107,7 @@ Set the following in `.env`:
 
 ```env
 V2_DATABASE_BACKEND=postgres
-V2_POSTGRES_DSN=postgresql://user:password@localhost:5432/link2nas
+V2_POSTGRES_DSN=postgresql://link2nas:change_me@127.0.0.1:5432/link2nas_v2
 ```
 
 The schema is applied automatically on startup. Do not expose PostgreSQL on a public network interface.
@@ -125,6 +125,20 @@ REDIS_DB=0
 ```
 
 In multi-worker deployments, Redis is also recommended for rate limiting (see `V2_RATE_LIMIT_REDIS_REQUIRED` in [CONFIGURATION.md](CONFIGURATION.md)).
+
+---
+
+## Validate your installation
+
+Once the app and workers are running, run the automated test suite to verify the installation against the currently configured backend:
+
+```bash
+ADMIN_EMAIL="admin@example.local" ADMIN_PASSWORD="your-admin-password" bash scripts/test_v3_full.sh
+```
+
+Expected final output: `=== test_v3_full: OK ===`
+
+For explicit backend targeting (SQLite or PostgreSQL), or for a full release validation covering both backends, use the dedicated wrappers — see [docs/testing.md](testing.md).
 
 ---
 

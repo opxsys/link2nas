@@ -10,7 +10,7 @@ Link2NAS V3 still mostly uses the `/api/v2/` HTTP API. Test scripts that call `/
 
 ```
 scripts/
-├── setup/              Initialization and configuration (DB, SMTP)
+├── setup/              Initialization and configuration helpers
 ├── inspect/            Static route wiring checks
 ├── quality/            Code quality (compile, lint, secrets)
 ├── tests/
@@ -21,15 +21,14 @@ scripts/
 │   ├── settings/       Global settings, maintenance, session, cleanup
 │   ├── security/       Rate limits, secret exposure, timeouts
 │   ├── qbittorrent/    qBittorrent API compatibility
-│   ├── v3/             V3-specific tests
 │   ├── dev/            Development routes (not included by default)
 │   └── manual/         Heavy manual tests (real NAS, live providers)
 ├── legacy/v1/          V1 scripts kept outside V3 runners
-├── test_quality.sh     Static quality runner
-├── test_v3_smoke.sh    Smoke runner (fast, no provider)
-├── test_v3_sqlite.sh   Full suite — SQLite backend
-├── test_v3_postgres.sh Full suite — PostgreSQL backend
-├── test_v3_full.sh     Full suite — SQLite + PostgreSQL
+├── test_quality.sh     Static quality runner — no app required
+├── test_v3_smoke.sh    Smoke runner — fast, no provider, called by test_v3_full.sh
+├── test_v3_full.sh     Core test suite runner ★ (primary)
+├── test_v3_sqlite.sh   SQLite backend wrapper → calls test_v3_full.sh
+├── test_v3_postgres.sh PostgreSQL backend wrapper → calls test_v3_full.sh
 └── test_v2_full.sh     V2 runner (deprecated)
 ```
 
@@ -51,13 +50,14 @@ The following variables are required for functional runners:
 |---|---|---|
 | `BASE_URL` | `http://127.0.0.1:5000` | Application URL |
 | `ADMIN_EMAIL` | `admin@test.local` | Super admin account email |
-| `ADMIN_PASSWORD` | _(empty — required)_ | Admin password. The runner exits immediately if absent. |
+| `ADMIN_PASSWORD` | _(empty)_ | Admin password — required unless `ADMIN_API_KEY` or `TOKEN` is set |
+| `ADMIN_API_KEY` | _(empty)_ | Pre-obtained admin session token — skips login if provided |
 
-`ADMIN_PASSWORD` is never printed in runner output.
+The runner performs **one admin login at startup** and exports `ADMIN_API_KEY` to all child scripts. If `ADMIN_API_KEY` is already set (from a previous run or parent process), it is reused — no new login is performed. `ADMIN_PASSWORD` is never printed.
 
 ### For test_v3_postgres.sh
 
-PostgreSQL must be available and configured (via `V2_DATABASE_BACKEND=postgres` or `V2_POSTGRES_DSN`).
+PostgreSQL must be available and configured. The wrapper sets a default dev DSN (`postgresql://link2nas:link2nas_dev_password@127.0.0.1:5432/link2nas_v2`). Override with `V2_POSTGRES_DSN` if needed.
 
 ### For email tests with real sending
 
@@ -95,13 +95,44 @@ No running app required. Can be executed in CI on every commit.
 
 ---
 
+### test_v3_full.sh — Core test suite ★
+
+```bash
+ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_full.sh
+```
+
+Runs the complete test suite against **the currently configured backend** (whatever `V2_DATABASE_BACKEND` is set to in the environment or `.env`). Performs a single admin login, exports `ADMIN_API_KEY` to all child scripts, and covers:
+
+- Smoke: global settings, runtime settings, account tokens, anti-abuse, admin routes, qBittorrent rate limit
+- Auth: policies, email verification
+- Admin: user disable/enable, local space permission, public space
+- Settings: session inactivity, cleanup, maintenance
+- Notifications: schema, dispatcher, deduplication, business
+- Email: transactional templates (no live SMTP by default)
+- Security: rate limits, secret exposure, system events, timeouts
+- qBittorrent: full API compatibility
+
+If `ADMIN_API_KEY` is already available (e.g. from a parent script or a previous session), pass it directly to avoid a new login:
+
+```bash
+ADMIN_API_KEY=<token> bash scripts/test_v3_full.sh
+```
+
+Expected final output: `=== test_v3_full: OK ===`
+
+Estimated duration: 10–20 minutes depending on environment.
+
+> **Multi-backend release validation:** `test_v3_full.sh` tests one backend at a time. To validate both SQLite and PostgreSQL, run `test_v3_sqlite.sh` then `test_v3_postgres.sh` — each wrapper configures its backend and then calls `test_v3_full.sh`.
+
+---
+
 ### test_v3_smoke.sh — Quick smoke
 
 ```bash
 ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_smoke.sh
 ```
 
-Fast tests against a running app, with no provider or live SMTP.
+Fast subset of tests against a running app. This runner is also called internally at the start of `test_v3_full.sh`.
 
 Includes:
 
@@ -114,63 +145,54 @@ Includes:
 
 **Not included in the smoke runner:**
 
-`test_single_user_mode.sh` and `test_multi_user_mode.sh` require a specific application configuration (`LINK2NAS_SINGLE_USER_MODE`). Run them via `test_v3_sqlite.sh` in a dedicated environment.
+`test_single_user_mode.sh` and `test_multi_user_mode.sh` require a specific application configuration (`LINK2NAS_SINGLE_USER_MODE`). Run them manually in a dedicated environment.
 
-If the application is not running, the runner prints `[SKIP]` and exits cleanly (exit 0).
+If the application is not running, the smoke runner prints `[SKIP]` and exits cleanly (exit 0).
 
 ---
 
-### test_v3_sqlite.sh — Full SQLite suite
+### test_v3_sqlite.sh — SQLite backend wrapper
 
 ```bash
 ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_sqlite.sh
 ```
 
-Full suite on SQLite backend. Runs the smoke first, then:
+Sets `V2_DATABASE_BACKEND=sqlite`, clears any PostgreSQL DSN, then invokes `test_v3_full.sh`. Use this to run the full suite explicitly on the SQLite backend.
 
-- Auth: policies, expired tokens, email verification
-- Admin: disable/enable, local space and public space permissions
-- Settings: session inactivity, cleanup, maintenance
-- Notifications: schema, dispatcher, deduplication, business
-- Email: SMTP configuration, templates (no live sending by default)
-- Security: rate limits, secret exposure, system events, timeouts
-- qBittorrent: full API compatibility
+Expected output ends with:
 
-Estimated duration: 10–20 minutes depending on environment.
-
-To force the backend:
-
-```bash
-V2_DATABASE_BACKEND=sqlite ADMIN_EMAIL=... ADMIN_PASSWORD=... bash scripts/test_v3_sqlite.sh
+```
+=== test_v3_full: OK ===
+=== test_v3_sqlite: OK ===
 ```
 
 ---
 
-### test_v3_postgres.sh — Full PostgreSQL suite
+### test_v3_postgres.sh — PostgreSQL backend wrapper
 
 ```bash
-ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** V2_POSTGRES_DSN=... bash scripts/test_v3_postgres.sh
+ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_postgres.sh
 ```
 
-Runs the same suite as `test_v3_sqlite.sh` with `V2_DATABASE_BACKEND=postgres`. PostgreSQL must be available and configured.
+Sets `V2_DATABASE_BACKEND=postgres` with a default dev DSN, then invokes `test_v3_full.sh`. Use this to run the full suite explicitly on the PostgreSQL backend.
 
----
-
-### test_v3_full.sh — Full SQLite + PostgreSQL suite
+Override the DSN if your environment differs:
 
 ```bash
-ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_full.sh
+V2_POSTGRES_DSN="postgresql://link2nas:change_me@127.0.0.1:5432/link2nas_v2" \
+  ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_postgres.sh
 ```
 
-Runs `test_v3_sqlite.sh` then `test_v3_postgres.sh` in sequence. Recommended before a merge or release.
+Expected output ends with:
+
+```
+=== test_v3_full: OK ===
+=== test_v3_postgres: OK ===
+```
 
 ---
 
 ### test_v2_full.sh — V2 runner (deprecated)
-
-```bash
-ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v2_full.sh
-```
 
 Legacy runner, kept for compatibility. Prints a deprecation warning on startup. Replaced by `test_v3_full.sh`.
 
@@ -178,16 +200,18 @@ Legacy runner, kept for compatibility. Prints a deprecation warning on startup. 
 
 ## When to use each runner
 
-| Situation | Recommended runner |
+| Situation | Recommended |
 |---|---|
 | Before every commit | `test_quality.sh` |
-| After a code change, quick sanity check | `test_v3_smoke.sh` |
-| Before merging a feature branch | `test_v3_sqlite.sh` |
-| Before a release | `test_v3_full.sh` |
+| Quick sanity check after a code change | `test_v3_smoke.sh` |
+| Full suite against current backend | `test_v3_full.sh` |
+| Full suite — explicit SQLite backend | `test_v3_sqlite.sh` |
+| Full suite — explicit PostgreSQL backend | `test_v3_postgres.sh` |
+| Before a merge or release (both backends) | `test_v3_sqlite.sh` then `test_v3_postgres.sh` |
 | After auth changes | `test_v3_smoke.sh` + `scripts/tests/auth/` |
-| After notification changes | `test_v3_sqlite.sh` (includes notification suite) |
-| After email or SMTP changes | `test_v3_sqlite.sh` (with `SMTP_RUN_TEST=true` if needed) |
-| After qBittorrent/Prowlarr compatibility changes | `scripts/tests/qbittorrent/test_qbittorrent_compat.sh` |
+| After notification changes | `test_v3_full.sh` |
+| After email or SMTP changes | `test_v3_full.sh` (with `SMTP_RUN_TEST=true` if needed) |
+| After qBittorrent/Prowlarr changes | `scripts/tests/qbittorrent/test_qbittorrent_compat.sh` |
 
 ---
 
@@ -200,19 +224,19 @@ bash scripts/test_quality.sh
 # Quick smoke
 ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_smoke.sh
 
-# Full SQLite suite
+# Full suite (uses backend from .env or environment)
+ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_full.sh
+
+# Full suite — explicit SQLite backend
 ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_sqlite.sh
 
-# Full PostgreSQL suite
-ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** V2_POSTGRES_DSN=... bash scripts/test_v3_postgres.sh
-
-# Full SQLite + PostgreSQL suite
-ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_full.sh
+# Full suite — explicit PostgreSQL backend
+ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_postgres.sh
 
 # Single test script
 ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/tests/auth/test_account_tokens.sh
 
-# All email templates
+# Email templates only
 ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/tests/email/run_email_templates.sh
 ```
 
@@ -226,3 +250,4 @@ ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/tests/email/run_
 | `scripts/tests/manual/` | Requires a real NAS or live provider — manual execution only |
 | `scripts/legacy/v1/` | V1 architecture — kept for reference, not actively maintained |
 | `scripts/inspect/` | Static wiring checks — no app required, run separately as needed |
+| `scripts/tests/auth/test_account_expired_existing_token.sh` | Requires PostgreSQL + direct `docker exec` access — not part of SQLite runner |

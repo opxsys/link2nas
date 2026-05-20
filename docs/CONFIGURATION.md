@@ -72,7 +72,7 @@ Use absolute paths in production. The application creates these directories on s
 |---|---|---|
 | `V2_DATABASE_BACKEND` | `sqlite` | Database engine: `sqlite` or `postgres`. |
 | `V2_SQLITE_PATH` | `./data/link2nas_v2.sqlite3` | Path to the SQLite database file. |
-| `V2_POSTGRES_DSN` | *(empty)* | PostgreSQL connection string. **Required** when `V2_DATABASE_BACKEND=postgres`. Example: `postgresql://user:password@localhost:5432/link2nas` |
+| `V2_POSTGRES_DSN` | *(empty)* | PostgreSQL connection string. **Required** when `V2_DATABASE_BACKEND=postgres`. Example: `postgresql://link2nas:change_me@127.0.0.1:5432/link2nas_v2` |
 
 The database schema is applied automatically on startup.
 

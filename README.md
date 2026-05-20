@@ -97,10 +97,12 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model, rate limit
 
 | File | Content |
 |---|---|
+| [docs/INSTALL.md](docs/INSTALL.md) | Installation, workers, first setup, SQLite, PostgreSQL, Redis, troubleshooting |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | All environment variables with defaults and descriptions |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security model, secrets, deployment hardening, publication checklist |
-| [docs/V2_VALIDATION.md](docs/V2_VALIDATION.md) | Internal validation notes |
-
-Additional documentation is planned before the public release.
+| [docs/testing.md](docs/testing.md) | Test runners, prerequisites, quick commands, runner architecture |
+| [docs/VALIDATION.md](docs/VALIDATION.md) | Pre-deployment validation checklist |
+| [docs/PROWLARR.md](docs/PROWLARR.md) | Prowlarr / qBittorrent integration guide |
 
 ---
 

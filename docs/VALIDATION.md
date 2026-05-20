@@ -4,6 +4,42 @@ This document provides a checklist of checks to run locally before deploying or 
 
 ---
 
+## Automated test suite
+
+The application and workers must be running before executing the test suite.
+
+### Single-backend validation (current configured backend)
+
+```bash
+ADMIN_EMAIL="admin@example.local" ADMIN_PASSWORD="your-admin-password" bash scripts/test_v3_full.sh
+```
+
+`test_v3_full.sh` runs the complete test suite against whichever backend is configured in the environment (SQLite by default). Expected result: `=== test_v3_full: OK ===`
+
+Pass `ADMIN_API_KEY` directly to skip login if a token is already available:
+
+```bash
+ADMIN_API_KEY="<token>" bash scripts/test_v3_full.sh
+```
+
+### Multi-backend release validation (SQLite + PostgreSQL)
+
+For a complete release validation covering both backends, run the two backend wrappers in sequence. Each wrapper forces its own backend configuration and then calls `test_v3_full.sh`:
+
+```bash
+# 1. SQLite backend
+ADMIN_EMAIL="admin@example.local" ADMIN_PASSWORD="your-admin-password" bash scripts/test_v3_sqlite.sh
+# Expected: === test_v3_full: OK === then === test_v3_sqlite: OK ===
+
+# 2. PostgreSQL backend
+ADMIN_EMAIL="admin@example.local" ADMIN_PASSWORD="your-admin-password" bash scripts/test_v3_postgres.sh
+# Expected: === test_v3_full: OK === then === test_v3_postgres: OK ===
+```
+
+See [testing.md](testing.md) for the full runner documentation.
+
+---
+
 ## 1. Static checks
 
 ### Python syntax
@@ -145,6 +181,7 @@ If using PostgreSQL:
 
 Before pushing to a public repository:
 
+- [ ] Automated test suite passes on both backends: `bash scripts/test_v3_sqlite.sh` → `test_v3_sqlite: OK` and `bash scripts/test_v3_postgres.sh` → `test_v3_postgres: OK`
 - [ ] No `.env` file tracked in git
 - [ ] No SQLite database (`.sqlite3`, `.db`) tracked in git
 - [ ] No log files tracked in git
