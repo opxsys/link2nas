@@ -50,12 +50,8 @@ import { renderCreateJobForm } from "../render/forms.js";
 import { renderProwlarrPanel, hasConfiguredProwlarr } from "../render/prowlarr.js";
 import { showAppMessage } from "../utils.js";
 import { showConfirmModal, showSecretModal } from "../ui/modals.js";
-import {
-  applyCurrentUserTheme,
-  updateProwlarrNavVisibility,
-  renderPageVisibility,
-  loadAndRenderBanner,
-} from "../app.js";
+import { applyCurrentUserTheme, loadAndRenderBanner } from "../app.js";
+import { updateProwlarrNavVisibility, renderPageVisibility } from "./navigation-controller.js";
 
 function showApiKeyFeedback(message, type = "info") {
   const el = document.getElementById("api-key-feedback");

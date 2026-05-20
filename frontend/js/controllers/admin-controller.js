@@ -53,10 +53,8 @@ import {
 import { renderLoginForm } from "../render/auth.js";
 import { showAppMessage } from "../utils.js";
 import { showConfirmModal, showLinkModal } from "../ui/modals.js";
-import {
-  renderStaticTexts,
-  bindAuthEvents,
-} from "../app.js";
+import { renderStaticTexts } from "./navigation-controller.js";
+import { bindAuthEvents } from "./auth-controller.js";
 
 export function showAdminFeedback(section, message, type = "info") {
   const el = document.getElementById(`admin-${section}-feedback`);
@@ -403,7 +401,7 @@ function insertAtCursor(textarea, text) {
   textarea.focus();
 }
 
-async function loadEmailTemplateIntoPanel(key, lang) {
+export async function loadEmailTemplateIntoPanel(key, lang) {
   const feedbackEl = document.getElementById("admin-email-templates-feedback");
   if (feedbackEl) feedbackEl.hidden = true;
   hideEmailTemplatePreview();
