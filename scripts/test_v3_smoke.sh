@@ -7,11 +7,11 @@ cd "$ROOT_DIR"
 BASE_URL="${BASE_URL:-http://127.0.0.1:5000}"
 export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@test.local}"
 export ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
+export ADMIN_API_KEY="${ADMIN_API_KEY:-}"
 
 echo "=== test_v3_smoke — quick, no providers, no SMTP ==="
 echo "BASE_URL=$BASE_URL"
 echo "ADMIN_EMAIL=$ADMIN_EMAIL"
-[[ -n "$ADMIN_PASSWORD" ]] || { echo "[KO] ADMIN_PASSWORD is required for this runner"; exit 1; }
 echo
 
 # Preflight: skip gracefully if app not running
@@ -21,6 +21,29 @@ if [[ "$reach" != "200" && "$reach" != "401" && "$reach" != "403" ]]; then
   exit 0
 fi
 echo "[OK] App reachable (HTTP $reach)"
+echo
+
+# Obtain shared admin token once; export only ADMIN_API_KEY — never TOKEN, as some
+# child scripts treat TOKEN as a user-scoped token and must not see the admin value.
+if [[ -n "$ADMIN_API_KEY" ]]; then
+  unset TOKEN
+elif [[ -n "${TOKEN:-}" ]]; then
+  export ADMIN_API_KEY="$TOKEN"
+  unset TOKEN
+else
+  [[ -n "$ADMIN_PASSWORD" ]] || { echo "[KO] ADMIN_PASSWORD is required (no ADMIN_API_KEY or TOKEN set)"; exit 1; }
+  _LOGIN="$(curl -s -X POST "$BASE_URL/api/v2/auth/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}")"
+  _TOK="$(echo "$_LOGIN" | jq -r '.token // empty')"
+  if [[ -z "$_TOK" || "$_TOK" == "null" ]]; then
+    echo "[KO] Admin login failed"
+    echo "     response: $_LOGIN"
+    exit 1
+  fi
+  export ADMIN_API_KEY="$_TOK"
+  echo "[OK] Admin token obtained: ${_TOK:0:8}..."
+fi
 echo
 
 run_script() {
