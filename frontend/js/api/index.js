@@ -1,60 +1,11 @@
 import { ApiError, request } from "./request.js";
-import { normalizeProviderRef, normalizeDestinationRef } from "./normalize.js";
 
 export { ApiError };
 export * from "./auth.js";
 export * from "./system.js";
 export * from "./jobs.js";
-
-// V2 providers
-export function listProviders() {
-  return request("/api/v2/providers", { method: "GET" });
-}
-
-export function saveProvider(payload) {
-  return request("/api/v2/providers", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export function deleteProvider(providerRef) {
-  return request(`/api/v2/providers/${encodeURIComponent(providerRef)}`, { method: "DELETE" });
-}
-
-export function testDefaultProvider() {
-  return request("/api/v2/provider-runtime/me", { method: "GET" });
-}
-
-export function testProvider(providerRef) {
-  return request(`/api/v2/provider-runtime/test/${encodeURIComponent(providerRef)}`, {
-    method: "GET",
-  });
-}
-
-export function testProviderFromSettings(providerRef = null) {
-  return request("/api/v2/settings/provider/test", {
-    method: "POST",
-    body: JSON.stringify(normalizeProviderRef(providerRef)),
-  });
-}
-
-// V2 destinations
-export function listDestinations() {
-  return request("/api/v2/destinations", { method: "GET" });
-}
-
-export function saveDestination(payload) {
-  return request("/api/v2/destinations", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export function deleteDestination(destinationRef) {
-  return request(`/api/v2/destinations/${encodeURIComponent(destinationRef)}`, { method: "DELETE" });
-}
-
+export * from "./providers.js";
+export * from "./destinations.js";
 
 // V2 admin SMTP settings
 export function getAdminSmtpSettings() {
@@ -73,19 +24,6 @@ export function saveAdminSmtpSettings(payload) {
 export function testAdminSmtpSettings() {
   return request("/api/v2/admin/smtp-settings/test", {
     method: "POST",
-  });
-}
-
-export function testDestination(destinationRef) {
-  return request(`/api/v2/destinations/${encodeURIComponent(destinationRef)}/test`, {
-    method: "POST",
-  });
-}
-
-export function testDestinationFromSettings(destinationRef = null) {
-  return request("/api/v2/settings/destination/test", {
-    method: "POST",
-    body: JSON.stringify(normalizeDestinationRef(destinationRef)),
   });
 }
 
