@@ -1,9 +1,10 @@
 import { escapeHtml, formatBytes, formatDate, statusBadgeClass, formatJobStatus } from "../../utils.js";
 import { t } from "../../i18n/index.js";
-import { renderJobActions, renderAsyncButton } from "./actions.js";
+import { renderJobActions } from "./actions.js";
 import { renderJobMessage } from "./status.js";
 import { getJobPanelState, isPanelOpen } from "./panel-state.js";
 import { renderDestinationBlock } from "./destination.js";
+import { renderFilesBlock } from "./files.js";
 
 function getDisplaySourceType(job) {
   if (job.source_type === "magnet" || job.source_type === "torrent_file") return t("jobs.torrent");
@@ -74,70 +75,6 @@ function renderTechnicalBlock(job) {
           <div class="kv-item"><strong>${t("job.selected_files")}</strong><div>${escapeHtml(job.selected_files || t("common.none"))}</div></div>
           <div class="kv-item"><strong>${t("job.error")}</strong><div>${escapeHtml(job.error_message || t("common.none"))}</div></div>
         </div>
-      </div>
-    </details>
-  `;
-}
-
-function renderFiles(files, job) {
-  if (!files?.length) {
-    return `<p class="muted">${t("common.no_file")}</p>`;
-  }
-
-  return files.map((file) => {
-    const copyFileLabel = file._copyDone ? t("common.copied") : t("common.copy");
-
-    return `
-      <div class="file-row">
-        <div class="file-main">
-          <div class="file-path">
-            <strong>${escapeHtml(file.path || file.filename || t("job.file_fallback", { id: file.id }))}</strong>
-          </div>
-          <div class="muted">
-            id=${escapeHtml(file.id)} • ${escapeHtml(formatBytes(file.bytes ?? file.filesize))}
-          </div>
-          ${file.debrid_link ? `<div class="code-block muted url-truncated">${t("labels.debrid")}: ${escapeHtml(file.debrid_link)}</div>` : ""}
-          ${file.download_url ? `<div class="code-block muted url-truncated">${t("labels.direct")}: ${escapeHtml(file.download_url)}</div>` : ""}
-        </div>
-
-        <div class="inline-actions">
-          ${
-            job.output_mode === "per_file" && file.debrid_link
-              ? renderAsyncButton({
-                  action: "unrestrict-file",
-                  jobId: job.id,
-                  fileId: file.id,
-                  label: file.download_url ? t("job.unlock_again") : t("job.unrestrict"),
-                })
-              : ""
-          }
-
-          ${
-            file.download_url
-              ? renderAsyncButton({
-                  action: "copy-file-url",
-                  jobId: job.id,
-                  fileId: file.id,
-                  label: copyFileLabel,
-                })
-              : ""
-          }
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderFilesBlock(job) {
-  const filesCount = job.files?.length || 0;
-  const defaultOpen = filesCount > 0 && filesCount <= 5;
-  const filesOpen = isPanelOpen(job, "files", defaultOpen);
-
-  return `
-    <details class="detail-block collapsible-block" data-panel="files" ${filesOpen ? "open" : ""}>
-      <summary>${t("job.files")} (${filesCount})</summary>
-      <div class="collapsible-content">
-        ${renderFiles(job.files, job)}
       </div>
     </details>
   `;
