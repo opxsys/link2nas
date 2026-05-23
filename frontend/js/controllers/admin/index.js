@@ -3,9 +3,6 @@ import { state } from "../../state.js";
 import { t } from "../../i18n/index.js";
 import {
   listUsers,
-  createUser,
-  updateUser,
-  resetUserPassword,
   getAdminSmtpSettings,
   getAdminSecuritySettings,
   getAdminCleanupSettings,
@@ -30,13 +27,14 @@ import {
 } from "../../render/admin.js";
 import { renderLoginForm } from "../../render/auth.js";
 import { showAppMessage } from "../../utils.js";
-import { showConfirmModal, showLinkModal } from "../../ui/modals.js";
+import { showConfirmModal } from "../../ui/modals.js";
 import { renderStaticTexts } from "../navigation-controller.js";
 import { bindAuthEvents } from "../auth-controller.js";
 import { showAdminFeedback } from "./feedback.js";
 import { getFilteredAdminUsers, bindAdminUsersFilters } from "./users-filters.js";
-import { getOptionalDatetimeValue, buildAnnouncementPayload, formatCleanupResult } from "./payloads.js";
+import { buildAnnouncementPayload, formatCleanupResult } from "./payloads.js";
 import { handleSettingsSubmit } from "./settings-submit.js";
+import { handleUserSubmit } from "./user-submit.js";
 import { loadEmailTemplateIntoPanel, initEmailTemplatesPanel } from "./email-templates.js";
 import { handleEmailTemplateAction } from "./email-template-actions.js";
 import { loadAntiAbuseSection } from "./anti-abuse.js";
@@ -167,91 +165,8 @@ export function updateUserCreationModeFields() {
 export async function handleAdminSubmit(form) {
 
   if (await handleSettingsSubmit(form)) return;
+  if (await handleUserSubmit(form)) return;
 
-  if (form.id === "user-form") {
-    const creationMode = form.creation_mode?.value || "password";
-
-    try {
-      const result = await createUser({
-        email: form.email.value,
-        display_name: form.display_name.value,
-        creation_mode: creationMode,
-        password: creationMode === "password" ? form.password.value : undefined,
-        force_password_change: creationMode === "password"
-          ? Boolean(form.force_password_change?.checked)
-          : false,
-        is_super_admin: Boolean(form.is_super_admin.checked),
-        email_verified: Boolean(form.email_verified?.checked),
-        valid_from: getOptionalDatetimeValue(form, "valid_from"),
-        account_expires_at: getOptionalDatetimeValue(form, "account_expires_at"),
-        preferred_language: form.preferred_language.value,
-        can_use_local_space: Boolean(form.can_use_local_space?.checked),
-      });
-
-      form.reset();
-      state.activeAdminTab = "users";
-      await loadAdmin();
-      switchAdminTab("users");
-      showAdminFeedback("users", t("messages.admin_user_created"), "success");
-
-      if (result.invitation?.invitation_url) {
-        await showLinkModal({
-          title: t("admin.users.modal_invite_title"),
-          message: t("admin.users.modal_invite_message_create"),
-          link: result.invitation.invitation_url,
-          expiresAt: result.invitation.expires_at,
-          copyLabel: t("common.copy"),
-          closeLabel: t("common.close"),
-        });
-      }
-    } catch (error) {
-      showAdminFeedback("users", error.message || t("messages.admin_action_error"), "error");
-    }
-
-    return;
-  }
-  if (form.classList.contains("user-edit-form")) {
-    const userId = form.dataset.userId;
-
-    try {
-      await updateUser(userId, {
-        email: form.email.value,
-        display_name: form.display_name.value,
-        is_super_admin: Boolean(form.is_super_admin.checked),
-        is_active: Boolean(form.is_active.checked),
-        email_verified: Boolean(form.email_verified.checked),
-        valid_from: getOptionalDatetimeValue(form, "valid_from"),
-        account_expires_at: getOptionalDatetimeValue(form, "account_expires_at"),
-        preferred_language: form.preferred_language.value,
-        can_use_local_space: Boolean(form.can_use_local_space?.checked),
-      });
-
-      state.activeAdminTab = "users";
-      await loadAdmin();
-      switchAdminTab("users");
-      showAdminFeedback("users", t("messages.admin_user_updated"), "success");
-    } catch (error) {
-      showAdminFeedback("users", error.message || t("messages.admin_action_error"), "error");
-    }
-
-    return;
-  }
-
-  if (form.classList.contains("user-password-form")) {
-    const userId = form.dataset.userId;
-
-    try {
-      await resetUserPassword(userId, form.password.value);
-      state.activeAdminTab = "users";
-      await loadAdmin();
-      switchAdminTab("users");
-      showAdminFeedback("users", t("messages.admin_user_password_reset"), "success");
-    } catch (error) {
-      showAdminFeedback("users", error.message || t("messages.admin_action_error"), "error");
-    }
-
-    return;
-  }
   if (form.id === "announcement-create-form") {
     const payload = buildAnnouncementPayload(form);
     try {
