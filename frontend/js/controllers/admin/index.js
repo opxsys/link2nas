@@ -10,16 +10,8 @@ import {
   getAdminRuntimeSettings,
   getAdminGeneralSettings,
   listAdminAnnouncements,
-  updateAdminAnnouncement,
-  deleteAdminAnnouncement,
-  getAdminAnnouncementTracking,
 } from "../../api.js";
-import {
-  renderUsersPanel,
-  renderAnnouncementForm,
-  renderAnnouncementTrackingPanel,
-} from "../../render/admin.js";
-import { showConfirmModal } from "../../ui/modals.js";
+import { renderUsersPanel } from "../../render/admin.js";
 import { renderStaticTexts } from "../navigation-controller.js";
 import { showAdminFeedback } from "./feedback.js";
 import { getFilteredAdminUsers, bindAdminUsersFilters } from "./users-filters.js";
@@ -32,6 +24,7 @@ import { loadAntiAbuseSection } from "./anti-abuse.js";
 import { handleAntiAbuseAction } from "./anti-abuse-actions.js";
 import { handleUserAction } from "./user-actions.js";
 import { handleSystemAction } from "./system-actions.js";
+import { handleAnnouncementAction } from "./announcement-actions.js";
 
 export { showAdminFeedback, getFilteredAdminUsers, bindAdminUsersFilters, loadEmailTemplateIntoPanel, initEmailTemplatesPanel, loadAntiAbuseSection };
 
@@ -170,90 +163,6 @@ export async function handleAdminClick(button) {
   if (await handleAntiAbuseAction(action, button)) return;
   if (await handleUserAction(action, button)) return;
   if (await handleSystemAction(action, button)) return;
-
-  if (action === "edit-announcement") {
-    const annId = id;
-    if (!annId) return;
-    const ann = state.adminAnnouncements.find((a) => a.id === annId);
-    if (!ann) return;
-    const inlineEl = document.querySelector(`.announcement-edit-inline[data-for-announcement="${annId}"]`);
-    if (!inlineEl) return;
-    if (!inlineEl.hidden) {
-      inlineEl.hidden = true;
-      return;
-    }
-    const emailAvailableForForm = Boolean(state.currentUser?.email_sending_available);
-    inlineEl.innerHTML = renderAnnouncementForm(ann, emailAvailableForForm);
-    const inlineForm = inlineEl.querySelector("form");
-    if (inlineForm) inlineForm.classList.add("announcement-edit-form-inline");
-    inlineEl.hidden = false;
-    return;
-  }
-
-  if (action === "cancel-announcement-edit") {
-    const annId = id;
-    const inlineEl = document.querySelector(`.announcement-edit-inline[data-for-announcement="${annId}"]`);
-    if (inlineEl) inlineEl.hidden = true;
-    return;
-  }
-
-  if (action === "delete-announcement") {
-    const annId = id;
-    if (!annId) return;
-    const confirmed = await showConfirmModal({
-      title: t("admin.announcements.confirm_delete_title"),
-      message: t("admin.announcements.confirm_delete"),
-      confirmLabel: t("admin.announcements.delete"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-    if (!confirmed) return;
-    try {
-      await deleteAdminAnnouncement(annId);
-      state.activeAdminTab = "announcements";
-      await loadAdmin();
-      switchAdminTab("announcements");
-      showAdminFeedback("announcements", t("admin.announcements.deleted"), "success");
-    } catch (error) {
-      showAdminFeedback("announcements", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "activate-announcement" || action === "deactivate-announcement") {
-    const annId = id;
-    if (!annId) return;
-    const isActivating = action === "activate-announcement";
-    try {
-      await updateAdminAnnouncement(annId, { is_active: isActivating });
-      state.activeAdminTab = "announcements";
-      await loadAdmin();
-      switchAdminTab("announcements");
-      showAdminFeedback("announcements", t("admin.announcements.updated"), "success");
-    } catch (error) {
-      showAdminFeedback("announcements", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "view-announcement-tracking") {
-    const annId = id;
-    if (!annId) return;
-    const inlineEl = document.querySelector(`.announcement-tracking-inline[data-for-tracking="${annId}"]`);
-    if (!inlineEl) return;
-    if (!inlineEl.hidden) {
-      inlineEl.hidden = true;
-      return;
-    }
-    try {
-      const tracking = await getAdminAnnouncementTracking(annId);
-      state.announcementTrackingById[annId] = tracking;
-      inlineEl.innerHTML = renderAnnouncementTrackingPanel(tracking);
-      inlineEl.hidden = false;
-    } catch (error) {
-      showAdminFeedback("announcements", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
+  if (await handleAnnouncementAction(action, button)) return;
 
 }
