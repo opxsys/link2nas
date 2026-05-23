@@ -1,11 +1,8 @@
 import {
   getJob,
   getJobs,
-  selectJobFiles,
   sendJobToDestination,
   resendJobToDestination,
-  unrestrictJob,
-  unrestrictJobFile,
   cloneJobWithProvider,
   ApiError,
   cancelLocalDestinationDownload,
@@ -34,6 +31,7 @@ import {
   providerOption,
 } from "./profile-helpers.js";
 import { handleLifecycleJobAction } from "./lifecycle-actions.js";
+import { handleFileJobAction } from "./file-actions.js";
 
 async function reloadJobs() {
   await ensureRestartCooldownsLoaded(true);
@@ -56,31 +54,7 @@ export async function performJobAction(action, jobId, fileId = null) {
     renderJobDetails(state.selectedJob);
 
     if (await handleLifecycleJobAction(action, jobId, { reloadJobs, selectJob })) return;
-
-    if (action === "select-files") {
-      await selectJobFiles(jobId, "all");
-      showAppMessage(t("messages.select_all_done"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "unrestrict") {
-      await unrestrictJob(jobId);
-      showAppMessage(t("messages.unrestrict_done"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "unrestrict-file" && fileId != null) {
-      forceOpenJobPanel(jobId, "files");
-      await unrestrictJobFile(jobId, fileId);
-      showAppMessage(t("messages.unrestrict_file_done"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
+    if (await handleFileJobAction(action, jobId, fileId, { reloadJobs, selectJob })) return;
 
     if (action === "send-to-destination") {
       const job = state.selectedJob;
