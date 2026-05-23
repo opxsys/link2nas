@@ -1,13 +1,9 @@
 import { state } from "../../state.js";
 import { t } from "../../i18n/index.js";
 import {
-  saveProvider,
-  deleteProvider,
-  testProvider,
   saveDestination,
   deleteDestination,
   testDestination,
-  testProviderFromSettings,
   testDestinationFromSettings,
   testNotificationConfig,
   testStoredNotificationConfig,
@@ -17,7 +13,6 @@ import {
   deleteNotificationRule,
 } from "../../api.js";
 import {
-  fillProviderForm,
   fillDestinationForm,
   updateDestinationFields,
   fillNotificationChannelForm,
@@ -29,7 +24,6 @@ import { showAppMessage } from "../../utils.js";
 import { showConfirmModal } from "../../ui/modals.js";
 import {
   showApiKeyFeedback,
-  showProviderFeedback,
   showDestinationFeedback,
   showNotificationFeedback,
 } from "./feedback.js";
@@ -48,6 +42,7 @@ import { handleDestinationSubmit } from "./destination-submit.js";
 import { handleApiKeySubmit } from "./api-key-submit.js";
 import { handleNotificationSubmit } from "./notification-submit.js";
 import { handleApiKeyAction } from "./api-key-actions.js";
+import { handleProviderAction } from "./provider-actions.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
@@ -61,22 +56,7 @@ export async function handleSettingsSubmit(form) {
 export async function handleSettingsClick(button) {
   const action = button.dataset.settingsAction || button.dataset.action;
   if (await handleApiKeyAction(action, button)) return;
-
-  if (action === "edit-provider") {
-    const provider = state.providers.find((p) => p.id === button.dataset.providerId);
-    fillProviderForm(provider);
-    return;
-  }
-
-  if (action === "cancel-provider-edit") {
-    const form = document.getElementById("provider-form");
-    if (!form) return;
-    form.reset();
-    form.provider_config_id.value = "";
-    form.querySelector("button[type='submit']").textContent = t("settings.providers.save");
-    button.hidden = true;
-    return;
-  }
+  if (await handleProviderAction(action, button)) return;
 
   if (action === "toggle-destination-enabled") {
     button.disabled = true;
@@ -154,75 +134,6 @@ export async function handleSettingsClick(button) {
     return;
   }
 
-  if (action === "toggle-provider-enabled") {
-    button.disabled = true;
-    const newEnabled = button.checked;
-    const payload = {
-      provider_config_id: button.dataset.providerId,
-      provider_type: button.dataset.providerType,
-      name: button.dataset.providerName,
-      is_enabled: newEnabled,
-      is_default: newEnabled ? button.dataset.isDefault === "1" : false,
-    };
-    try {
-      await saveProvider(payload);
-      await loadSettings();
-      showProviderFeedback(t("messages.settings_provider_enabled_updated"), "success");
-    } catch (err) {
-      await loadSettings();
-      showProviderFeedback(err.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "set-provider-default") {
-    if (!button.checked) {
-      button.checked = true;
-      return;
-    }
-    button.disabled = true;
-    const payload = {
-      provider_config_id: button.dataset.providerId,
-      provider_type: button.dataset.providerType,
-      name: button.dataset.providerName,
-      is_enabled: true,
-      is_default: true,
-    };
-    try {
-      await saveProvider(payload);
-      await loadSettings();
-      showProviderFeedback(t("messages.settings_provider_default_updated"), "success");
-    } catch (err) {
-      await loadSettings();
-      showProviderFeedback(err.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "test-provider") {
-    const providerId = button.dataset.providerId;
-    try {
-      const result = await testProvider(providerId);
-      await loadSettings();
-      const name = result.provider_user?.username || t("messages.settings_provider_tested_ok");
-      showProviderFeedback(`${t("messages.settings_provider_tested")}: ${name}`, "success");
-    } catch (error) {
-      showProviderFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "delete-provider") {
-    try {
-      await deleteProvider(button.dataset.providerId);
-      await loadSettings();
-      showProviderFeedback(t("messages.settings_provider_deleted"), "success");
-    } catch (error) {
-      showProviderFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
   if (action === "delete-destination") {
     try {
       await deleteDestination(button.dataset.destinationId);
@@ -231,16 +142,6 @@ export async function handleSettingsClick(button) {
     } catch (err) {
       showDestinationFeedback(err.message || t("messages.settings_action_error"), "error");
     }
-    return;
-  }
-
-  if (action === "test-provider-settings") {
-    const result = await testProviderFromSettings(button.dataset.providerId);
-    showAppMessage(
-      `Provider OK: ${result.provider_user?.username || "compte valide"}`,
-      "success"
-    );
-    await loadSettings();
     return;
   }
 
