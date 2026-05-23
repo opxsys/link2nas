@@ -17,7 +17,6 @@ import {
   createNotificationRule,
   updateNotificationRule,
   deleteNotificationRule,
-  createUserApiKey,
   revokeUserApiKey,
   deleteUserApiKey,
 } from "../../api.js";
@@ -31,7 +30,7 @@ import {
   resetNotificationRuleForm,
 } from "../../render/settings.js";
 import { showAppMessage } from "../../utils.js";
-import { showConfirmModal, showSecretModal } from "../../ui/modals.js";
+import { showConfirmModal } from "../../ui/modals.js";
 import {
   showApiKeyFeedback,
   showProviderFeedback,
@@ -51,39 +50,14 @@ import { handleAccountSubmit } from "./account-submit.js";
 import { handleProwlarrSubmit } from "./prowlarr-submit.js";
 import { handleProviderSubmit } from "./provider-submit.js";
 import { handleDestinationSubmit } from "./destination-submit.js";
+import { handleApiKeySubmit } from "./api-key-submit.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
   if (await handleProwlarrSubmit(form)) return;
   if (await handleProviderSubmit(form)) return;
   if (await handleDestinationSubmit(form)) return;
-
-  if (form.id === "api-key-form") {
-    const scopes = Array.from(form.querySelectorAll("input[name='scope']:checked"))
-      .map((input) => input.value)
-      .filter(Boolean);
-
-    try {
-      const result = await createUserApiKey({
-        name: form.name.value,
-        scopes,
-      });
-
-      form.reset();
-
-      await showSecretModal({
-        title: t("settings.api_keys.modal_title"),
-        message: t("settings.api_keys.modal_message"),
-        secret: result.key,
-        copyLabel: t("settings.api_keys.modal_copy"),
-        closeLabel: t("common.close"),
-      });
-      await loadSettings();
-    } catch (error) {
-      showApiKeyFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
+  if (await handleApiKeySubmit(form)) return;
 
   if (form.id === "test-gotify-form") {
     const result = await testNotificationConfig({
