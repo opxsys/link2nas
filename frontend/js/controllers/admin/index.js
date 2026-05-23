@@ -15,7 +15,6 @@ import {
   runAdminNotificationDispatcherOnce,
   getAdminGeneralSettings,
   listAdminAnnouncements,
-  createAdminAnnouncement,
   updateAdminAnnouncement,
   deleteAdminAnnouncement,
   getAdminAnnouncementTracking,
@@ -32,9 +31,10 @@ import { renderStaticTexts } from "../navigation-controller.js";
 import { bindAuthEvents } from "../auth-controller.js";
 import { showAdminFeedback } from "./feedback.js";
 import { getFilteredAdminUsers, bindAdminUsersFilters } from "./users-filters.js";
-import { buildAnnouncementPayload, formatCleanupResult } from "./payloads.js";
+import { formatCleanupResult } from "./payloads.js";
 import { handleSettingsSubmit } from "./settings-submit.js";
 import { handleUserSubmit } from "./user-submit.js";
+import { handleAnnouncementSubmit } from "./announcement-submit.js";
 import { loadEmailTemplateIntoPanel, initEmailTemplatesPanel } from "./email-templates.js";
 import { handleEmailTemplateAction } from "./email-template-actions.js";
 import { loadAntiAbuseSection } from "./anti-abuse.js";
@@ -166,41 +166,7 @@ export async function handleAdminSubmit(form) {
 
   if (await handleSettingsSubmit(form)) return;
   if (await handleUserSubmit(form)) return;
-
-  if (form.id === "announcement-create-form") {
-    const payload = buildAnnouncementPayload(form);
-    try {
-      await createAdminAnnouncement(payload);
-      state.activeAdminTab = "announcements";
-      await loadAdmin();
-      switchAdminTab("announcements");
-      const details = document.querySelector('[data-admin-panel="announcements"] details');
-      if (details) details.open = false;
-      showAdminFeedback("announcements", t("admin.announcements.created"), "success");
-    } catch (error) {
-      const msg = error.status === 503
-        ? t("admin.announcements.email_send_failed_smtp")
-        : error.message || t("messages.admin_action_error");
-      showAdminFeedback("announcements", msg, "error");
-    }
-    return;
-  }
-
-  if (form.classList.contains("announcement-edit-form-inline")) {
-    const annId = form.dataset.announcementId;
-    if (!annId) return;
-    const payload = buildAnnouncementPayload(form);
-    try {
-      await updateAdminAnnouncement(annId, payload);
-      state.activeAdminTab = "announcements";
-      await loadAdmin();
-      switchAdminTab("announcements");
-      showAdminFeedback("announcements", t("admin.announcements.updated"), "success");
-    } catch (error) {
-      showAdminFeedback("announcements", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
+  if (await handleAnnouncementSubmit(form)) return;
 
 }
 
