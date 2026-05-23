@@ -36,9 +36,6 @@ import {
   updateAdminAnnouncement,
   deleteAdminAnnouncement,
   getAdminAnnouncementTracking,
-  saveEmailTemplate,
-  previewEmailTemplate,
-  resetEmailTemplate,
   getAdminAntiAbuse,
   resetAdminAntiAbuseAll,
   resetAdminAntiAbuseKind,
@@ -57,7 +54,8 @@ import { bindAuthEvents } from "../auth-controller.js";
 import { showAdminFeedback } from "./feedback.js";
 import { getFilteredAdminUsers, bindAdminUsersFilters } from "./users-filters.js";
 import { getOptionalDatetimeValue, buildSmtpSettingsPayload, buildSecuritySettingsPayload, buildCleanupSettingsPayload, buildRestartCooldownsPayload, buildRuntimeSettingsPayload, buildAnnouncementPayload, formatCleanupResult } from "./payloads.js";
-import { loadEmailTemplateIntoPanel, initEmailTemplatesPanel, getEmailTemplateBtns, setEmailTemplateBtnsDisabled, updateEmailTemplateCustomBadge, showEmailTemplatePreview, hideEmailTemplatePreview, insertAtCursor } from "./email-templates.js";
+import { loadEmailTemplateIntoPanel, initEmailTemplatesPanel } from "./email-templates.js";
+import { handleEmailTemplateAction } from "./email-template-actions.js";
 
 export { showAdminFeedback, getFilteredAdminUsers, bindAdminUsersFilters, loadEmailTemplateIntoPanel, initEmailTemplatesPanel };
 
@@ -412,6 +410,8 @@ export async function handleAdminClick(button) {
   const action = button.dataset.action;
   const id = button.dataset.id;
 
+  if (await handleEmailTemplateAction(action, button)) return;
+
   if (action === "test-admin-smtp") {
     try {
       const result = await testAdminSmtpSettings();
@@ -748,85 +748,6 @@ export async function handleAdminClick(button) {
       inlineEl.hidden = false;
     } catch (error) {
       showAdminFeedback("announcements", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "insert-template-variable") {
-    const variable = button.dataset.variable;
-    if (!variable) return;
-    const textarea = document.getElementById("email-template-body");
-    if (!textarea) return;
-    insertAtCursor(textarea, `{${variable}}`);
-    return;
-  }
-
-  if (action === "email-template-save") {
-    const key = document.getElementById("email-template-key-select")?.value;
-    const lang = document.getElementById("email-template-lang-select")?.value;
-    const subject = document.getElementById("email-template-subject")?.value || "";
-    const body = document.getElementById("email-template-body")?.value || "";
-    if (!key || !lang) return;
-
-    const btns = getEmailTemplateBtns();
-    setEmailTemplateBtnsDisabled(btns, true);
-    try {
-      const saved = await saveEmailTemplate(key, lang, { subject_template: subject, body_template: body });
-      updateEmailTemplateCustomBadge(saved.is_custom);
-      showAdminFeedback("email-templates", t("admin.email_templates.saved"), "success");
-    } catch (error) {
-      showAdminFeedback("email-templates", error.message || t("admin.email_templates.save_error"), "error");
-    } finally {
-      setEmailTemplateBtnsDisabled(btns, false);
-    }
-    return;
-  }
-
-  if (action === "email-template-preview") {
-    const key = document.getElementById("email-template-key-select")?.value;
-    const lang = document.getElementById("email-template-lang-select")?.value;
-    const subject = document.getElementById("email-template-subject")?.value || "";
-    const body = document.getElementById("email-template-body")?.value || "";
-    if (!key || !lang) return;
-
-    const btns = getEmailTemplateBtns();
-    setEmailTemplateBtnsDisabled(btns, true);
-    hideEmailTemplatePreview();
-    try {
-      const result = await previewEmailTemplate(key, lang, { subject_template: subject, body_template: body });
-      showEmailTemplatePreview(result);
-    } catch (error) {
-      showAdminFeedback("email-templates", error.message || t("admin.email_templates.preview_error"), "error");
-    } finally {
-      setEmailTemplateBtnsDisabled(btns, false);
-    }
-    return;
-  }
-
-  if (action === "email-template-reset") {
-    const key = document.getElementById("email-template-key-select")?.value;
-    const lang = document.getElementById("email-template-lang-select")?.value;
-    if (!key || !lang) return;
-
-    const confirmed = await showConfirmModal({
-      title: t("admin.email_templates.reset"),
-      message: t("admin.email_templates.reset_confirm"),
-      confirmLabel: t("admin.email_templates.reset"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-    if (!confirmed) return;
-
-    const btns = getEmailTemplateBtns();
-    setEmailTemplateBtnsDisabled(btns, true);
-    try {
-      await resetEmailTemplate(key, lang);
-      await loadEmailTemplateIntoPanel(key, lang);
-      showAdminFeedback("email-templates", t("admin.email_templates.reset_done"), "success");
-    } catch (error) {
-      showAdminFeedback("email-templates", error.message || t("admin.email_templates.reset_error"), "error");
-    } finally {
-      setEmailTemplateBtnsDisabled(btns, false);
     }
     return;
   }
