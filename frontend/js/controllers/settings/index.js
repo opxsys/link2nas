@@ -53,38 +53,12 @@ import { showConfirmModal, showSecretModal } from "../../ui/modals.js";
 import { applyCurrentUserTheme } from "../../core/theme.js";
 import { loadAndRenderBanner } from "../announcements-controller.js";
 import { updateProwlarrNavVisibility, renderPageVisibility } from "../navigation-controller.js";
-
-function showApiKeyFeedback(message, type = "info") {
-  const el = document.getElementById("api-key-feedback");
-  if (!el) { showAppMessage(message, type); return; }
-  el.textContent = message;
-  el.className = `api-key-feedback api-key-feedback-${type}`;
-  el.hidden = false;
-}
-
-function showProviderFeedback(message, type = "info") {
-  const el = document.getElementById("provider-feedback");
-  if (!el) { showAppMessage(message, type); return; }
-  el.textContent = message;
-  el.className = `provider-feedback provider-feedback-${type}`;
-  el.hidden = false;
-}
-
-function showDestinationFeedback(message, type = "info") {
-  const el = document.getElementById("destination-feedback");
-  if (!el) { showAppMessage(message, type); return; }
-  el.textContent = message;
-  el.className = `destination-feedback destination-feedback-${type}`;
-  el.hidden = false;
-}
-
-function showNotificationFeedback(message, type = "info") {
-  const el = document.getElementById("notification-feedback");
-  if (!el) { showAppMessage(message, type); return; }
-  el.textContent = message;
-  el.className = `notification-feedback notification-feedback-${type}`;
-  el.hidden = false;
-}
+import {
+  showApiKeyFeedback,
+  showProviderFeedback,
+  showDestinationFeedback,
+  showNotificationFeedback,
+} from "./feedback.js";
 
 function buildDestinationConfigJsonFromState(dest) {
   const cfg = dest.config || {};
