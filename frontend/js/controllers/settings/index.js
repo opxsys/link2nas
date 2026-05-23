@@ -15,8 +15,6 @@ import {
   deleteNotificationConfig,
   updateNotificationRule,
   deleteNotificationRule,
-  revokeUserApiKey,
-  deleteUserApiKey,
 } from "../../api.js";
 import {
   fillProviderForm,
@@ -49,6 +47,7 @@ import { handleProviderSubmit } from "./provider-submit.js";
 import { handleDestinationSubmit } from "./destination-submit.js";
 import { handleApiKeySubmit } from "./api-key-submit.js";
 import { handleNotificationSubmit } from "./notification-submit.js";
+import { handleApiKeyAction } from "./api-key-actions.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
@@ -61,6 +60,7 @@ export async function handleSettingsSubmit(form) {
 
 export async function handleSettingsClick(button) {
   const action = button.dataset.settingsAction || button.dataset.action;
+  if (await handleApiKeyAction(action, button)) return;
 
   if (action === "edit-provider") {
     const provider = state.providers.find((p) => p.id === button.dataset.providerId);
@@ -442,56 +442,6 @@ export async function handleSettingsClick(button) {
       showNotificationFeedback(result.message || t("messages.settings_channel_test_ok"), "success");
     } catch (error) {
       showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "revoke-api-key") {
-    const keyId = button.dataset.apiKeyId;
-
-    if (!keyId) return;
-
-    const confirmed = await showConfirmModal({
-      title: t("settings.api_keys.confirm_revoke_title"),
-      message: t("settings.api_keys.confirm_revoke_message"),
-      confirmLabel: t("settings.api_keys.revoke"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-
-    if (!confirmed) return;
-
-    try {
-      await revokeUserApiKey(keyId);
-      await loadSettings();
-      showApiKeyFeedback(t("messages.settings_api_key_revoked"), "success");
-    } catch (error) {
-      showApiKeyFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "delete-api-key") {
-    const keyId = button.dataset.apiKeyId;
-
-    if (!keyId) return;
-
-    const confirmed = await showConfirmModal({
-      title: t("settings.api_keys.confirm_delete_title"),
-      message: t("settings.api_keys.confirm_delete_message"),
-      confirmLabel: t("common.delete"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-
-    if (!confirmed) return;
-
-    try {
-      await deleteUserApiKey(keyId);
-      await loadSettings();
-      showApiKeyFeedback(t("messages.settings_api_key_deleted"), "success");
-    } catch (error) {
-      showApiKeyFeedback(error.message || t("messages.settings_action_error"), "error");
     }
     return;
   }
