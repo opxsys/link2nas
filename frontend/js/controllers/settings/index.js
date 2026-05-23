@@ -18,8 +18,6 @@ import {
   createNotificationRule,
   updateNotificationRule,
   deleteNotificationRule,
-  updateMe,
-  changeMyPassword,
   createUserApiKey,
   revokeUserApiKey,
   deleteUserApiKey,
@@ -36,7 +34,6 @@ import {
 import { hasConfiguredProwlarr } from "../../render/prowlarr.js";
 import { showAppMessage } from "../../utils.js";
 import { showConfirmModal, showSecretModal } from "../../ui/modals.js";
-import { applyCurrentUserTheme } from "../../core/theme.js";
 import { renderPageVisibility } from "../navigation-controller.js";
 import {
   showApiKeyFeedback,
@@ -53,8 +50,10 @@ import {
 import { loadSettings, onSettingsTabChange } from "./loader.js";
 export { loadSettings, onSettingsTabChange };
 export { loadEspace } from "./espace.js";
+import { handleAccountSubmit } from "./account-submit.js";
 
 export async function handleSettingsSubmit(form) {
+  if (await handleAccountSubmit(form)) return;
   if (form.id === "prowlarr-settings-form") {
     const saved = await saveMyIntegrationSettings({
       prowlarr_enabled: Boolean(form.prowlarr_enabled?.checked),
@@ -113,45 +112,6 @@ export async function handleSettingsSubmit(form) {
     } catch (err) {
       showDestinationFeedback(err.message || t("messages.settings_action_error"), "error");
     }
-    return;
-  }
-
-  if (form.id === "my-profile-form") {
-    const previousEmail = String(state.currentUser?.email || "").trim().toLowerCase();
-    const newEmail = String(form.email.value || "").trim().toLowerCase();
-
-    const me = await updateMe({
-      email: form.email.value,
-      display_name: form.display_name.value,
-      preferred_language: form.preferred_language.value,
-      receive_application_emails: Boolean(form.receive_application_emails?.checked),
-      ui_theme: form.ui_theme?.value || "auto",
-    });
-
-    state.currentUser = me;
-    applyCurrentUserTheme(me);
-
-    if (newEmail && previousEmail && newEmail !== previousEmail) {
-      showAppMessage(
-        t("messages.settings_profile_updated_email"),
-        "info"
-      );
-    } else {
-      showAppMessage(t("messages.settings_profile_updated"), "success");
-    }
-
-    await loadSettings();
-    return;
-  }
-
-  if (form.id === "change-password-form") {
-    await changeMyPassword({
-      current_password: form.current_password.value,
-      new_password: form.new_password.value,
-    });
-
-    form.reset();
-    showAppMessage(t("messages.settings_password_changed"), "success");
     return;
   }
 
