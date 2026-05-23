@@ -1,14 +1,9 @@
 import {
-  cancelJob,
-  deleteJob,
   getJob,
   getJobs,
-  refreshJob,
-  restartJob,
   selectJobFiles,
   sendJobToDestination,
   resendJobToDestination,
-  startJob,
   unrestrictJob,
   unrestrictJobFile,
   cloneJobWithProvider,
@@ -38,6 +33,7 @@ import {
   getOtherProviderConfigs,
   providerOption,
 } from "./profile-helpers.js";
+import { handleLifecycleJobAction } from "./lifecycle-actions.js";
 
 async function reloadJobs() {
   await ensureRestartCooldownsLoaded(true);
@@ -59,71 +55,7 @@ export async function performJobAction(action, jobId, fileId = null) {
     setCurrentAction(action, jobId, fileId);
     renderJobDetails(state.selectedJob);
 
-    if (action === "start") {
-      await startJob(jobId);
-      showAppMessage(t("messages.job_started"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "refresh" || action === "resync-provider") {
-      await refreshJob(jobId);
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "cancel") {
-      const confirmed = await confirmModal(
-        "Annuler le job",
-        "Annuler ce job et nettoyer les ressources provider si possible ?",
-        "Annuler le job"
-      );
-
-      if (!confirmed) return;
-
-      await cancelJob(jobId);
-      showAppMessage(t("messages.job_cancelled"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "restart") {
-      await restartJob(jobId);
-      showAppMessage(t("messages.job_restarted"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "delete") {
-      const confirmed = await confirmModal(
-        "Supprimer le job",
-        t("messages.confirm_delete_job"),
-        "Supprimer"
-      );
-
-      if (!confirmed) return;
-
-      const wasSelected = state.selectedJobId === jobId;
-      await deleteJob(jobId);
-
-      if (wasSelected) {
-        state.selectedJobId = null;
-        state.selectedJob = null;
-      }
-
-      await reloadJobs();
-
-      if (wasSelected) {
-        renderJobDetails(null);
-      }
-
-      showAppMessage(t("messages.job_deleted"), "success");
-      return;
-    }
+    if (await handleLifecycleJobAction(action, jobId, { reloadJobs, selectJob })) return;
 
     if (action === "select-files") {
       await selectJobFiles(jobId, "all");
