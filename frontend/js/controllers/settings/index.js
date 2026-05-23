@@ -1,26 +1,5 @@
-import { state } from "../../state.js";
 import { t } from "../../i18n/index.js";
-import {
-  testNotificationConfig,
-  testStoredNotificationConfig,
-  updateNotificationConfig,
-  deleteNotificationConfig,
-  updateNotificationRule,
-  deleteNotificationRule,
-} from "../../api.js";
-import {
-  fillNotificationChannelForm,
-  resetNotificationChannelForm,
-  fillNotificationRuleForm,
-  resetNotificationRuleForm,
-} from "../../render/settings.js";
 import { showConfirmModal } from "../../ui/modals.js";
-import {
-  showNotificationFeedback,
-} from "./feedback.js";
-import {
-  buildNotificationChannelPayload,
-} from "./payloads.js";
 import { loadSettings, onSettingsTabChange } from "./loader.js";
 export { loadSettings, onSettingsTabChange };
 export { loadEspace } from "./espace.js";
@@ -33,6 +12,7 @@ import { handleNotificationSubmit } from "./notification-submit.js";
 import { handleApiKeyAction } from "./api-key-actions.js";
 import { handleProviderAction } from "./provider-actions.js";
 import { handleDestinationAction } from "./destination-actions.js";
+import { handleNotificationAction } from "./notification-actions.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
@@ -48,16 +28,7 @@ export async function handleSettingsClick(button) {
   if (await handleApiKeyAction(action, button)) return;
   if (await handleProviderAction(action, button)) return;
   if (await handleDestinationAction(action, button)) return;
-
-  if (action === "reset-notification-channel-form") {
-    resetNotificationChannelForm();
-    return;
-  }
-
-  if (action === "reset-notification-rule-form") {
-    resetNotificationRuleForm();
-    return;
-  }
+  if (await handleNotificationAction(action, button)) return;
 
   if (action === "show-prowlarr-api-key-modal") {
     const confirmed = await showConfirmModal({
@@ -69,178 +40,6 @@ export async function handleSettingsClick(button) {
     });
     if (confirmed) {
       document.querySelector('[data-settings-tab="api_keys"]')?.click();
-    }
-    return;
-  }
-
-  if (action === "cancel-notification-channel-edit") {
-    resetNotificationChannelForm();
-    button.hidden = true;
-    return;
-  }
-
-  if (action === "cancel-notification-rule-edit") {
-    resetNotificationRuleForm();
-    button.hidden = true;
-    return;
-  }
-
-  if (action === "toggle-notification-channel-enabled") {
-    button.disabled = true;
-    const newEnabled = button.checked;
-    const cfg = state.notificationConfigs.find((c) => c.id === button.dataset.notificationConfigId);
-    if (!cfg) { button.disabled = false; return; }
-    try {
-      await updateNotificationConfig(cfg.id, {
-        is_enabled: newEnabled,
-        is_default: newEnabled ? cfg.is_default : false,
-      });
-      await loadSettings();
-      showNotificationFeedback(t("messages.settings_channel_enabled_updated"), "success");
-    } catch (error) {
-      await loadSettings();
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "set-notification-channel-default") {
-    if (!button.checked) { button.checked = true; return; }
-    button.disabled = true;
-    const cfg = state.notificationConfigs.find((c) => c.id === button.dataset.notificationConfigId);
-    if (!cfg) { button.disabled = false; return; }
-    try {
-      await updateNotificationConfig(cfg.id, { is_enabled: true, is_default: true });
-      await loadSettings();
-      showNotificationFeedback(t("messages.settings_channel_default_updated"), "success");
-    } catch (error) {
-      await loadSettings();
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "toggle-notification-rule-enabled") {
-    button.disabled = true;
-    const newEnabled = button.checked;
-    const rule = state.notificationRules.find((r) => r.id === button.dataset.notificationRuleId);
-    if (!rule) { button.disabled = false; return; }
-    try {
-      await updateNotificationRule(rule.id, { is_enabled: newEnabled });
-      await loadSettings();
-      showNotificationFeedback(t("messages.settings_rule_enabled_updated"), "success");
-    } catch (error) {
-      await loadSettings();
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "edit-notification-channel") {
-    const configId = button.dataset.notificationConfigId;
-    const config = state.notificationConfigs.find((item) => item.id === configId);
-
-    if (!config) {
-      showNotificationFeedback(t("messages.settings_channel_not_found"), "error");
-      return;
-    }
-
-    fillNotificationChannelForm(config);
-    return;
-  }
-
-  if (action === "test-stored-notification-channel") {
-    const configId = button.dataset.notificationConfigId;
-
-    if (!configId) return;
-
-    try {
-      const result = await testStoredNotificationConfig(configId);
-      showNotificationFeedback(result.message || t("messages.settings_channel_test_ok"), "success");
-    } catch (error) {
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "delete-notification-channel") {
-    const configId = button.dataset.notificationConfigId;
-
-    if (!configId) return;
-
-    const confirmed = await showConfirmModal({
-      title: t("settings.notifications.confirm_delete_channel_title"),
-      message: t("settings.notifications.confirm_delete_channel_message"),
-      confirmLabel: t("common.delete"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-
-    if (!confirmed) return;
-
-    try {
-      await deleteNotificationConfig(configId);
-      await loadSettings();
-      showNotificationFeedback(t("messages.settings_channel_deleted"), "success");
-    } catch (error) {
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "edit-notification-rule") {
-    const ruleId = button.dataset.notificationRuleId;
-    const rule = state.notificationRules.find((item) => item.id === ruleId);
-
-    if (!rule) {
-      showNotificationFeedback(t("messages.settings_rule_not_found"), "error");
-      return;
-    }
-
-    fillNotificationRuleForm(rule);
-    return;
-  }
-
-  if (action === "delete-notification-rule") {
-    const ruleId = button.dataset.notificationRuleId;
-
-    if (!ruleId) return;
-
-    const confirmed = await showConfirmModal({
-      title: t("settings.notifications.confirm_delete_rule_title"),
-      message: t("settings.notifications.confirm_delete_rule_message"),
-      confirmLabel: t("common.delete"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-
-    if (!confirmed) return;
-
-    try {
-      await deleteNotificationRule(ruleId);
-      await loadSettings();
-      showNotificationFeedback(t("messages.settings_rule_deleted"), "success");
-    } catch (error) {
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "test-notification-channel-form") {
-    const form = document.getElementById("notification-channel-form");
-    if (!form) return;
-
-    const payload = buildNotificationChannelPayload(form);
-
-    try {
-      const result = await testNotificationConfig({
-        channel: payload.channel,
-        name: payload.name,
-        config: payload.config,
-      });
-      showNotificationFeedback(result.message || t("messages.settings_channel_test_ok"), "success");
-    } catch (error) {
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
     }
     return;
   }
