@@ -1,7 +1,6 @@
 import { state } from "../../state.js";
 import { t } from "../../i18n/index.js";
 import {
-  saveMyIntegrationSettings,
   saveProvider,
   deleteProvider,
   testProvider,
@@ -31,10 +30,8 @@ import {
   fillNotificationRuleForm,
   resetNotificationRuleForm,
 } from "../../render/settings.js";
-import { hasConfiguredProwlarr } from "../../render/prowlarr.js";
 import { showAppMessage } from "../../utils.js";
 import { showConfirmModal, showSecretModal } from "../../ui/modals.js";
-import { renderPageVisibility } from "../navigation-controller.js";
 import {
   showApiKeyFeedback,
   showProviderFeedback,
@@ -51,30 +48,11 @@ import { loadSettings, onSettingsTabChange } from "./loader.js";
 export { loadSettings, onSettingsTabChange };
 export { loadEspace } from "./espace.js";
 import { handleAccountSubmit } from "./account-submit.js";
+import { handleProwlarrSubmit } from "./prowlarr-submit.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
-  if (form.id === "prowlarr-settings-form") {
-    const saved = await saveMyIntegrationSettings({
-      prowlarr_enabled: Boolean(form.prowlarr_enabled?.checked),
-      prowlarr_url: form.prowlarr_url?.value || "",
-      prowlarr_open_mode: form.prowlarr_open_mode?.value || "both",
-      home_page: form.home_page?.value || "jobs",
-    });
-
-    state.integrationSettings = saved;
-
-    if (state.activePage === "prowlarr" && !hasConfiguredProwlarr()) {
-      state.activePage = "jobs";
-      localStorage.setItem("link2nas_active_page", "jobs");
-    }
-
-    showAppMessage(t("messages.settings_prowlarr_saved"), "success");
-    await loadSettings();
-    renderPageVisibility();
-    return;
-  }
-
+  if (await handleProwlarrSubmit(form)) return;
   if (form.id === "provider-form") {
     try {
       await saveProvider({
