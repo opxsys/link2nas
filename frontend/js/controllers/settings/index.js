@@ -1,5 +1,3 @@
-import { t } from "../../i18n/index.js";
-import { showConfirmModal } from "../../ui/modals.js";
 import { loadSettings, onSettingsTabChange } from "./loader.js";
 export { loadSettings, onSettingsTabChange };
 export { loadEspace } from "./espace.js";
@@ -13,6 +11,7 @@ import { handleApiKeyAction } from "./api-key-actions.js";
 import { handleProviderAction } from "./provider-actions.js";
 import { handleDestinationAction } from "./destination-actions.js";
 import { handleNotificationAction } from "./notification-actions.js";
+import { handleProwlarrAction } from "./prowlarr-actions.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
@@ -29,19 +28,5 @@ export async function handleSettingsClick(button) {
   if (await handleProviderAction(action, button)) return;
   if (await handleDestinationAction(action, button)) return;
   if (await handleNotificationAction(action, button)) return;
-
-  if (action === "show-prowlarr-api-key-modal") {
-    const confirmed = await showConfirmModal({
-      title: t("settings.prowlarr.no_qbt_key_modal_title"),
-      message: t("settings.prowlarr.no_qbt_key_modal_message"),
-      confirmLabel: t("settings.prowlarr.no_qbt_key_modal_goto"),
-      cancelLabel: t("common.close"),
-      danger: false,
-    });
-    if (confirmed) {
-      document.querySelector('[data-settings-tab="api_keys"]')?.click();
-    }
-    return;
-  }
-
+  if (await handleProwlarrAction(action, button)) return;
 }
