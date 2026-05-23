@@ -1,4 +1,3 @@
-import { getToken } from "../../core/session.js";
 import { state } from "../../state.js";
 import { t } from "../../i18n/index.js";
 import {
@@ -6,13 +5,9 @@ import {
   getAdminSmtpSettings,
   getAdminSecuritySettings,
   getAdminCleanupSettings,
-  runAdminCleanup,
   getAdminMaintenanceStatus,
-  testAdminSmtpSettings,
   getAdminRestartCooldowns,
   getAdminRuntimeSettings,
-  getAdminNotificationDispatcherStatus,
-  runAdminNotificationDispatcherOnce,
   getAdminGeneralSettings,
   listAdminAnnouncements,
   updateAdminAnnouncement,
@@ -24,14 +19,10 @@ import {
   renderAnnouncementForm,
   renderAnnouncementTrackingPanel,
 } from "../../render/admin.js";
-import { renderLoginForm } from "../../render/auth.js";
-import { showAppMessage } from "../../utils.js";
 import { showConfirmModal } from "../../ui/modals.js";
 import { renderStaticTexts } from "../navigation-controller.js";
-import { bindAuthEvents } from "../auth-controller.js";
 import { showAdminFeedback } from "./feedback.js";
 import { getFilteredAdminUsers, bindAdminUsersFilters } from "./users-filters.js";
-import { formatCleanupResult } from "./payloads.js";
 import { handleSettingsSubmit } from "./settings-submit.js";
 import { handleUserSubmit } from "./user-submit.js";
 import { handleAnnouncementSubmit } from "./announcement-submit.js";
@@ -40,6 +31,7 @@ import { handleEmailTemplateAction } from "./email-template-actions.js";
 import { loadAntiAbuseSection } from "./anti-abuse.js";
 import { handleAntiAbuseAction } from "./anti-abuse-actions.js";
 import { handleUserAction } from "./user-actions.js";
+import { handleSystemAction } from "./system-actions.js";
 
 export { showAdminFeedback, getFilteredAdminUsers, bindAdminUsersFilters, loadEmailTemplateIntoPanel, initEmailTemplatesPanel, loadAntiAbuseSection };
 
@@ -177,106 +169,7 @@ export async function handleAdminClick(button) {
   if (await handleEmailTemplateAction(action, button)) return;
   if (await handleAntiAbuseAction(action, button)) return;
   if (await handleUserAction(action, button)) return;
-
-  if (action === "test-admin-smtp") {
-    try {
-      const result = await testAdminSmtpSettings();
-      showAdminFeedback("smtp", result.message || t("messages.admin_smtp_test_sent"), "success");
-    } catch (error) {
-      showAdminFeedback("smtp", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "run-admin-cleanup") {
-    const confirmed = await showConfirmModal({
-      title: t("admin.cleanup.confirm_title"),
-      message: t("admin.cleanup.confirm_message"),
-      confirmLabel: t("admin.cleanup.confirm_run"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-
-    if (!confirmed) return;
-
-    try {
-      const result = await runAdminCleanup();
-      state.activeAdminTab = "cleanup";
-      await loadAdmin();
-      switchAdminTab("cleanup");
-      showAdminFeedback(
-        "cleanup",
-        `${t("messages.admin_cleanup_run")} ${formatCleanupResult(result)}`,
-        "success"
-      );
-    } catch (error) {
-      showAdminFeedback("cleanup", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "refresh-admin-maintenance") {
-    const token = getToken();
-
-    if (!token && !state.currentUser?.single_user_mode) {
-      showAppMessage(t("messages.session_expired"), "error");
-      renderLoginForm(state.appInfo?.email_sending_available ?? true);
-      bindAuthEvents();
-      return;
-    }
-
-    try {
-      const result = await getAdminMaintenanceStatus();
-      state.maintenanceStatus = result;
-      state.activeAdminTab = "maintenance";
-      await loadAdmin();
-      switchAdminTab("maintenance");
-      showAdminFeedback(
-        "maintenance",
-        t("messages.admin_maintenance_refreshed"),
-        result.ok ? "success" : "info"
-      );
-    } catch (error) {
-      showAdminFeedback("maintenance", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-  if (action === "run-notification-dispatcher-now") {
-    const limit = Number(
-      document.querySelector("[name='notification_dispatcher_limit']")?.value || 25
-    );
-    try {
-      const result = await runAdminNotificationDispatcherOnce(limit);
-      state.activeAdminTab = "runtime";
-      await loadAdmin();
-      switchAdminTab("runtime");
-      showAdminFeedback(
-        "runtime",
-        `${t("messages.admin_dispatcher_run")} processed=${result.processed || 0}, sent=${result.sent || 0}, retrying=${result.retrying || 0}, failed=${result.failed || 0}`,
-        result.errors?.length ? "info" : "success"
-      );
-    } catch (error) {
-      showAdminFeedback("runtime", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "refresh-notification-dispatcher-status") {
-    try {
-      const result = await getAdminNotificationDispatcherStatus();
-      state.activeAdminTab = "runtime";
-      await loadAdmin();
-      switchAdminTab("runtime");
-      showAdminFeedback(
-        "runtime",
-        result.last_error ? result.last_error : t("messages.admin_dispatcher_refreshed"),
-        result.last_error ? "info" : "success"
-      );
-    } catch (error) {
-      showAdminFeedback("runtime", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
+  if (await handleSystemAction(action, button)) return;
 
   if (action === "edit-announcement") {
     const annId = id;
