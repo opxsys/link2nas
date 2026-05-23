@@ -1,10 +1,6 @@
 import { state } from "../../state.js";
 import { t } from "../../i18n/index.js";
 import {
-  saveDestination,
-  deleteDestination,
-  testDestination,
-  testDestinationFromSettings,
   testNotificationConfig,
   testStoredNotificationConfig,
   updateNotificationConfig,
@@ -13,23 +9,16 @@ import {
   deleteNotificationRule,
 } from "../../api.js";
 import {
-  fillDestinationForm,
-  updateDestinationFields,
   fillNotificationChannelForm,
   resetNotificationChannelForm,
   fillNotificationRuleForm,
   resetNotificationRuleForm,
 } from "../../render/settings.js";
-import { showAppMessage } from "../../utils.js";
 import { showConfirmModal } from "../../ui/modals.js";
 import {
-  showApiKeyFeedback,
-  showDestinationFeedback,
   showNotificationFeedback,
 } from "./feedback.js";
 import {
-  buildDestinationConfigJsonFromState,
-  buildDestinationConfig,
   buildNotificationChannelPayload,
 } from "./payloads.js";
 import { loadSettings, onSettingsTabChange } from "./loader.js";
@@ -43,6 +32,7 @@ import { handleApiKeySubmit } from "./api-key-submit.js";
 import { handleNotificationSubmit } from "./notification-submit.js";
 import { handleApiKeyAction } from "./api-key-actions.js";
 import { handleProviderAction } from "./provider-actions.js";
+import { handleDestinationAction } from "./destination-actions.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
@@ -57,99 +47,7 @@ export async function handleSettingsClick(button) {
   const action = button.dataset.settingsAction || button.dataset.action;
   if (await handleApiKeyAction(action, button)) return;
   if (await handleProviderAction(action, button)) return;
-
-  if (action === "toggle-destination-enabled") {
-    button.disabled = true;
-    const newEnabled = button.checked;
-    const dest = state.destinations.find((d) => d.id === button.dataset.destinationId);
-    if (!dest) { button.disabled = false; return; }
-    const payload = {
-      destination_config_id: dest.id,
-      destination_type: dest.destination_type || dest.destination_name,
-      name: dest.name,
-      config_json: buildDestinationConfigJsonFromState(dest),
-      is_enabled: newEnabled,
-      is_default: newEnabled ? dest.is_default : false,
-    };
-    try {
-      await saveDestination(payload);
-      await loadSettings();
-      showDestinationFeedback(t("messages.settings_destination_enabled_updated"), "success");
-    } catch (err) {
-      await loadSettings();
-      showDestinationFeedback(err.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "set-destination-default") {
-    if (!button.checked) { button.checked = true; return; }
-    button.disabled = true;
-    const dest = state.destinations.find((d) => d.id === button.dataset.destinationId);
-    if (!dest) { button.disabled = false; return; }
-    const payload = {
-      destination_config_id: dest.id,
-      destination_type: dest.destination_type || dest.destination_name,
-      name: dest.name,
-      config_json: buildDestinationConfigJsonFromState(dest),
-      is_enabled: true,
-      is_default: true,
-    };
-    try {
-      await saveDestination(payload);
-      await loadSettings();
-      showDestinationFeedback(t("messages.settings_destination_default_updated"), "success");
-    } catch (err) {
-      await loadSettings();
-      showDestinationFeedback(err.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "cancel-destination-edit") {
-    const form = document.getElementById("destination-form");
-    if (!form) return;
-    form.reset();
-    form.destination_config_id.value = "";
-    form.querySelector("button[type='submit']").textContent = t("settings.destinations.save");
-    button.hidden = true;
-    updateDestinationFields();
-    return;
-  }
-
-  if (action === "edit-destination") {
-    const destination = state.destinations.find((d) => d.id === button.dataset.destinationId);
-    fillDestinationForm(destination);
-    return;
-  }
-
-  if (action === "test-destination") {
-    try {
-      const result = await testDestination(button.dataset.destinationId);
-      await loadSettings();
-      showDestinationFeedback(result.message || t("messages.settings_destination_tested"), "success");
-    } catch (err) {
-      showDestinationFeedback(err.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "delete-destination") {
-    try {
-      await deleteDestination(button.dataset.destinationId);
-      await loadSettings();
-      showDestinationFeedback(t("messages.settings_destination_deleted"), "success");
-    } catch (err) {
-      showDestinationFeedback(err.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "test-destination-settings") {
-    const result = await testDestinationFromSettings(button.dataset.destinationId);
-    showAppMessage(result.message || t("messages.settings_destination_tested"), "success");
-    return;
-  }
+  if (await handleDestinationAction(action, button)) return;
 
   if (action === "reset-notification-channel-form") {
     resetNotificationChannelForm();
