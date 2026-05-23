@@ -49,28 +49,12 @@ export { loadSettings, onSettingsTabChange };
 export { loadEspace } from "./espace.js";
 import { handleAccountSubmit } from "./account-submit.js";
 import { handleProwlarrSubmit } from "./prowlarr-submit.js";
+import { handleProviderSubmit } from "./provider-submit.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
   if (await handleProwlarrSubmit(form)) return;
-  if (form.id === "provider-form") {
-    try {
-      await saveProvider({
-        provider_config_id: form.provider_config_id?.value || undefined,
-        name: form.elements.name?.value || "",
-        provider_type: form.provider_type.value,
-        api_key: form.api_key.value || undefined,
-        is_enabled: Boolean(form.is_enabled.checked),
-        is_default: Boolean(form.is_default.checked),
-      });
-
-      await loadSettings();
-      showProviderFeedback(t("messages.settings_provider_saved"), "success");
-    } catch (error) {
-      showProviderFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
+  if (await handleProviderSubmit(form)) return;
 
   if (form.id === "destination-form") {
 
