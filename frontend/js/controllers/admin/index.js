@@ -8,21 +8,15 @@ import {
   resetUserPassword,
   getAdminSmtpSettings,
   getAdminSecuritySettings,
-  saveAdminSecuritySettings,
   getAdminCleanupSettings,
-  saveAdminCleanupSettings,
   runAdminCleanup,
   getAdminMaintenanceStatus,
-  saveAdminSmtpSettings,
   testAdminSmtpSettings,
   getAdminRestartCooldowns,
-  saveAdminRestartCooldowns,
   getAdminRuntimeSettings,
-  saveAdminRuntimeSettings,
   getAdminNotificationDispatcherStatus,
   runAdminNotificationDispatcherOnce,
   getAdminGeneralSettings,
-  saveAdminGeneralSettings,
   listAdminAnnouncements,
   createAdminAnnouncement,
   updateAdminAnnouncement,
@@ -41,7 +35,8 @@ import { renderStaticTexts } from "../navigation-controller.js";
 import { bindAuthEvents } from "../auth-controller.js";
 import { showAdminFeedback } from "./feedback.js";
 import { getFilteredAdminUsers, bindAdminUsersFilters } from "./users-filters.js";
-import { getOptionalDatetimeValue, buildSmtpSettingsPayload, buildSecuritySettingsPayload, buildCleanupSettingsPayload, buildRestartCooldownsPayload, buildRuntimeSettingsPayload, buildAnnouncementPayload, formatCleanupResult } from "./payloads.js";
+import { getOptionalDatetimeValue, buildAnnouncementPayload, formatCleanupResult } from "./payloads.js";
+import { handleSettingsSubmit } from "./settings-submit.js";
 import { loadEmailTemplateIntoPanel, initEmailTemplatesPanel } from "./email-templates.js";
 import { handleEmailTemplateAction } from "./email-template-actions.js";
 import { loadAntiAbuseSection } from "./anti-abuse.js";
@@ -171,65 +166,8 @@ export function updateUserCreationModeFields() {
 
 export async function handleAdminSubmit(form) {
 
-  if (form.id === "admin-general-form") {
-    const payload = {
-      app_name: form.app_name?.value?.trim() || "",
-      app_tagline: form.app_tagline?.value?.trim() || "",
-      public_base_url: form.public_base_url?.value?.trim() || "",
-    };
-    try {
-      const saved = await saveAdminGeneralSettings(payload);
-      state.generalSettings = saved;
-      state.activeAdminTab = "general";
-      await loadAdmin();
-      switchAdminTab("general");
-      showAdminFeedback("general", t("messages.admin_general_saved"), "success");
-    } catch (error) {
-      showAdminFeedback("general", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
+  if (await handleSettingsSubmit(form)) return;
 
-  if (form.id === "admin-smtp-form") {
-    const payload = buildSmtpSettingsPayload(form);
-    try {
-      await saveAdminSmtpSettings(payload);
-      state.activeAdminTab = "smtp";
-      await loadAdmin();
-      switchAdminTab("smtp");
-      showAdminFeedback("smtp", t("messages.admin_smtp_saved"), "success");
-    } catch (error) {
-      showAdminFeedback("smtp", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-  if (form.id === "admin-security-form") {
-    const payload = buildSecuritySettingsPayload(form);
-    try {
-      await saveAdminSecuritySettings(payload);
-      state.activeAdminTab = "security";
-      await loadAdmin();
-      switchAdminTab("security");
-      showAdminFeedback("security", t("messages.admin_security_saved"), "success");
-    } catch (error) {
-      showAdminFeedback("security", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (form.id === "admin-cleanup-form") {
-    const payload = buildCleanupSettingsPayload(form);
-    try {
-      await saveAdminCleanupSettings(payload);
-      state.activeAdminTab = "cleanup";
-      await loadAdmin();
-      switchAdminTab("cleanup");
-      showAdminFeedback("cleanup", t("messages.admin_cleanup_saved"), "success");
-    } catch (error) {
-      showAdminFeedback("cleanup", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
   if (form.id === "user-form") {
     const creationMode = form.creation_mode?.value || "password";
 
@@ -314,37 +252,6 @@ export async function handleAdminSubmit(form) {
 
     return;
   }
-  if (form.id === "admin-timeouts-form") {
-    const payload = buildRestartCooldownsPayload(form);
-    try {
-      const saved = await saveAdminRestartCooldowns(payload);
-      state.restartCooldowns = saved;
-      state.timeoutSettings = saved;
-      state.activeAdminTab = "timeouts";
-      await loadAdmin();
-      switchAdminTab("timeouts");
-      showAdminFeedback("timeouts", t("messages.admin_timeouts_saved"), "success");
-    } catch (error) {
-      showAdminFeedback("timeouts", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (form.id === "admin-runtime-form") {
-    const payload = buildRuntimeSettingsPayload(form);
-    try {
-      const saved = await saveAdminRuntimeSettings(payload);
-      state.runtimeSettings = saved;
-      state.activeAdminTab = "runtime";
-      await loadAdmin();
-      switchAdminTab("runtime");
-      showAdminFeedback("runtime", t("messages.admin_runtime_saved"), "success");
-    } catch (error) {
-      showAdminFeedback("runtime", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
   if (form.id === "announcement-create-form") {
     const payload = buildAnnouncementPayload(form);
     try {
