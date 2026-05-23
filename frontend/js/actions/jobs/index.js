@@ -17,60 +17,23 @@ import {
   cloneJobWithProvider,
   ApiError,
   cancelLocalDestinationDownload,
-  getAdminRestartCooldowns,
 } from "../../api.js";
 import { state } from "../../state.js";
 import { renderJobsList } from "../../render/jobs-list.js";
 import { renderJobDetails, forceOpenJobPanel } from "../../render/job-details.js";
 import { showAppMessage, copyToClipboard } from "../../utils.js";
 import { t } from "../../i18n/index.js";
+import {
+  ensureRestartCooldownsLoaded,
+  buildActionKey,
+  setCurrentAction,
+  clearCurrentAction,
+  clearCopyFlags,
+  isRestartCooldownError,
+} from "./state-helpers.js";
 
 let jobsRefreshRunning = false;
 let jobDetailsRefreshRunning = false;
-let restartCooldownsLoaded = false;
-
-async function ensureRestartCooldownsLoaded(force = false) {
-  if (restartCooldownsLoaded && !force) return;
-
-  try {
-    const cooldowns = await getAdminRestartCooldowns();
-    state.restartCooldowns = cooldowns;
-  } catch {
-    // Non-admin ou API indisponible : garder les valeurs fallback.
-  }
-
-  restartCooldownsLoaded = true;
-}
-
-function buildActionKey(action, jobId, fileId = null) {
-  return fileId != null ? `${action}:${jobId}:${fileId}` : `${action}:${jobId}`;
-}
-
-function setCurrentAction(action, jobId, fileId = null) {
-  state.currentActionKey = buildActionKey(action, jobId, fileId);
-}
-
-function clearCurrentAction() {
-  state.currentActionKey = null;
-}
-
-function clearCopyFlags(job) {
-  if (!job) return;
-
-  job._copyDownloadUrlDone = false;
-  job._copyAllDownloadsDone = false;
-
-  if (Array.isArray(job.files)) {
-    for (const file of job.files) {
-      file._copyDone = false;
-    }
-  }
-}
-
-function isRestartCooldownError(error) {
-  const message = String(error?.message || "");
-  return /restart temporarily blocked after cancel/i.test(message);
-}
 
 function openModal({ title, bodyHtml, confirmLabel = "Valider", cancelLabel = "Annuler" }) {
   return new Promise((resolve) => {
