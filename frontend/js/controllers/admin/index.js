@@ -36,15 +36,11 @@ import {
   updateAdminAnnouncement,
   deleteAdminAnnouncement,
   getAdminAnnouncementTracking,
-  getAdminAntiAbuse,
-  resetAdminAntiAbuseAll,
-  resetAdminAntiAbuseKind,
 } from "../../api.js";
 import {
   renderUsersPanel,
   renderAnnouncementForm,
   renderAnnouncementTrackingPanel,
-  renderAntiAbuseSection,
 } from "../../render/admin.js";
 import { renderLoginForm } from "../../render/auth.js";
 import { showAppMessage } from "../../utils.js";
@@ -56,23 +52,10 @@ import { getFilteredAdminUsers, bindAdminUsersFilters } from "./users-filters.js
 import { getOptionalDatetimeValue, buildSmtpSettingsPayload, buildSecuritySettingsPayload, buildCleanupSettingsPayload, buildRestartCooldownsPayload, buildRuntimeSettingsPayload, buildAnnouncementPayload, formatCleanupResult } from "./payloads.js";
 import { loadEmailTemplateIntoPanel, initEmailTemplatesPanel } from "./email-templates.js";
 import { handleEmailTemplateAction } from "./email-template-actions.js";
+import { loadAntiAbuseSection } from "./anti-abuse.js";
+import { handleAntiAbuseAction } from "./anti-abuse-actions.js";
 
-export { showAdminFeedback, getFilteredAdminUsers, bindAdminUsersFilters, loadEmailTemplateIntoPanel, initEmailTemplatesPanel };
-
-export async function loadAntiAbuseSection() {
-  const contentEl = document.getElementById("admin-anti-abuse-content");
-  const feedbackEl = document.getElementById("admin-anti-abuse-feedback");
-  if (!contentEl) return;
-
-  try {
-    const data = await getAdminAntiAbuse();
-    state.antiAbuseData = data;
-    contentEl.innerHTML = renderAntiAbuseSection(data);
-    if (feedbackEl) feedbackEl.hidden = true;
-  } catch (error) {
-    showAdminFeedback("anti-abuse", error.message || t("messages.admin_action_error"), "error");
-  }
-}
+export { showAdminFeedback, getFilteredAdminUsers, bindAdminUsersFilters, loadEmailTemplateIntoPanel, initEmailTemplatesPanel, loadAntiAbuseSection };
 
 export async function loadAdmin() {
   const isSingleUserMode = Boolean(state.currentUser?.single_user_mode);
@@ -411,6 +394,7 @@ export async function handleAdminClick(button) {
   const id = button.dataset.id;
 
   if (await handleEmailTemplateAction(action, button)) return;
+  if (await handleAntiAbuseAction(action, button)) return;
 
   if (action === "test-admin-smtp") {
     try {
@@ -748,59 +732,6 @@ export async function handleAdminClick(button) {
       inlineEl.hidden = false;
     } catch (error) {
       showAdminFeedback("announcements", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "refresh-anti-abuse") {
-    try {
-      await loadAntiAbuseSection();
-      showAdminFeedback("anti-abuse", t("messages.admin_maintenance_refreshed"), "success");
-    } catch (error) {
-      showAdminFeedback("anti-abuse", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "reset-anti-abuse-all") {
-    const confirmed = await showConfirmModal({
-      title: t("admin.security.anti_abuse.reset_all_confirm_title"),
-      message: t("admin.security.anti_abuse.reset_all_confirm_message"),
-      confirmLabel: t("admin.security.anti_abuse.reset_all"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-    if (!confirmed) return;
-
-    try {
-      await resetAdminAntiAbuseAll();
-      await loadAntiAbuseSection();
-      showAdminFeedback("anti-abuse", t("messages.admin_anti_abuse_reset_all"), "success");
-    } catch (error) {
-      showAdminFeedback("anti-abuse", error.message || t("messages.admin_action_error"), "error");
-    }
-    return;
-  }
-
-  if (action === "reset-anti-abuse-kind") {
-    const kind = button.dataset.kind;
-    if (!kind) return;
-
-    const confirmed = await showConfirmModal({
-      title: t("admin.security.anti_abuse.reset_kind_confirm_title"),
-      message: t("admin.security.anti_abuse.reset_kind_confirm_message"),
-      confirmLabel: t("admin.security.anti_abuse.reset_kind"),
-      cancelLabel: t("common.cancel"),
-      danger: true,
-    });
-    if (!confirmed) return;
-
-    try {
-      await resetAdminAntiAbuseKind(kind);
-      await loadAntiAbuseSection();
-      showAdminFeedback("anti-abuse", t("messages.admin_anti_abuse_reset_kind"), "success");
-    } catch (error) {
-      showAdminFeedback("anti-abuse", error.message || t("messages.admin_action_error"), "error");
     }
     return;
   }
