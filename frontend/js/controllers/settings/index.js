@@ -11,10 +11,8 @@ import {
   testDestinationFromSettings,
   testNotificationConfig,
   testStoredNotificationConfig,
-  createNotificationConfig,
   updateNotificationConfig,
   deleteNotificationConfig,
-  createNotificationRule,
   updateNotificationRule,
   deleteNotificationRule,
   revokeUserApiKey,
@@ -41,7 +39,6 @@ import {
   buildDestinationConfigJsonFromState,
   buildDestinationConfig,
   buildNotificationChannelPayload,
-  buildNotificationRulePayload,
 } from "./payloads.js";
 import { loadSettings, onSettingsTabChange } from "./loader.js";
 export { loadSettings, onSettingsTabChange };
@@ -51,6 +48,7 @@ import { handleProwlarrSubmit } from "./prowlarr-submit.js";
 import { handleProviderSubmit } from "./provider-submit.js";
 import { handleDestinationSubmit } from "./destination-submit.js";
 import { handleApiKeySubmit } from "./api-key-submit.js";
+import { handleNotificationSubmit } from "./notification-submit.js";
 
 export async function handleSettingsSubmit(form) {
   if (await handleAccountSubmit(form)) return;
@@ -58,77 +56,7 @@ export async function handleSettingsSubmit(form) {
   if (await handleProviderSubmit(form)) return;
   if (await handleDestinationSubmit(form)) return;
   if (await handleApiKeySubmit(form)) return;
-
-  if (form.id === "test-gotify-form") {
-    const result = await testNotificationConfig({
-      channel: "gotify",
-      config: {
-        server_url: form.server_url.value,
-        token: form.token.value,
-      },
-    });
-
-    showAppMessage(result.message || t("messages.settings_channel_test_ok"), "success");
-    return;
-  }
-
-  if (form.id === "test-webhook-form") {
-    const result = await testNotificationConfig({
-      channel: "webhook",
-      config: {
-        url: form.url.value,
-        method: "POST",
-      },
-    });
-
-    showAppMessage(result.message || t("messages.settings_channel_test_ok"), "success");
-    return;
-  }
-
-  if (form.id === "notification-channel-form") {
-    const configId = String(form.config_id?.value || "").trim();
-    const payload = buildNotificationChannelPayload(form);
-
-    try {
-      if (configId) {
-        await updateNotificationConfig(configId, payload);
-        await loadSettings();
-        showNotificationFeedback(t("messages.settings_channel_updated"), "success");
-      } else {
-        await createNotificationConfig(payload);
-        await loadSettings();
-        showNotificationFeedback(t("messages.settings_channel_created"), "success");
-      }
-    } catch (error) {
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
-
-  if (form.id === "notification-rule-form") {
-    const ruleId = String(form.rule_id?.value || "").trim();
-    const payload = buildNotificationRulePayload(form);
-
-    if (!payload.config_id) {
-      showNotificationFeedback(t("messages.select_notification_channel"), "error");
-      return;
-    }
-
-    try {
-      if (ruleId) {
-        await updateNotificationRule(ruleId, payload);
-        await loadSettings();
-        showNotificationFeedback(t("messages.settings_rule_updated"), "success");
-      } else {
-        await createNotificationRule(payload);
-        await loadSettings();
-        showNotificationFeedback(t("messages.settings_rule_created"), "success");
-      }
-    } catch (error) {
-      showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
-    }
-    return;
-  }
+  if (await handleNotificationSubmit(form)) return;
 }
 
 export async function handleSettingsClick(button) {
