@@ -35,6 +35,7 @@ from backend.services_v2.job_support.provider_cleanup import (
 from backend.services_v2.job_support.output_links import attach_job_metadata_to_output_links
 from backend.services_v2.job_support.local_download_queue import enqueue_local_download
 from backend.services_v2.job_support.unrestrict_links import build_output_links
+from backend.services_v2.job_support.file_selection import resolve_files_to_select
 
 now = utc_now_iso
 
@@ -353,22 +354,7 @@ class JobService:
         return job
 
     def _resolve_files_to_select(self, provider_payload: dict) -> str:
-        files = provider_payload.get("files") or []
-
-        ids = []
-
-        for index, item in enumerate(files, start=1):
-            if isinstance(item, dict):
-                file_id = item.get("id") or item.get("file_id") or index
-            else:
-                file_id = index
-
-            ids.append(str(file_id))
-
-        if ids:
-            return ",".join(ids)
-
-        return "all"
+        return resolve_files_to_select(provider_payload)
 
     def refresh_job(self, context: UserContext, job_id: str) -> Job | None:
         job = self.get_job(context, job_id)
