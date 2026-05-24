@@ -4,21 +4,17 @@ import { showAppMessage } from "../utils.js";
 import { t } from "../i18n/index.js";
 import {
   getPublicTokenStatus,
-  confirmMagicLogin,
   confirmEmailVerification,
   getMe,
 } from "../api.js";
 import {
   renderInvalidToken,
-  renderForcedPasswordChangeForm,
-  renderMagicLoginProcessing,
   renderEmailVerificationProcessing,
   renderLoginForm,
 } from "../render/auth.js";
 import { bindAuthEvents } from "./auth-controller.js";
 import {
   getPublicTokenFromUrl,
-  isMagicLoginRoute,
   isEmailVerificationRoute,
   isPublicAccountRoute,
 } from "./public-routes/route-utils.js";
@@ -26,6 +22,7 @@ import {
   handleInvitationRoute,
   handlePasswordResetRoute,
 } from "./public-routes/invitation-reset-routes.js";
+import { handleMagicLoginRoute } from "./public-routes/magic-login-route.js";
 
 let _updateAuthVisibility;
 let _enterMainApplication;
@@ -71,36 +68,16 @@ export async function handlePublicAccountRoute() {
     if (handleInvitationRoute({ token, tokenStatus })) return true;
     if (handlePasswordResetRoute({ token, tokenStatus })) return true;
 
-    if (isMagicLoginRoute()) {
-      renderMagicLoginProcessing();
-
-      try {
-        const result = await confirmMagicLogin(token);
-
-        setToken(result.token);
-        state.currentUser = result.user;
-        _applyCurrentUserTheme(result.user);
-        _updateAuthVisibility();
-
-        clearPublicAccountUrl();
-
-        if (result.user?.force_password_change) {
-          renderForcedPasswordChangeForm();
-          bindAuthEvents();
-          showAppMessage(t("messages.must_change_password"), "info");
-          return true;
-        }
-
-        _hideAdminIfNeeded();
-        await _enterMainApplication({ useHomePage: true });
-
-        return true;
-      } catch (error) {
-        renderInvalidToken(error.message || t("auth.error.magic_link_invalid"));
-        bindAuthEvents();
-        return true;
-      }
-    }
+    if (await handleMagicLoginRoute({
+      token,
+      setToken,
+      state,
+      applyCurrentUserTheme: _applyCurrentUserTheme,
+      updateAuthVisibility: _updateAuthVisibility,
+      clearPublicAccountUrl,
+      hideAdminIfNeeded: _hideAdminIfNeeded,
+      enterMainApplication: _enterMainApplication,
+    })) return true;
 
     if (isEmailVerificationRoute()) {
       renderEmailVerificationProcessing();
