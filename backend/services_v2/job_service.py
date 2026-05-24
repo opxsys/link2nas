@@ -26,6 +26,10 @@ from backend.services_v2.job_support.creation import (
     clone_job_with_provider_impl,
 )
 from backend.services_v2.job_support.link_health import links_expired_or_invalid
+from backend.services_v2.job_support.restart_policy import (
+    get_restart_cooldown_seconds,
+    ensure_restart_cooldown_elapsed,
+)
 
 now = utc_now_iso
 
@@ -939,51 +943,10 @@ class JobService:
         return self.start_job(context, job.id)
 
     def _get_restart_cooldown_seconds(self, job: Job) -> int:
-        fallback = {
-            "default_seconds": 10,
-            "realdebrid_seconds": 60,
-            "alldebrid_seconds": 8,
-        }
-
-        if self.app_settings_service is None:
-            cooldowns = fallback
-        else:
-            cooldowns = self.app_settings_service.get_restart_cooldowns()
-
-        provider_name = str(job.provider_name or "").strip().lower()
-
-        if provider_name == "realdebrid":
-            return int(cooldowns.get("realdebrid_seconds", fallback["realdebrid_seconds"]))
-
-        if provider_name == "alldebrid":
-            return int(cooldowns.get("alldebrid_seconds", fallback["alldebrid_seconds"]))
-
-        return int(cooldowns.get("default_seconds", fallback["default_seconds"]))
+        return get_restart_cooldown_seconds(self.app_settings_service, job)
 
     def _ensure_restart_cooldown_elapsed(self, job: Job) -> None:
-        if not job.cancelled_at:
-            return
-
-        try:
-            cancelled_at = datetime.fromisoformat(job.cancelled_at)
-        except ValueError:
-            return
-
-        if cancelled_at.tzinfo is None:
-            cancelled_at = cancelled_at.replace(tzinfo=UTC)
-
-        cooldown_seconds = self._get_restart_cooldown_seconds(job)
-
-        if cooldown_seconds <= 0:
-            return
-
-        elapsed = (datetime.now(UTC) - cancelled_at).total_seconds()
-
-        if elapsed < cooldown_seconds:
-            remaining = max(1, int(cooldown_seconds - elapsed))
-            raise ValueError(
-                f"Restart temporarily blocked after cancel. Retry in {remaining}s."
-            )
+        return ensure_restart_cooldown_elapsed(self.app_settings_service, job)
 
     def _delete_provider_resources_best_effort(
         self,
