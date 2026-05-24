@@ -1,23 +1,16 @@
 import { applyTheme } from "./core/theme.js";
 import { clearToken } from "./core/session.js";
 import { state } from "./state.js";
-import { renderJobDetails } from "./render/job-details.js";
-import { loadJobs } from "./actions/jobs.js";
-import { loadSystemInfo } from "./actions/system.js";
 import { showAppMessage } from "./utils.js";
 import { t } from "./i18n/index.js";
 import { updateMe, logout } from "./api.js";
 import { renderForcedPasswordChangeForm } from "./render/auth.js";
-import { renderProwlarrPanel } from "./render/prowlarr.js";
 import { loadSettings } from "./controllers/settings-controller.js";
-import { loadAdmin } from "./controllers/admin-controller.js";
+import { navigateToPage } from "./controllers/app/page-navigation.js";
 import { bindJobsEvents } from "./controllers/jobs-controller.js";
 import { bindSettingsEvents } from "./events/settings-events.js";
 import { bindAdminEvents } from "./events/admin-events.js";
-import {
-  loadAnnouncements,
-  bindAnnouncementsPageEvents,
-} from "./controllers/announcements-controller.js";
+import { bindAnnouncementsPageEvents } from "./controllers/announcements-controller.js";
 import {
   closeNavDrawer,
   openNavDrawer,
@@ -54,31 +47,7 @@ function bindGlobalEvents() {
     closeNavDrawer();
     setActivePage(page);
 
-    if (page === "jobs") {
-      await loadSettings();
-      renderJobDetails(state.selectedJob);
-      await loadJobs();
-    }
-
-    if (page === "prowlarr") {
-      renderProwlarrPanel();
-    }
-
-    if (page === "control-center") {
-      await loadSystemInfo();
-    }
-
-    if (page === "settings") {
-      await loadSettings();
-    }
-
-    if (page === "announcements") {
-      await loadAnnouncements();
-    }
-
-    if (page === "admin") {
-      await loadAdmin();
-    }
+    await navigateToPage(page);
   });
 
   // Theme select — apply immediately on change
@@ -102,17 +71,7 @@ function bindGlobalEvents() {
     const page = resolveHomePage();
     if (page === state.activePage) return;
     setActivePage(page);
-    if (page === "jobs") {
-      await loadSettings();
-      renderJobDetails(state.selectedJob);
-      await loadJobs();
-    }
-    if (page === "prowlarr") {
-      renderProwlarrPanel();
-    }
-    if (page === "control-center") {
-      await loadSystemInfo();
-    }
+    await navigateToPage(page);
   });
 
   // Burger button toggle
