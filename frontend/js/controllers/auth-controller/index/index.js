@@ -3,7 +3,6 @@ import { state } from "../../../state.js";
 import { showAppMessage } from "../../../utils.js";
 import { t } from "../../../i18n/index.js";
 import {
-  createFirstAdmin,
   login,
   requestMagicLogin,
   acceptInvitation,
@@ -11,6 +10,7 @@ import {
   changeMyPassword,
   getMe,
 } from "../../../api.js";
+import { bindSetupAuthEvents } from "./setup-actions.js";
 import {
   renderLoginForm,
   renderForcedPasswordChangeForm,
@@ -40,25 +40,7 @@ export function initAuth({
 }
 
 export function bindAuthEvents() {
-  document.getElementById("setup-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-
-    try {
-      await createFirstAdmin({
-        email: form.email.value,
-        display_name: form.display_name.value,
-        password: form.password.value,
-      });
-
-      showAppMessage(t("messages.super_admin_created"), "success");
-      renderLoginForm(state.appInfo?.email_sending_available ?? true);
-      bindAuthEvents();
-    } catch (error) {
-      showAppMessage(error.message || t("messages.settings_action_error"), "error");
-    }
-  });
+  bindSetupAuthEvents({ bindAuthEvents });
 
   document.getElementById("login-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
