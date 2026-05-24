@@ -1,9 +1,9 @@
-import { applyTheme } from "./core/theme.js";
 import { clearToken } from "./core/session.js";
 import { state } from "./state.js";
-import { updateMe, logout } from "./api.js";
+import { logout } from "./api.js";
 import { loadSettings } from "./controllers/settings-controller.js";
 import { bindGlobalNavigationEvents } from "./controllers/app/global-navigation-events.js";
+import { bindThemeEvents } from "./controllers/app/theme-events.js";
 import { bindJobsEvents } from "./controllers/jobs-controller.js";
 import { bindSettingsEvents } from "./events/settings-events.js";
 import { bindAdminEvents } from "./events/admin-events.js";
@@ -23,18 +23,7 @@ function bindGlobalEvents() {
 
   bindGlobalNavigationEvents();
 
-  // Theme select — apply immediately on change
-  document.addEventListener("change", async (event) => {
-    const select = event.target.closest("select[name='ui_theme']");
-    if (!select) return;
-    const theme = select.value;
-    applyTheme(theme);
-    localStorage.setItem("link2nas_theme", theme);
-    if (state.currentUser) {
-      try { await updateMe({ ui_theme: theme }); } catch {}
-      if (state.currentUser) state.currentUser.ui_theme = theme;
-    }
-  });
+  bindThemeEvents();
 
   bindJobsEvents();
 
