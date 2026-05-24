@@ -1,6 +1,3 @@
-import secrets
-from pathlib import Path
-
 from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -11,57 +8,14 @@ from backend.routes_v2.admin_users_support.validation import (
     validate_email as _validate_email,
     validate_password as _validate_password,
 )
+from backend.routes_v2.me_support.serialization import serialize_me, serialize_integration_settings
+from backend.routes_v2.me_support.space import _get_or_create_public_slug, _user_space_path
 from backend.services_v2.rate_limit_service import rate_limit_response
 from backend.utils.email_templates import build_email_verification_email
 from backend.utils.user_language import validate_preferred_language
 
 
 me_v2_bp = Blueprint("me_v2", __name__, url_prefix="/api/v2")
-
-def serialize_me(user):
-    app_settings = current_app.config.get("APP_SETTINGS_SERVICE_V2")
-    session_inactivity_minutes = 30
-
-    if app_settings:
-        try:
-            security_settings = app_settings.get_security_settings()
-            session_inactivity_minutes = int(
-                security_settings.get("token_ttl", {}).get(
-                    "session_inactivity_minutes",
-                    30,
-                )
-            )
-        except Exception:
-            session_inactivity_minutes = 30
-
-    settings = current_app.config.get("SETTINGS")
-    single_user_mode = bool(
-        getattr(settings, "LINK2NAS_SINGLE_USER_MODE", False)
-    )
-
-    smtp_service = current_app.config.get("SMTP_SERVICE_V2")
-    email_sending_available = smtp_service.is_email_sending_available() if smtp_service else False
-
-    return {
-        "id": user.id,
-        "email": user.email,
-        "display_name": user.display_name,
-        "role": user.role,
-        "is_active": user.is_active,
-        "valid_from": user.valid_from,
-        "account_expires_at": user.account_expires_at,
-        "email_verified_at": user.email_verified_at,
-        "email_verified": bool(user.email_verified_at),
-        "last_login_at": user.last_login_at,
-        "force_password_change": user.force_password_change,
-        "session_inactivity_minutes": session_inactivity_minutes,
-        "single_user_mode": single_user_mode,
-        "preferred_language": user.preferred_language,
-        "email_sending_available": email_sending_available,
-        "receive_application_emails": user.receive_application_emails,
-        "can_use_local_space": bool(user.can_use_local_space),
-        "ui_theme": user.ui_theme or "auto",
-    }
 
 @me_v2_bp.get("/me")
 def get_me_v2():
@@ -183,14 +137,6 @@ def change_my_password_v2():
 
     return jsonify({"ok": True})
 
-def serialize_integration_settings(settings):
-    return {
-        "prowlarr_enabled": bool(settings.prowlarr_enabled),
-        "prowlarr_url": settings.prowlarr_url or "",
-        "prowlarr_open_mode": settings.prowlarr_open_mode or "both",
-        "home_page": settings.home_page or "jobs",
-    }
-
 
 @me_v2_bp.get("/me/integration-settings")
 def get_my_integration_settings_v2():
@@ -299,23 +245,6 @@ def request_email_verification_v2():
     })
 
 
-def _get_or_create_public_slug(user, user_repo) -> str:
-    if user.public_slug:
-        return user.public_slug
-    slug = secrets.token_urlsafe(24)
-    user.public_slug = slug
-    user.updated_at = now()
-    user_repo.update(user)
-    return slug
-
-def _user_space_path(user_id: str, settings) -> Path:
-    userdata_root = Path(settings.USERDATA_DIR).resolve()
-    space_path = (userdata_root / user_id / "local").resolve()
-    try:
-        space_path.relative_to(userdata_root)
-    except ValueError:
-        raise ValueError("Resolved user space escapes userdata directory")
-    return space_path
 
 @me_v2_bp.get("/me/public-space")
 def get_my_public_space():
