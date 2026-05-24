@@ -10,8 +10,6 @@ import {
 } from "../api.js";
 import {
   renderInvalidToken,
-  renderAcceptInvitationForm,
-  renderPasswordResetForm,
   renderForcedPasswordChangeForm,
   renderMagicLoginProcessing,
   renderEmailVerificationProcessing,
@@ -20,12 +18,14 @@ import {
 import { bindAuthEvents } from "./auth-controller.js";
 import {
   getPublicTokenFromUrl,
-  isInviteRoute,
-  isPasswordResetRoute,
   isMagicLoginRoute,
   isEmailVerificationRoute,
   isPublicAccountRoute,
 } from "./public-routes/route-utils.js";
+import {
+  handleInvitationRoute,
+  handlePasswordResetRoute,
+} from "./public-routes/invitation-reset-routes.js";
 
 let _updateAuthVisibility;
 let _enterMainApplication;
@@ -68,29 +68,8 @@ export async function handlePublicAccountRoute() {
   try {
     const tokenStatus = await getPublicTokenStatus(token);
 
-    if (isInviteRoute()) {
-      if (tokenStatus.token_type !== "invitation") {
-        renderInvalidToken(t("auth.error.not_invitation_link"));
-        bindAuthEvents();
-        return true;
-      }
-
-      renderAcceptInvitationForm(token, tokenStatus);
-      bindAuthEvents();
-      return true;
-    }
-
-    if (isPasswordResetRoute()) {
-      if (tokenStatus.token_type !== "password_reset") {
-        renderInvalidToken(t("auth.error.not_reset_link"));
-        bindAuthEvents();
-        return true;
-      }
-
-      renderPasswordResetForm(token, tokenStatus);
-      bindAuthEvents();
-      return true;
-    }
+    if (handleInvitationRoute({ token, tokenStatus })) return true;
+    if (handlePasswordResetRoute({ token, tokenStatus })) return true;
 
     if (isMagicLoginRoute()) {
       renderMagicLoginProcessing();
