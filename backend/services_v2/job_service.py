@@ -1,14 +1,11 @@
 import json
-from pathlib import Path
-from datetime import UTC, datetime
 from backend.utils.time import utc_now_iso
 
 from flask import current_app
 
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
-from backend.services_v2.job_support.status_actions import ACTION_RULES, map_provider_status
-from backend.services_v2.job_support.source_helpers import filename_from_path
+
 from backend.services_v2.job_support.notifications import (
     emit_notification_event,
     emit_provider_failed,
@@ -36,6 +33,25 @@ from backend.services_v2.job_support.output_links import attach_job_metadata_to_
 from backend.services_v2.job_support.local_download_queue import enqueue_local_download
 from backend.services_v2.job_support.unrestrict_links import build_output_links
 from backend.services_v2.job_support.file_selection import resolve_files_to_select
+from backend.services_v2.job_support.listing import filter_jobs_by_status
+from backend.services_v2.job_support.actions import (
+    get_allowed_actions,
+    ensure_action_allowed,
+)
+from backend.services_v2.job_support.provider_start import set_started_provider_job
+from backend.services_v2.job_support.unrestrict_file import unrestrict_file_impl
+from backend.services_v2.job_support.unrestrict_job import unrestrict_job_impl
+from backend.services_v2.job_support.refresh import refresh_job_impl
+from backend.services_v2.job_support.select_files import select_files_impl
+from backend.services_v2.job_support.local_download_cancel import cancel_local_download_impl
+from backend.services_v2.job_support.restart import restart_job_impl
+from backend.services_v2.job_support.cancel import cancel_job_impl
+from backend.services_v2.job_support.delete import delete_job_impl
+from backend.services_v2.job_support.resend_destination import resend_to_destination_impl
+from backend.services_v2.job_support.local_destination_send import send_to_local_destination_impl
+from backend.services_v2.job_support.non_local_destination_send import send_to_non_local_destination_impl
+from backend.services_v2.job_support.destination_prepare import prepare_destination_send
+from backend.services_v2.job_support.start import start_job_impl
 
 now = utc_now_iso
 
@@ -56,15 +72,10 @@ class JobService:
         self.notification_service = notification_service
 
     def get_allowed_actions(self, job: Job) -> list[str]:
-        return ACTION_RULES.get(job.status, [])
+        return get_allowed_actions(job)
 
     def _ensure_action_allowed(self, job: Job, action: str) -> None:
-        allowed = self.get_allowed_actions(job)
-
-        if action not in allowed:
-            raise ValueError(
-                f"Action '{action}' is not allowed from status '{job.status}'"
-            )
+        return ensure_action_allowed(job, action)
 
     def _emit_notification_event(
         self,
@@ -207,220 +218,24 @@ class JobService:
 
     def list_jobs(self, context: UserContext, status: str | None = None) -> list[Job]:
         jobs = self.job_repository.list_for_user(context.user_id)
-
-        if status:
-            wanted = str(status).strip().lower()
-            jobs = [
-                job
-                for job in jobs
-                if str(job.status or "").strip().lower() == wanted
-            ]
-
-        return jobs
+        return filter_jobs_by_status(jobs, status)
 
     def start_job(self, context: UserContext, job_id: str) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        self._ensure_action_allowed(job, "start")
-
-        if self.provider_factory is None:
-            raise RuntimeError("Provider factory is not configured")
-
-        resolved_provider = self.provider_factory.resolve_provider_for_user(
-            user_id=context.user_id,
-            provider_config_id=job.provider_config_id,
-            provider_name=job.provider_name,
-        )
-        provider = resolved_provider.provider
-
-        job.provider_config_id = resolved_provider.provider_config_id
-        job.provider_name = resolved_provider.provider_type
-        job.provider_profile_name = resolved_provider.provider_profile_name
-
-        if job.source_type == "magnet":
-            try:
-                result = provider.add_magnet(job.source_value)
-            except Exception as exc:
-                self._emit_provider_failed(job, exc)
-                raise
-
-            return self._set_started_provider_job(job, result)
-
-        if job.source_type == "torrent_file":
-            torrent_hash = str(job.source_value).replace("torrent:", "", 1)
-            torrent_path = Path("data/torrents") / f"{torrent_hash}.torrent"
-
-            if not torrent_path.exists():
-                raise ValueError("Torrent file content is no longer available")
-
-            try:
-                result = provider.add_torrent_file(str(torrent_path))
-            except Exception as exc:
-                self._emit_provider_failed(job, exc)
-                raise
-
-            return self._set_started_provider_job(job, result)
-
-        if job.source_type == "direct_link":
-            try:
-                result = provider.unrestrict_link(job.source_value)
-            except Exception as exc:
-                self._emit_provider_failed(job, exc)
-                raise
-
-            download_url = result.get("download")
-
-            if not download_url:
-                raise ValueError("Provider returned no download URL")
-
-            output_links = [
-                {
-                    "url": download_url,
-                    "filename": result.get("filename"),
-                    "filesize": result.get("filesize"),
-                    "provider_download_id": result.get("id"),
-                    "relative_path": result.get("filename"),
-                    "path": result.get("filename"),
-                }
-            ]
-
-            timestamp = now()
-
-            job.provider_status = "unrestricted"
-            job.provider_payload_json = json.dumps(result)
-            job.output_mode = "single"
-            job.output_links_json = json.dumps(output_links)
-            job.status = "ready"
-            job.started_at = timestamp
-            job.unrestricted_at = timestamp
-            job.updated_at = timestamp
-            job.error_message = None
-
-            self.job_repository.update_provider_state(job)
-            self.job_repository.update_unrestrict_state(job)
-
-            self._emit_notification_event(
-                job,
-                event_type="job.started",
-                severity="info",
-                title="Job started",
-                message="Job has started.",
-            )
-
-            self._emit_notification_event(
-                job,
-                event_type="job.ready",
-                severity="info",
-                title="Job ready",
-                message="Job direct link is ready.",
-            )
-
-            self._emit_notification_event(
-                job,
-                event_type="job.links_ready",
-                severity="info",
-                title="Links ready",
-                message="Direct links are available for this job.",
-            )
-
-            return job
-
-        raise ValueError("Unsupported source_type")
+        return start_job_impl(self, context, job_id)
 
     def _set_started_provider_job(self, job: Job, result: dict) -> Job:
-        timestamp = now()
-
-        job.provider_resource_id = str(result.get("id")) if result.get("id") else None
-        job.provider_status = "submitted"
-        job.provider_payload_json = json.dumps(result)
-        job.status = "started"
-        job.started_at = timestamp
-        job.updated_at = timestamp
-        job.error_message = None
-
-        self.job_repository.update_provider_state(job)
-
-        self._emit_notification_event(
+        return set_started_provider_job(
+            self.job_repository,
+            self.notification_service,
             job,
-            event_type="job.started",
-            severity="info",
-            title="Job started",
-            message="Job has started.",
+            result,
         )
-
-        return job
 
     def _resolve_files_to_select(self, provider_payload: dict) -> str:
         return resolve_files_to_select(provider_payload)
 
     def refresh_job(self, context: UserContext, job_id: str) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        self._ensure_action_allowed(job, "refresh")
-
-        if not job.provider_resource_id:
-            raise ValueError("Job has no provider_resource_id")
-
-        if self.provider_factory is None:
-            raise RuntimeError("Provider factory is not configured")
-
-        provider = self.provider_factory.get_provider_for_user(
-            user_id=context.user_id,
-            provider_config_id=job.provider_config_id,
-            provider_name=job.provider_name,
-        )
-
-        try:
-            info = provider.get_torrent_info(job.provider_resource_id)
-        except Exception as exc:
-            self._emit_provider_failed(job, exc)
-            raise
-
-        provider_status = info.get("status")
-
-        if provider_status == "waiting_files_selection":
-            files_to_select = self._resolve_files_to_select(info)
-
-            try:
-                provider.select_files(job.provider_resource_id, files_to_select)
-            except Exception as exc:
-                self._emit_provider_failed(job, exc)
-                raise
-
-            job.status = "downloading"
-            job.provider_status = "files_selected"
-            job.provider_payload_json = json.dumps(info)
-            job.updated_at = now()
-            job.error_message = None
-
-            self.job_repository.update_after_select_files(job)
-            return job
-
-        job.provider_status = provider_status
-        job.provider_payload_json = json.dumps(info)
-        job.status = map_provider_status(provider_status)
-        job.updated_at = now()
-        job.error_message = None
-
-        if job.status == "downloaded":
-            job.completed_at = now()
-            self.job_repository.update_refresh_state(job)
-
-            job = self.unrestrict_job(context, job.id)
-
-            if job and job.send_to_destination:
-                job = self.send_to_destination(context, job.id)
-
-            return job
-
-        self.job_repository.update_refresh_state(job)
-        return job
+        return refresh_job_impl(self, context, job_id)
 
     def select_files(
         self,
@@ -428,181 +243,13 @@ class JobService:
         job_id: str,
         files: str,
     ) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        self._ensure_action_allowed(job, "select_files")
-
-        if not job.provider_resource_id:
-            raise ValueError("Job has no provider_resource_id")
-
-        if not files:
-            raise ValueError("files is required")
-
-        if self.provider_factory is None:
-            raise RuntimeError("Provider factory is not configured")
-
-        provider = self.provider_factory.get_provider_for_user(
-            user_id=context.user_id,
-            provider_config_id=job.provider_config_id,
-            provider_name=job.provider_name,
-        )
-
-        try:
-            provider.select_files(job.provider_resource_id, files)
-        except Exception as exc:
-            self._emit_provider_failed(job, exc)
-            raise
-
-        job.status = "downloading"
-        job.provider_status = "files_selected"
-        job.updated_at = now()
-        job.error_message = None
-
-        self.job_repository.update_after_select_files(job)
-        return job
+        return select_files_impl(self, context, job_id, files)
 
     def unrestrict_job(self, context: UserContext, job_id: str) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        if job.status not in {"downloaded", "ready", "completed"}:
-            self._ensure_action_allowed(job, "unrestrict")
-
-        previous_status = str(job.status or "").strip().lower()
-        had_links = bool(json.loads(job.output_links_json or "[]"))
-
-        try:
-            output_links = self._build_output_links(context, job)
-        except Exception as exc:
-            self._emit_provider_failed(job, exc)
-            raise
-
-        job.output_mode = "single" if len(output_links) == 1 else "per_file"
-        job.output_links_json = json.dumps(output_links)
-        job.status = "ready" if job.status != "completed" else "completed"
-        job.unrestricted_at = now()
-        job.updated_at = now()
-        job.error_message = None
-
-        self.job_repository.update_unrestrict_state(job)
-
-        if previous_status != "ready" and job.status == "ready":
-            self._emit_notification_event(
-                job,
-                event_type="job.ready",
-                severity="info",
-                title="Job ready",
-                message="Job direct links are ready.",
-            )
-
-        if output_links and not had_links:
-            self._emit_notification_event(
-                job,
-                event_type="job.links_ready",
-                severity="info",
-                title="Links ready",
-                message="Direct links are available for this job.",
-            )
-
-        return job
+        return unrestrict_job_impl(self, context, job_id)
 
     def unrestrict_file(self, context: UserContext, job_id: str, file_id: int) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        payload = json.loads(job.provider_payload_json or "{}")
-        links = payload.get("links") or []
-        files = payload.get("files") or []
-
-        index = int(file_id) - 1
-
-        if index < 0 or index >= len(links):
-            raise ValueError("Invalid file id")
-
-        if self.provider_factory is None:
-            raise RuntimeError("Provider factory is not configured")
-
-        provider = self.provider_factory.get_provider_for_user(
-            user_id=context.user_id,
-            provider_config_id=job.provider_config_id,
-            provider_name=job.provider_name,
-        )
-
-        existing_links = json.loads(job.output_links_json or "[]")
-        if not isinstance(existing_links, list):
-            existing_links = []
-
-        while len(existing_links) < len(links):
-            existing_links.append({})
-
-        link = links[index]
-        file_meta = files[index] if index < len(files) and isinstance(files[index], dict) else {}
-
-        try:
-            result = provider.unrestrict_link(link)
-        except Exception as exc:
-            self._emit_provider_failed(job, exc)
-            raise
-
-        download_url = result.get("download")
-
-        if not download_url:
-            raise ValueError("Provider returned no download URL")
-
-        relative_path = file_meta.get("path") or result.get("filename")
-        filename = result.get("filename") or filename_from_path(relative_path)
-
-        had_links = any(item for item in existing_links if item)
-
-        existing_links[index] = {
-            "url": download_url,
-            "filename": filename,
-            "filesize": result.get("filesize") or file_meta.get("bytes"),
-            "provider_download_id": result.get("id"),
-            "debrid_link": link,
-            "file_id": file_meta.get("id") or file_id,
-            "relative_path": relative_path,
-            "path": relative_path,
-        }
-
-        previous_status = str(job.status or "").strip().lower()
-        compact_links = [item for item in existing_links if item]
-
-        job.output_mode = "single" if len(compact_links) == 1 else "per_file"
-        job.output_links_json = json.dumps(compact_links)
-        job.status = "ready" if job.status != "completed" else "completed"
-        job.unrestricted_at = now()
-        job.updated_at = now()
-        job.error_message = None
-
-        self.job_repository.update_unrestrict_state(job)
-
-        if previous_status != "ready" and job.status == "ready":
-            self._emit_notification_event(
-                job,
-                event_type="job.ready",
-                severity="info",
-                title="Job ready",
-                message="Job direct links are ready.",
-            )
-
-        if compact_links and not had_links:
-            self._emit_notification_event(
-                job,
-                event_type="job.links_ready",
-                severity="info",
-                title="Links ready",
-                message="Direct links are available for this job.",
-            )
-
-        return job
+        return unrestrict_file_impl(self, context, job_id, file_id)
 
     def _build_output_links(self, context: UserContext, job: Job) -> list[dict]:
         return build_output_links(self.provider_factory, context, job)
@@ -638,111 +285,34 @@ class JobService:
         if job.status not in {"ready", "partially_ready", "completed"}:
             self._ensure_action_allowed(job, "send_to_destination")
 
-        output_links = json.loads(job.output_links_json or "[]")
-
-        if not isinstance(output_links, list) or not output_links:
-            raise ValueError("Invalid output links")
-
-        if self.destination_factory is None:
-            raise RuntimeError("Destination factory is not configured")
-
-        resolved = self.destination_factory.resolve_destination_for_user(
-            user_id=context.user_id,
-            destination_config_id=destination_config_id or job.destination_config_id,
-            destination_name=destination_name if destination_config_id is None else None,
+        resolved, output_links = prepare_destination_send(
+            self,
+            context,
+            job,
+            destination_name,
+            destination_config_id,
         )
-
-        job.destination_config_id = resolved.destination_config_id
-        job.destination_name = resolved.name
-        job.destination_profile_name = resolved.destination_profile_name
-        job.send_to_destination = True
-        job.destination_message_key = None
-        job.destination_message_params = None
-        job.destination_last_attempt = now()
-        job.updated_at = now()
-
-        if resolved.name != "local":
-            job.destination_status = "sending"
-            job.destination_message = "Sending to destination"
-            job.destination_message_key = None
-            job.destination_message_params = None
-            job.destination_progress = 0
-            job.sent_to_destination = False
-            job.sent_to_destination_at = None
-            job.error_message = None
-            self.job_repository.update_destination_state(job)
 
         try:
             self._attach_job_metadata_to_output_links(job, output_links)
             job.output_links_json = json.dumps(output_links)
 
             if resolved.name == "local":
-                settings = current_app.config["SETTINGS"]
-
-                current_status = str(job.destination_status or "").strip().lower()
-
-                if current_status in {"queued", "downloading", "cancel_requested"}:
-                    return job
-
-                resolved.destination.ensure_enough_space(
-                    output_links,
-                    margin_percent=settings.LOCAL_DOWNLOAD_SPACE_MARGIN_PERCENT,
-                    min_free_bytes=settings.LOCAL_DOWNLOAD_MIN_FREE_BYTES,
-                )
-
-                job.destination_status = "queued"
-                job.destination_message = "Local download queued"
-                job.destination_message_key = None
-                job.destination_message_params = None
-                job.sent_to_destination = False
-                job.sent_to_destination_at = None
-                job.destination_last_attempt = now()
-                job.error_message = None
-                job.updated_at = now()
-
-                self.job_repository.update_unrestrict_state(job)
-                self.job_repository.update_destination_state(job)
-
-                self._enqueue_local_download(
-                    context=context,
-                    job=job,
-                    destination_config_id=resolved.destination_config_id,
-                )
-
-                return job
-
-            result = resolved.destination.send(output_links) or {}
-
-            job.status = "completed"
-            job.sent_to_destination = True
-            job.sent_to_destination_at = now()
-            job.destination_status = "sent"
-            job.destination_message = "Sent to destination"
-            job.destination_path = result.get("destination_path") or job.destination_path
-            job.completed_at = job.completed_at or now()
-            job.updated_at = now()
-            job.error_message = None
-
-            self.job_repository.update_destination_state(job)
-
-            self._emit_notification_event(
-                job,
-                event_type="destination.sent",
-                severity="info",
-                title="Destination sent",
-                message="Job was sent to destination.",
-            )
-
-            if previous_status != "completed":
-                self._emit_notification_event(
+                return send_to_local_destination_impl(
+                    self,
+                    context,
                     job,
-                    event_type="job.completed",
-                    severity="info",
-                    title="Job completed",
-                    message="Job completed successfully.",
+                    resolved,
+                    output_links,
                 )
 
-            return job
+            return send_to_non_local_destination_impl(
+                self,
+                job,
+                resolved,
+                output_links,
+                previous_status,
+            )
 
         except Exception as exc:
             job.destination_status = "failed"
@@ -770,107 +340,19 @@ class JobService:
         *,
         destination_config_id: str | None = None,
     ) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        if job.status not in {"ready", "partially_ready", "completed"}:
-            self._ensure_action_allowed(job, "resend")
-
-        output_links = json.loads(job.output_links_json or "[]")
-
-        if not isinstance(output_links, list):
-            raise ValueError("Invalid output links")
-
-        if self._links_expired_or_invalid(output_links):
-            output_links = self._rebuild_links(context, job)
-            job.output_links_json = json.dumps(output_links)
-            job.unrestricted_at = now()
-            self.job_repository.update_unrestrict_state(job)
-
-        if not output_links:
-            raise ValueError("No output links available")
-
-        return self.send_to_destination(
-            context=context,
-            job_id=job_id,
+        return resend_to_destination_impl(
+            self,
+            context,
+            job_id,
             destination_name=destination_name,
             destination_config_id=destination_config_id,
         )
 
     def cancel_local_download(self, context: UserContext, job_id: str) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        if job.destination_name != "local":
-            raise ValueError("Only local destination downloads can be cancelled")
-
-        current_status = str(job.destination_status or "").strip().lower()
-
-        if current_status not in {"queued", "sending", "downloading"}:
-            raise ValueError("Local download is not running or queued")
-
-        job.destination_status = "cancel_requested"
-        job.destination_message = "Local download cancellation requested"
-        job.send_to_destination = False
-        job.sent_to_destination = False
-        job.destination_progress = 0
-        job.updated_at = now()
-
-        self.job_repository.update_destination_state(job)
-
-        self._emit_notification_event(
-            job,
-            event_type="destination.cancelled",
-            severity="warning",
-            title="Destination cancelled",
-            message="Local destination download cancellation requested.",
-        )
-
-        return job
+        return cancel_local_download_impl(self, context, job_id)
 
     def restart_job(self, context: UserContext, job_id: str) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        self._ensure_action_allowed(job, "restart")
-        self._ensure_restart_cooldown_elapsed(job)
-
-        job.status = "created"
-
-        job.provider_resource_id = None
-        job.provider_status = None
-        job.provider_payload_json = None
-
-        job.output_mode = None
-        job.output_links_json = None
-        job.unrestricted_at = None
-
-        job.error_message = None
-
-        job.started_at = None
-        job.completed_at = None
-        job.cancelled_at = None
-
-        job.sent_to_destination = False
-        job.sent_to_destination_at = None
-        job.destination_status = "pending" if job.send_to_destination else None
-        job.destination_message = None
-        job.destination_message_key = None
-        job.destination_message_params = None
-        job.destination_last_attempt = None
-        job.destination_path = None
-
-        job.updated_at = now()
-
-        self.job_repository.update_full_reset(job)
-
-        return self.start_job(context, job.id)
+        return restart_job_impl(self, context, job_id)
 
     def _get_restart_cooldown_seconds(self, job: Job) -> int:
         return get_restart_cooldown_seconds(self.app_settings_service, job)
@@ -889,71 +371,10 @@ class JobService:
         return is_unknown_resource_error(exc)
 
     def cancel_job(self, context: UserContext, job_id: str) -> Job | None:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return None
-
-        self._ensure_action_allowed(job, "cancel")
-
-        try:
-            self._delete_provider_resources_best_effort(context, job)
-        except Exception as exc:
-            job.error_message = str(exc)
-            job.updated_at = now()
-            self.job_repository.update_status_state(job)
-            raise
-
-        timestamp = now()
-
-        job.status = "cancelled"
-        job.error_message = None
-        job.updated_at = timestamp
-        job.completed_at = timestamp
-        job.cancelled_at = timestamp
-
-        job.provider_resource_id = None
-        job.provider_status = None
-        job.provider_payload_json = None
-
-        job.output_mode = None
-        job.output_links_json = None
-        job.unrestricted_at = None
-
-        job.sent_to_destination = False
-        job.sent_to_destination_at = None
-        job.destination_status = "pending" if job.send_to_destination else None
-        job.destination_message = None
-        job.destination_message_key = None
-        job.destination_message_params = None
-        job.destination_last_attempt = None
-        job.destination_path = None
-
-        self.job_repository.update_full_reset(job)
-
-        self._emit_notification_event(
-            job,
-            event_type="job.cancelled",
-            severity="warning",
-            title="Job cancelled",
-            message="Job was cancelled.",
-        )
-
-        return job
+        return cancel_job_impl(self, context, job_id)
 
     def delete_job(self, context: UserContext, job_id: str) -> bool:
-        job = self.get_job(context, job_id)
-
-        if job is None:
-            return False
-
-        try:
-            self._delete_provider_resources_best_effort(context, job)
-        except Exception:
-            pass
-
-        self.job_repository.delete(context.user_id, job_id)
-        return True
+        return delete_job_impl(self, context, job_id)
 
     def _attach_job_metadata_to_output_links(self, job: Job, output_links: list[dict]) -> None:
         return attach_job_metadata_to_output_links(job, output_links)
