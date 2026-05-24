@@ -3,13 +3,21 @@ from backend.utils.time import utc_now_iso
 
 from backend.models.announcement import Announcement
 from backend.models.announcement_read import AnnouncementRead
-
-VALID_TYPES = frozenset({"news", "maintenance", "incident", "security"})
-VALID_SEVERITIES = frozenset({"info", "warning", "critical"})
-
-
-class AnnouncementEmailUnavailableError(Exception):
-    pass
+from backend.services_v2.announcement_support.constants import (
+    VALID_TYPES,
+    VALID_SEVERITIES,
+    AnnouncementEmailUnavailableError,
+)
+from backend.services_v2.announcement_support.serialization import (
+    serialize_announcement,
+    serialize_announcement_with_read,
+)
+from backend.services_v2.announcement_support.validation import validate_announcement_payload
+from backend.services_v2.announcement_support.email_delivery import send_announcement_emails
+from backend.services_v2.announcement_support.tracking import (
+    get_or_create_read,
+    build_tracking_payload,
+)
 
 
 _now = utc_now_iso
@@ -37,46 +45,17 @@ class AnnouncementService:
     # ------------------------------------------------------------------
 
     def _serialize(self, a: Announcement) -> dict:
-        return {
-            "id": a.id,
-            "title": a.title,
-            "body": a.body,
-            "type": a.type,
-            "severity": a.severity,
-            "is_active": a.is_active,
-            "show_as_banner": a.show_as_banner,
-            "require_acknowledgement": a.require_acknowledgement,
-            "track_open": a.track_open,
-            "send_email": a.send_email,
-            "starts_at": a.starts_at,
-            "ends_at": a.ends_at,
-            "created_by_user_id": a.created_by_user_id,
-            "created_at": a.created_at,
-            "updated_at": a.updated_at,
-        }
+        return serialize_announcement(a)
 
     def _serialize_with_read(self, a: Announcement, read: AnnouncementRead | None) -> dict:
-        d = self._serialize(a)
-        d["user_status"] = {
-            "opened_at": read.opened_at if read else None,
-            "read_at": read.read_at if read else None,
-            "acknowledged_at": read.acknowledged_at if read else None,
-        }
-        return d
+        return serialize_announcement_with_read(a, read)
 
     # ------------------------------------------------------------------
     # Validation
     # ------------------------------------------------------------------
 
     def _validate(self, data: dict) -> None:
-        if "type" in data and data["type"] not in VALID_TYPES:
-            raise ValueError(
-                f"Invalid type '{data['type']}'. Must be one of: {', '.join(sorted(VALID_TYPES))}"
-            )
-        if "severity" in data and data["severity"] not in VALID_SEVERITIES:
-            raise ValueError(
-                f"Invalid severity '{data['severity']}'. Must be one of: {', '.join(sorted(VALID_SEVERITIES))}"
-            )
+        validate_announcement_payload(data)
 
     # ------------------------------------------------------------------
     # User-facing reads
@@ -218,106 +197,26 @@ class AnnouncementService:
         return True
 
     # ------------------------------------------------------------------
-    # User tracking
+    # Email delivery
     # ------------------------------------------------------------------
 
     def _send_announcement_emails(self, ann: Announcement) -> None:
-        from backend.utils.email_templates import build_announcement_email, _ANNOUNCEMENT_ACTION_TEXTS
-        from backend.services_v2.smtp_service import SmtpServiceError
-        from backend.utils.user_language import resolve_preferred_language
+        send_announcement_emails(
+            ann,
+            smtp_service=self.smtp_service,
+            app_settings_service=self.app_settings_service,
+            email_template_svc=self.email_template_svc,
+            user_repo=self.user_repo,
+            read_repo=self.read_repo,
+            now_func=_now,
+        )
 
-        if not self.smtp_service or not self.smtp_service.is_email_sending_available():
-            raise AnnouncementEmailUnavailableError(
-                "SMTP is not configured or not enabled"
-            )
-
-        app_name = "Link2NAS"
-        url = ""
-        if self.app_settings_service:
-            try:
-                app_name = self.app_settings_service.get_effective_app_name() or "Link2NAS"
-                url = self.app_settings_service.get_effective_public_base_url() or ""
-            except Exception:
-                pass
-
-        users = self.user_repo.list_all()
-        eligible = [
-            u for u in users
-            if u.is_active
-            and u.email
-            and bool(u.email_verified_at)
-            and u.receive_application_emails
-        ]
-
-        for user in eligible:
-            try:
-                lang = resolve_preferred_language(user.preferred_language)
-                action_text = _ANNOUNCEMENT_ACTION_TEXTS[lang][bool(ann.require_acknowledgement)]
-
-                if self.email_template_svc:
-                    subject, body_text = self.email_template_svc.render(
-                        "announcement",
-                        user.preferred_language,
-                        app_name=app_name,
-                        title=ann.title,
-                        body=ann.body,
-                        type=ann.type,
-                        severity=ann.severity,
-                        url=url,
-                        action_text=action_text,
-                        starts_at=ann.starts_at or "",
-                        ends_at=ann.ends_at or "",
-                    )
-                else:
-                    subject, body_text = build_announcement_email(
-                        user.preferred_language,
-                        app_name=app_name,
-                        title=ann.title,
-                        body=ann.body,
-                        type=ann.type,
-                        severity=ann.severity,
-                        url=url,
-                        require_acknowledgement=ann.require_acknowledgement,
-                    )
-
-                self.smtp_service.send_email(user.email, subject, body_text)
-                read = self._get_or_create_read(ann.id, user.id)
-                now = _now()
-                if read.opened_at is None:
-                    read.opened_at = now
-                if read.email_sent_at is None:
-                    read.email_sent_at = now
-                read.email_status = "sent"
-                read.email_error = None
-                read.updated_at = now
-                self.read_repo.upsert(read)
-            except SmtpServiceError as exc:
-                read = self._get_or_create_read(ann.id, user.id)
-                now = _now()
-                read.email_status = "failed"
-                read.email_error = str(exc)
-                read.updated_at = now
-                self.read_repo.upsert(read)
-            except Exception as exc:
-                read = self._get_or_create_read(ann.id, user.id)
-                now = _now()
-                read.email_status = "failed"
-                read.email_error = f"Unexpected error: {exc}"
-                read.updated_at = now
-                self.read_repo.upsert(read)
+    # ------------------------------------------------------------------
+    # User tracking
+    # ------------------------------------------------------------------
 
     def _get_or_create_read(self, announcement_id: str, user_id: str) -> AnnouncementRead:
-        read = self.read_repo.get(announcement_id, user_id)
-        if read is None:
-            now = _now()
-            read = AnnouncementRead(
-                id=str(uuid.uuid4()),
-                announcement_id=announcement_id,
-                user_id=user_id,
-                created_at=now,
-                updated_at=now,
-            )
-        return read
+        return get_or_create_read(self.read_repo, announcement_id, user_id, _now)
 
     def mark_opened(self, announcement_id: str, user_id: str) -> bool:
         a = self.ann_repo.get_by_id(announcement_id)
@@ -377,37 +276,6 @@ class AnnouncementService:
 
         stats = self.read_repo.count_stats(announcement_id)
         reads = self.read_repo.list_for_announcement(announcement_id)
-
         all_users = self.user_repo.list_all()
-        targeted_email_recipients = sum(
-            1 for u in all_users
-            if u.is_active
-            and u.email
-            and bool(u.email_verified_at)
-            and u.receive_application_emails
-        )
 
-        user_map = {u.id: u for u in all_users}
-        read_details = []
-        for r in reads:
-            u = user_map.get(r.user_id)
-            read_details.append({
-                "user_id": r.user_id,
-                "email": u.email if u else None,
-                "display_name": u.display_name if u else None,
-                "opened_at": r.opened_at,
-                "read_at": r.read_at,
-                "acknowledged_at": r.acknowledged_at,
-                "email_sent_at": r.email_sent_at,
-                "email_status": r.email_status,
-                "email_error": r.email_error,
-            })
-
-        return {
-            "announcement": self._serialize(a),
-            "stats": {
-                **stats,
-                "targeted_email_recipients": targeted_email_recipients,
-            },
-            "reads": read_details,
-        }
+        return build_tracking_payload(a, stats, reads, all_users)
