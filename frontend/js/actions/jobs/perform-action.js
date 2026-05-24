@@ -5,21 +5,21 @@ import {
 } from "../../api.js";
 import { state } from "../../state.js";
 import { renderJobsList } from "../../render/jobs-list.js";
-import { renderJobDetails, forceOpenJobPanel } from "../../render/job-details.js";
-import { showAppMessage, copyToClipboard } from "../../utils.js";
+import { renderJobDetails } from "../../render/job-details.js";
+import { showAppMessage } from "../../utils.js";
 import { t } from "../../i18n/index.js";
 import {
   ensureRestartCooldownsLoaded,
   buildActionKey,
   setCurrentAction,
   clearCurrentAction,
-  clearCopyFlags,
   isRestartCooldownError,
 } from "./state-helpers.js";
 import { handleLifecycleJobAction } from "./lifecycle-actions.js";
 import { handleFileJobAction } from "./file-actions.js";
 import { handleDestinationJobAction } from "./destination-actions.js";
 import { handleProviderJobAction } from "./provider-actions.js";
+import { handleCopyJobAction } from "./copy-actions.js";
 
 async function reloadJobs() {
   await ensureRestartCooldownsLoaded(true);
@@ -45,82 +45,7 @@ export async function performJobAction(action, jobId, fileId = null) {
     if (await handleFileJobAction(action, jobId, fileId, { reloadJobs, selectJob })) return;
     if (await handleDestinationJobAction(action, jobId, { reloadJobs, selectJob })) return;
     if (await handleProviderJobAction(action, jobId, { reloadJobs, selectJob })) return;
-
-    if (action === "copy-download-url") {
-      const job = state.selectedJob;
-
-      if (!job?.download_url) {
-        showAppMessage(t("messages.no_link_to_copy"), "info");
-        return;
-      }
-
-      const ok = await copyToClipboard(job.download_url);
-
-      if (ok) {
-        clearCopyFlags(job);
-        job._copyDownloadUrlDone = true;
-        renderJobDetails(job);
-      }
-
-      showAppMessage(
-        ok ? t("messages.link_copied") : t("messages.copy_error"),
-        ok ? "success" : "error"
-      );
-      return;
-    }
-
-    if (action === "copy-all-downloads") {
-      const job = state.selectedJob;
-
-      const urls = (job.files || [])
-        .map((f) => f.download_url)
-        .filter(Boolean);
-
-      if (urls.length === 0) {
-        showAppMessage(t("messages.no_link_to_copy"), "info");
-        return;
-      }
-
-      const ok = await copyToClipboard(urls.join("\n"));
-
-      if (ok) {
-        clearCopyFlags(job);
-        job._copyAllDownloadsDone = true;
-        forceOpenJobPanel(job.id, "files");
-        renderJobDetails(job);
-      }
-
-      showAppMessage(
-        ok ? t("messages.links_copied", { count: urls.length }) : t("messages.copy_error"),
-        ok ? "success" : "error"
-      );
-      return;
-    }
-
-    if (action === "copy-file-url" && fileId != null) {
-      const job = state.selectedJob;
-      const file = (job.files || []).find((f) => String(f.id) === String(fileId));
-
-      if (!file?.download_url) {
-        showAppMessage(t("messages.file_link_unavailable"), "info");
-        return;
-      }
-
-      const ok = await copyToClipboard(file.download_url);
-
-      if (ok) {
-        clearCopyFlags(job);
-        file._copyDone = true;
-        forceOpenJobPanel(job.id, "files");
-        renderJobDetails(job);
-      }
-
-      showAppMessage(
-        ok ? t("messages.link_copied") : t("messages.copy_error"),
-        ok ? "success" : "error"
-      );
-      return;
-    }
+    if (await handleCopyJobAction(action, jobId, fileId, { selectJob })) return;
   } catch (error) {
     if (action === "restart" && isRestartCooldownError(error)) {
       showAppMessage(error.message, "info");
