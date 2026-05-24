@@ -1,21 +1,11 @@
-import { getToken, setToken, clearToken } from "../core/session.js";
+import { setToken, clearToken } from "../core/session.js";
 import { state } from "../state.js";
-import { showAppMessage } from "../utils.js";
 import { t } from "../i18n/index.js";
-import {
-  getPublicTokenStatus,
-  confirmEmailVerification,
-  getMe,
-} from "../api.js";
-import {
-  renderInvalidToken,
-  renderEmailVerificationProcessing,
-  renderLoginForm,
-} from "../render/auth.js";
+import { getPublicTokenStatus } from "../api.js";
+import { renderInvalidToken } from "../render/auth.js";
 import { bindAuthEvents } from "./auth-controller.js";
 import {
   getPublicTokenFromUrl,
-  isEmailVerificationRoute,
   isPublicAccountRoute,
 } from "./public-routes/route-utils.js";
 import {
@@ -23,6 +13,7 @@ import {
   handlePasswordResetRoute,
 } from "./public-routes/invitation-reset-routes.js";
 import { handleMagicLoginRoute } from "./public-routes/magic-login-route.js";
+import { handleEmailVerificationRoute } from "./public-routes/email-verification-route.js";
 
 let _updateAuthVisibility;
 let _enterMainApplication;
@@ -79,37 +70,13 @@ export async function handlePublicAccountRoute() {
       enterMainApplication: _enterMainApplication,
     })) return true;
 
-    if (isEmailVerificationRoute()) {
-      renderEmailVerificationProcessing();
-
-      try {
-        await confirmEmailVerification(token);
-
-        clearPublicAccountUrl();
-        showAppMessage(t("messages.email_validated"), "success");
-
-        const existingToken = getToken();
-        if (existingToken) {
-          try {
-            state.currentUser = await getMe();
-            _applyCurrentUserTheme(state.currentUser);
-            _updateAuthVisibility();
-            await _enterMainApplication();
-            return true;
-          } catch {
-            clearToken();
-          }
-        }
-
-        renderLoginForm(state.appInfo?.email_sending_available ?? true);
-        bindAuthEvents();
-        return true;
-      } catch (error) {
-        renderInvalidToken(error.message || t("auth.error.email_verification_invalid"));
-        bindAuthEvents();
-        return true;
-      }
-    }
+    if (await handleEmailVerificationRoute({
+      token,
+      updateAuthVisibility: _updateAuthVisibility,
+      enterMainApplication: _enterMainApplication,
+      applyCurrentUserTheme: _applyCurrentUserTheme,
+      clearPublicAccountUrl,
+    })) return true;
 
   } catch (error) {
     renderInvalidToken(error.message || t("auth.invalid_token_message"));
