@@ -6,6 +6,7 @@ from backend.services_v2.notification_dispatcher_support.gotify import send_goti
 from backend.services_v2.notification_dispatcher_support.webhook import send_webhook
 from backend.services_v2.notification_dispatcher_support.email import send_email
 from backend.services_v2.notification_dispatcher_support.event_dispatch import dispatch_event, mark_event_failure
+from backend.services_v2.notification_dispatcher_support.runner import run_once_for_user, run_once_all_users
 from typing import Any
 
 now = utc_now_iso
@@ -50,81 +51,17 @@ class NotificationDispatcherService:
             "last_result": self.last_result,
             "message": "Notification dispatcher active",
         }
+
     def run_once_for_user(self, user_id: str, limit: int = 25) -> dict:
-        started_at = now()
-
-        result = {
-            "started_at": started_at,
-            "finished_at": None,
-            "user_id": user_id,
-            "limit": limit,
-            "processed": 0,
-            "sent": 0,
-            "retrying": 0,
-            "failed": 0,
-            "skipped": 0,
-            "errors": [],
-        }
-
-        try:
-            events = self.notification_event_repository.list_for_user(
-                user_id=user_id,
-                limit=limit,
-            )
-
-            candidates = [
-                event
-                for event in events
-                if str(getattr(event, "status", "") or "").lower() in {"pending", "retrying"}
-            ]
-
-            for event in candidates[:limit]:
-                result["processed"] += 1
-
-                try:
-                    outcome = self._dispatch_event(user_id, event)
-
-                    if outcome == "sent":
-                        result["sent"] += 1
-                    elif outcome == "skipped":
-                        result["skipped"] += 1
-                    else:
-                        result["skipped"] += 1
-
-                except Exception as exc:
-                    self._mark_event_failure(event, exc)
-
-                    refreshed = self.notification_event_repository.get_by_id(user_id, event.id)
-                    status = str(getattr(refreshed, "status", "") or "").lower()
-
-                    if status == "failed":
-                        result["failed"] += 1
-                    else:
-                        result["retrying"] += 1
-
-                    result["errors"].append({
-                        "event_id": event.id,
-                        "error": str(exc),
-                    })
-
-            result["finished_at"] = now()
-            self.last_run_at = result["finished_at"]
-            self.last_error = None if not result["errors"] else result["errors"][-1]["error"]
-            self.last_result = result
-
-            return result
-
-        except Exception as exc:
-            result["finished_at"] = now()
-            result["errors"].append({
-                "error": str(exc),
-            })
-
-            self.last_run_at = result["finished_at"]
-            self.last_error = str(exc)
-            self.last_result = result
-
-            raise
+        return run_once_for_user(
+            user_id,
+            limit,
+            self.notification_event_repository,
+            self._dispatch_event,
+            self._mark_event_failure,
+            now,
+            on_state_update=self._update_run_state,
+        )
 
     def _dispatch_event(self, user_id: str, event) -> str:
         return dispatch_event(
@@ -186,72 +123,15 @@ class NotificationDispatcherService:
         send_webhook(cfg, config, event)
 
     def run_once_all_users(self, limit: int = 25) -> dict:
-        started_at = now()
+        return run_once_all_users(
+            limit,
+            self.user_repository,
+            self.run_once_for_user,
+            now,
+            on_state_update=self._update_run_state,
+        )
 
-        result = {
-            "started_at": started_at,
-            "finished_at": None,
-            "limit": limit,
-            "users_processed": 0,
-            "processed": 0,
-            "sent": 0,
-            "retrying": 0,
-            "failed": 0,
-            "skipped": 0,
-            "errors": [],
-            "per_user": [],
-        }
-
-        try:
-            if not self.user_repository:
-                raise RuntimeError("User repository is not configured")
-
-            if hasattr(self.user_repository, "list_all"):
-                users = self.user_repository.list_all()
-            elif hasattr(self.user_repository, "list_users"):
-                users = self.user_repository.list_users()
-            elif hasattr(self.user_repository, "list"):
-                users = self.user_repository.list()
-            else:
-                raise RuntimeError("User repository has no list method")
-
-            for user in users:
-                user_id = str(getattr(user, "id", "") or "").strip()
-                is_active = bool(getattr(user, "is_active", False))
-
-                if not user_id or not is_active:
-                    continue
-
-                user_result = self.run_once_for_user(
-                    user_id=user_id,
-                    limit=limit,
-                )
-
-                result["users_processed"] += 1
-                result["processed"] += int(user_result.get("processed") or 0)
-                result["sent"] += int(user_result.get("sent") or 0)
-                result["retrying"] += int(user_result.get("retrying") or 0)
-                result["failed"] += int(user_result.get("failed") or 0)
-                result["skipped"] += int(user_result.get("skipped") or 0)
-
-                if user_result.get("errors"):
-                    result["errors"].extend(user_result["errors"])
-
-                result["per_user"].append(user_result)
-
-            result["finished_at"] = now()
-            self.last_run_at = result["finished_at"]
-            self.last_error = None if not result["errors"] else str(result["errors"][-1].get("error"))
-            self.last_result = result
-
-            return result
-
-        except Exception as exc:
-            result["finished_at"] = now()
-            result["errors"].append({"error": str(exc)})
-
-            self.last_run_at = result["finished_at"]
-            self.last_error = str(exc)
-            self.last_result = result
-
-            raise
+    def _update_run_state(self, finished_at: str, last_error: str | None, result: dict) -> None:
+        self.last_run_at = finished_at
+        self.last_error = last_error
+        self.last_result = result
