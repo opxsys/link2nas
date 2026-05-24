@@ -3,15 +3,16 @@ import { showAppMessage } from "../../../utils.js";
 import {
   createNewJob,
   createTorrentFilesBatch,
-  performJobAction,
 } from "../../../actions/jobs.js";
 import { renderCreateJobForm, updateCreateJobDestinationVisibility } from "../../../render/forms.js";
 import { setActivePage } from "../../navigation-controller.js";
 import { showBatchResultPanel } from "../batch-result.js";
 import { bindJobSelectionEvents } from "./selection-events.js";
+import { bindJobActionEvents } from "./action-events.js";
 
 export function bindJobsEvents() {
   bindJobSelectionEvents();
+  bindJobActionEvents();
 
   document.getElementById("create-job-panel")?.addEventListener("change", (event) => {
     if (event.target?.name === "send_to_destination") {
@@ -143,29 +144,6 @@ export function bindJobsEvents() {
     }
 
     setActivePage("jobs");
-  });
-
-  document.getElementById("jobs-list")?.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-action]");
-    if (!button) return;
-
-    const action = button.dataset.action;
-    const jobId = button.dataset.jobId;
-
-    if (action === "delete") {
-      await performJobAction("delete", jobId);
-    }
-  });
-
-  document.getElementById("job-details")?.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-action]");
-    if (!button) return;
-
-    const action = button.dataset.action;
-    const jobId = button.dataset.jobId;
-    const fileId = button.dataset.fileId;
-
-    await performJobAction(action, jobId, fileId);
   });
 
 }
