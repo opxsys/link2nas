@@ -1,12 +1,7 @@
 import { t } from "../../i18n/index.js";
+import { hideMainApp, showMainApp, escapeAuthHtml } from "./layout.js";
 
-function hideMainApp() {
-  const mainApp = document.getElementById("main-app");
-
-  if (mainApp) {
-    mainApp.hidden = true;
-  }
-}
+export { showMainApp };
 
 export function renderSetupForm() {
   const container = document.getElementById("auth-page");
@@ -76,20 +71,6 @@ export function renderLoginForm(emailAvailable = true) {
       </form>
     </section>
   `;
-}
-
-export function showMainApp() {
-  const authPage = document.getElementById("auth-page");
-  const mainApp = document.getElementById("main-app");
-
-  if (authPage) {
-    authPage.hidden = true;
-    authPage.innerHTML = "";
-  }
-
-  if (mainApp) {
-    mainApp.hidden = false;
-  }
 }
 
 export function renderAcceptInvitationForm(token, tokenStatus = null) {
@@ -188,14 +169,6 @@ export function renderInvalidToken(message = null) {
       </button>
     </section>
   `;
-}
-
-function escapeAuthHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
 
 export function renderForcedPasswordChangeForm() {
