@@ -30,6 +30,10 @@ from backend.services_v2.job_support.restart_policy import (
     get_restart_cooldown_seconds,
     ensure_restart_cooldown_elapsed,
 )
+from backend.services_v2.job_support.provider_cleanup import (
+    delete_provider_resources_best_effort,
+    is_unknown_resource_error,
+)
 
 now = utc_now_iso
 
@@ -953,62 +957,10 @@ class JobService:
         context: UserContext,
         job: Job,
     ) -> None:
-        if not job.provider_resource_id and not job.output_links_json:
-            return
-
-        if self.provider_factory is None:
-            return
-
-        provider = self.provider_factory.get_provider_for_user(
-            user_id=context.user_id,
-            provider_config_id=job.provider_config_id,
-            provider_name=job.provider_name,
-        )
-
-        if job.provider_resource_id:
-            try:
-                provider.delete_torrent(job.provider_resource_id)
-            except Exception as exc:
-                if not self._is_unknown_resource_error(exc):
-                    raise
-
-        try:
-            output_links = json.loads(job.output_links_json or "[]")
-        except Exception:
-            output_links = []
-
-        if not isinstance(output_links, list):
-            output_links = []
-
-        for item in output_links:
-            if not isinstance(item, dict):
-                continue
-
-            download_id = str(
-                item.get("provider_download_id")
-                or item.get("download_id")
-                or ""
-            ).strip()
-
-            if not download_id:
-                continue
-
-            try:
-                provider.delete_download(download_id)
-            except Exception as exc:
-                if not self._is_unknown_resource_error(exc):
-                    raise
+        return delete_provider_resources_best_effort(self.provider_factory, context, job)
 
     def _is_unknown_resource_error(exc: Exception) -> bool:
-        message = str(exc).lower()
-
-        return (
-            ("http 404" in message and "unknown_ressource" in message)
-            or "magnet_invalid_id" in message
-            or "invalid or expired" in message
-            or "not found" in message
-            or "unknown resource" in message
-        )
+        return is_unknown_resource_error(exc)
 
     def cancel_job(self, context: UserContext, job_id: str) -> Job | None:
         job = self.get_job(context, job_id)
