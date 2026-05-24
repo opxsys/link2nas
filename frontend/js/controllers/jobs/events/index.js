@@ -1,35 +1,17 @@
-import { state } from "../../../state.js";
 import { t } from "../../../i18n/index.js";
 import { showAppMessage } from "../../../utils.js";
 import {
-  loadJobs,
   createNewJob,
   createTorrentFilesBatch,
   performJobAction,
-  selectJob,
 } from "../../../actions/jobs.js";
 import { renderCreateJobForm, updateCreateJobDestinationVisibility } from "../../../render/forms.js";
-import { renderJobDetails } from "../../../render/job-details.js";
 import { setActivePage } from "../../navigation-controller.js";
 import { showBatchResultPanel } from "../batch-result.js";
+import { bindJobSelectionEvents } from "./selection-events.js";
 
 export function bindJobsEvents() {
-  document.getElementById("jobs-status-filter")?.addEventListener("change", async (event) => {
-    state.jobsStatusFilter = event.target.value;
-    await loadJobs();
-
-    if (state.selectedJobId) {
-      const stillThere = state.jobs.find((job) => job.id === state.selectedJobId);
-
-      if (stillThere) {
-        await selectJob(state.selectedJobId);
-      } else {
-        state.selectedJobId = null;
-        state.selectedJob = null;
-        renderJobDetails(null);
-      }
-    }
-  });
+  bindJobSelectionEvents();
 
   document.getElementById("create-job-panel")?.addEventListener("change", (event) => {
     if (event.target?.name === "send_to_destination") {
@@ -186,17 +168,4 @@ export function bindJobsEvents() {
     await performJobAction(action, jobId, fileId);
   });
 
-  document.addEventListener("click", async (event) => {
-    const card = event.target.closest(".job-card");
-    if (!card) return;
-
-    if (event.target.closest("button, input, select, textarea, label, details, summary, form")) return;
-
-    const jobId = card.dataset.jobId;
-    if (!jobId) return;
-
-    await selectJob(jobId);
-
-    setActivePage("jobs");
-  });
 }
