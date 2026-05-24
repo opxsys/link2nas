@@ -1,5 +1,4 @@
 import json
-import requests
 import uuid
 from backend.utils.time import utc_now_iso
 
@@ -21,10 +20,15 @@ from backend.services_v2.notification_support.serialization import (
     config_to_public_dict,
     rule_to_public_dict,
     event_to_public_dict,
-    safe_config,
 )
 from backend.services_v2.notification_support.config_codec import encode_config, decode_config
 from backend.services_v2.notification_support.config_serialization import serialize_config
+from backend.services_v2.notification_support.test_config import (
+    test_config_email,
+    test_config_gotify,
+    test_config_webhook,
+)
+from backend.services_v2.notification_support.admin_events import list_all_events_admin_impl
 
 
 class NotificationNotFoundError(Exception):
@@ -167,145 +171,21 @@ class NotificationService:
         channel = self._validate_channel(config.channel)
 
         if channel == "email":
-            to_email = str(decoded.get("to_email") or "").strip()
-            user = None
-
-            if self.user_repository:
-                user = self.user_repository.get_by_id(user_id)
-                if not to_email:
-                    to_email = str(getattr(user, "email", None) or "").strip() if user else ""
-            elif not to_email:
-                raise NotificationValidationError("User repository is not configured")
-
-            if not to_email:
-                raise NotificationValidationError("Email target is required")
-
-            if not self.smtp_service:
-                raise NotificationValidationError("SMTP service is not configured")
-
-            lang = str(getattr(user, "preferred_language", None) or "fr").lower() if user else "fr"
-
-            app_name = "Link2NAS"
-            if self.app_settings_service:
-                app_name = self.app_settings_service.get_effective_app_name() or "Link2NAS"
-
-            public_base_url = ""
-            if self.app_settings_service:
-                public_base_url = self.app_settings_service.get_effective_public_base_url() or ""
-
-            if self.email_template_service:
-                subject, body = self.email_template_service.render(
-                    "notification_test",
-                    lang,
-                    app_name=app_name,
-                    channel_name=config.name,
-                    channel=config.channel,
-                    to_email=to_email,
-                    config_id=config.id,
-                    public_base_url=public_base_url,
-                )
-            else:
-                subject = f"[{app_name}] Test notification"
-                if lang == "en":
-                    body = f'This is a test email for notification channel "{config.name}".'
-                else:
-                    body = f'Ceci est un email de test pour le canal de notification « {config.name} ».'
-
-            success_msg = f"Test email sent to {to_email}." if lang == "en" else f"Email de test envoyé à {to_email}."
-
-            try:
-                self.smtp_service.send_email(to_email=to_email, subject=subject, body=body)
-            except SmtpServiceError as exc:
-                raise NotificationValidationError(str(exc)) from exc
-
-            return {
-                "ok": True,
-                "channel": "email",
-                "config_id": config.id,
-                "message": success_msg,
-            }
-        if channel == "gotify":
-            server_url = str(decoded.get("server_url") or "").strip().rstrip("/")
-            token = str(decoded.get("token") or "").strip()
-
-            if not server_url:
-                raise NotificationValidationError("Gotify server_url is required")
-
-            if not token:
-                raise NotificationValidationError("Gotify token is required")
-
-            response = requests.post(
-                f"{server_url}/message",
-                params={"token": token},
-                json={
-                    "title": "Link2NAS - Test Gotify",
-                    "message": (
-                        "Ceci est un message de test depuis Link2NAS.\n\n"
-                        f"Canal: {config.name}"
-                    ),
-                    "priority": 5,
-                },
-                timeout=8,
+            return test_config_email(
+                config,
+                decoded,
+                user_id,
+                self.smtp_service,
+                self.user_repository,
+                self.email_template_service,
+                self.app_settings_service,
+                SmtpServiceError,
             )
-
-            if response.status_code < 200 or response.status_code >= 300:
-                raise NotificationValidationError(
-                    f"Gotify HTTP {response.status_code}: {response.text[:300]}"
-                )
-
-            return {
-                "ok": True,
-                "channel": "gotify",
-                "config_id": config.id,
-                "message": "Message de test Gotify envoyé.",
-            }
+        if channel == "gotify":
+            return test_config_gotify(config, decoded)
 
         if channel == "webhook":
-            url = str(decoded.get("url") or "").strip()
-            method = str(decoded.get("method") or "POST").strip().upper()
-            headers = decoded.get("headers") or {}
-
-            if not url:
-                raise NotificationValidationError("Webhook url is required")
-
-            if method not in {"POST", "PUT"}:
-                raise NotificationValidationError("Webhook method must be POST or PUT")
-
-            if not isinstance(headers, dict):
-                raise NotificationValidationError("Webhook headers must be an object")
-
-            payload = {
-                "app": "link2nas",
-                "test": True,
-                "channel": "webhook",
-                "config_id": config.id,
-                "config_name": config.name,
-                "type": "notification.test",
-                "severity": "info",
-                "title": "Link2NAS - Test Webhook",
-                "message": "Ceci est un message de test depuis Link2NAS.",
-                "created_at": now(),
-            }
-
-            response = requests.request(
-                method,
-                url,
-                headers=headers,
-                json=payload,
-                timeout=8,
-            )
-
-            if response.status_code < 200 or response.status_code >= 300:
-                raise NotificationValidationError(
-                    f"Webhook HTTP {response.status_code}: {response.text[:300]}"
-                )
-
-            return {
-                "ok": True,
-                "channel": "webhook",
-                "config_id": config.id,
-                "message": "Message de test Webhook envoyé.",
-            }
+            return test_config_webhook(config, decoded)
 
         raise NotificationValidationError("Unsupported notification channel")
     # -------------------------------------------------------------------------
@@ -530,9 +410,6 @@ class NotificationService:
     def _event_to_public_dict(self, event: NotificationEvent) -> dict:
         return event_to_public_dict(event)
 
-    def _safe_config(self, channel: str, config: dict) -> dict:
-        return safe_config(channel, config)
-
     def _require_text(self, value, field_name: str) -> str:
         return require_text(value, field_name)
 
@@ -555,31 +432,9 @@ class NotificationService:
         return severity_rank(severity)
 
     def list_all_events_admin(self, limit: int = 100, status: str | None = None) -> list[dict]:
-        limit = int(limit)
-
-        if limit < 1:
-            raise NotificationValidationError("limit must be >= 1")
-
-        if limit > 500:
-            raise NotificationValidationError("limit must be <= 500")
-
-        clean_status = str(status or "").strip().lower() or None
-
-        if clean_status and clean_status not in {
-            "pending",
-            "sent",
-            "retrying",
-            "failed",
-            "ignored",
-        }:
-            raise NotificationValidationError("Unsupported notification event status")
-
-        if not hasattr(self.notification_event_repository, "list_all"):
-            raise NotificationValidationError("Notification event repository does not support admin listing")
-
-        events = self.notification_event_repository.list_all(
+        return list_all_events_admin_impl(
+            self.notification_event_repository,
+            self._event_to_public_dict,
             limit=limit,
-            status=clean_status,
+            status=status,
         )
-
-        return [self._event_to_public_dict(event) for event in events]
