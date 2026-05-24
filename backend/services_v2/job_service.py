@@ -34,6 +34,7 @@ from backend.services_v2.job_support.provider_cleanup import (
 )
 from backend.services_v2.job_support.output_links import attach_job_metadata_to_output_links
 from backend.services_v2.job_support.local_download_queue import enqueue_local_download
+from backend.services_v2.job_support.unrestrict_links import build_output_links
 
 now = utc_now_iso
 
@@ -618,51 +619,7 @@ class JobService:
         return job
 
     def _build_output_links(self, context: UserContext, job: Job) -> list[dict]:
-        payload = json.loads(job.provider_payload_json or "{}")
-        links = payload.get("links") or []
-        files = payload.get("files") or []
-
-        if not links and job.source_type == "direct_link":
-            links = [job.source_value]
-
-        if not links:
-            raise ValueError("No provider links available")
-
-        if self.provider_factory is None:
-            raise RuntimeError("Provider factory is not configured")
-
-        provider = self.provider_factory.get_provider_for_user(
-            user_id=context.user_id,
-            provider_config_id=job.provider_config_id,
-            provider_name=job.provider_name,
-        )
-
-        output_links = []
-
-        for index, link in enumerate(links):
-            file_meta = files[index] if index < len(files) and isinstance(files[index], dict) else {}
-
-            result = provider.unrestrict_link(link)
-            download_url = result.get("download")
-
-            if not download_url:
-                raise ValueError("Provider returned no download URL")
-
-            relative_path = file_meta.get("path") or result.get("filename")
-            filename = result.get("filename") or filename_from_path(relative_path)
-
-            output_links.append({
-                "url": download_url,
-                "filename": filename,
-                "filesize": result.get("filesize") or file_meta.get("bytes"),
-                "provider_download_id": result.get("id"),
-                "debrid_link": link,
-                "file_id": file_meta.get("id") or index + 1,
-                "relative_path": relative_path,
-                "path": relative_path,
-            })
-
-        return output_links
+        return build_output_links(self.provider_factory, context, job)
 
     def _enqueue_local_download(
         self,
