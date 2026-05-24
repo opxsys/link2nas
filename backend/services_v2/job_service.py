@@ -17,6 +17,10 @@ from backend.services_v2.job_support.source_helpers import (
     filename_from_path,
     hash_file,
 )
+from backend.services_v2.job_support.notifications import (
+    emit_notification_event,
+    emit_provider_failed,
+)
 
 now = utc_now_iso
 
@@ -57,46 +61,18 @@ class JobService:
         message: str,
         payload: dict | None = None,
     ) -> None:
-        if not self.notification_service:
-            return
-
-        try:
-            self.notification_service.create_event(
-                user_id=job.user_id,
-                type=event_type,
-                severity=severity,
-                title=title,
-                message=message,
-                job_id=job.id,
-                payload={
-                    "source": "job_service",
-                    "job_id": job.id,
-                    "job_status": job.status,
-                    "provider_config_id": job.provider_config_id,
-                    "provider_name": job.provider_name,
-                    "provider_profile_name": job.provider_profile_name,
-                    "provider_status": job.provider_status,
-                    "destination_config_id": job.destination_config_id,
-                    "destination_name": job.destination_name,
-                    "destination_profile_name": job.destination_profile_name,
-                    "destination_status": job.destination_status,
-                    **(payload or {}),
-                },
-                scope="user",
-            )
-        except Exception:
-            # Notification failures must never break job workflows.
-            pass
+        emit_notification_event(
+            self.notification_service,
+            job,
+            event_type=event_type,
+            severity=severity,
+            title=title,
+            message=message,
+            payload=payload,
+        )
 
     def _emit_provider_failed(self, job: Job, exc: Exception) -> None:
-        self._emit_notification_event(
-            job,
-            event_type="provider.failed",
-            severity="error",
-            title="Provider failed",
-            message=str(exc),
-            payload={"error": str(exc)},
-        )
+        emit_provider_failed(self.notification_service, job, exc)
 
     def _resolve_provider_config(
         self,
