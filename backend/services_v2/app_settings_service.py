@@ -3,86 +3,35 @@ import json
 from datetime import UTC, datetime
 
 from backend.models.app_setting import AppSetting
-
-
-APP_PUBLIC_BASE_URL_KEY = "app.public_base_url"
-APP_NAME_KEY = "app.name"
-APP_TAGLINE_KEY = "app.tagline"
-
-DEFAULT_APP_NAME = "Link2NAS"
-DEFAULT_APP_TAGLINE = "Job management + debrid provider"
-SECURITY_TOKEN_TTL_KEY = "security.token_ttl"
-SECURITY_PASSWORD_POLICY_KEY = "security.password_policy"
-CLEANUP_RETENTION_KEY = "cleanup.retention"
-RESTART_COOLDOWN_KEY = "jobs.restart_cooldown"
-NOTIFICATION_DISPATCHER_KEY = "notifications.dispatcher"
-JOBS_ORCHESTRATOR_KEY = "jobs.orchestrator"
-LOCAL_DOWNLOAD_WORKER_KEY = "downloads.local_worker"
-NOTIFICATION_DISPATCHER_RUNTIME_KEY = "notifications.dispatcher.runtime"
-SYSTEM_EVENTS_DEDUP_KEY = "system_events.dedup"
-
-DEFAULT_SYSTEM_EVENTS_DEDUP = {
-    "enabled": True,
-    "dedup_minutes": 60,
-}
-DEFAULT_NOTIFICATION_DISPATCHER_RUNTIME = {
-    "last_run_at": None,
-    "last_error": None,
-    "last_result": None,
-}
-DEFAULT_NOTIFICATION_DISPATCHER = {
-    "enabled": True,
-    "interval_seconds": 60,
-    "limit": 25,
-}
-
-DEFAULT_JOBS_ORCHESTRATOR = {
-    "enabled": True,
-    "interval_seconds": 5,
-    "max_jobs_per_run": 25,
-    "auto_refresh_enabled": True,
-    "auto_unrestrict_enabled": True,
-    "auto_send_destination_enabled": True,
-}
-
-DEFAULT_LOCAL_DOWNLOAD_WORKER = {
-    "enabled": True,
-    "poll_interval_seconds": 5,
-    "max_concurrent_downloads": 1,
-}
-
-DEFAULT_SECURITY_TOKEN_TTL = {
-    "invitation_ttl_hours": 48,
-    "password_reset_ttl_hours": 2,
-    "magic_login_ttl_minutes": 15,
-    "email_verification_ttl_hours": 24,
-    "session_inactivity_minutes": 30,
-}
-
-DEFAULT_SECURITY_PASSWORD_POLICY = {
-    "min_length": 10,
-    "require_uppercase": False,
-    "require_lowercase": False,
-    "require_number": False,
-    "require_special": False,
-}
-
-DEFAULT_CLEANUP_RETENTION = {
-    "torrent_tmp_days": 7,
-    "completed_jobs_days": 30,
-    "failed_jobs_days": 30,
-    "cancelled_jobs_days": 15,
-    "expired_tokens_days": 7,
-}
-
-DEFAULT_RESTART_COOLDOWNS = {
-    "default_seconds": 10,
-    "realdebrid_seconds": 60,
-    "alldebrid_seconds": 8,
-}
-
-class AppSettingsValidationError(ValueError):
-    pass
+from backend.services_v2.app_settings_support.defaults import (
+    APP_NAME_KEY,
+    APP_PUBLIC_BASE_URL_KEY,
+    APP_TAGLINE_KEY,
+    CLEANUP_RETENTION_KEY,
+    DEFAULT_APP_NAME,
+    DEFAULT_APP_TAGLINE,
+    DEFAULT_CLEANUP_RETENTION,
+    DEFAULT_JOBS_ORCHESTRATOR,
+    DEFAULT_LOCAL_DOWNLOAD_WORKER,
+    DEFAULT_NOTIFICATION_DISPATCHER,
+    DEFAULT_NOTIFICATION_DISPATCHER_RUNTIME,
+    DEFAULT_RESTART_COOLDOWNS,
+    DEFAULT_SECURITY_PASSWORD_POLICY,
+    DEFAULT_SECURITY_TOKEN_TTL,
+    DEFAULT_SYSTEM_EVENTS_DEDUP,
+    JOBS_ORCHESTRATOR_KEY,
+    LOCAL_DOWNLOAD_WORKER_KEY,
+    NOTIFICATION_DISPATCHER_KEY,
+    NOTIFICATION_DISPATCHER_RUNTIME_KEY,
+    RESTART_COOLDOWN_KEY,
+    SECURITY_PASSWORD_POLICY_KEY,
+    SECURITY_TOKEN_TTL_KEY,
+    SYSTEM_EVENTS_DEDUP_KEY,
+)
+from backend.services_v2.app_settings_support.validation import (
+    AppSettingsValidationError,
+    validate_int,
+)
 
 
 class AppSettingsService:
@@ -138,6 +87,7 @@ class AppSettingsService:
         return {
             "retention": saved_retention,
         }
+
     def get_system_events_settings(self) -> dict:
         return {
             "dedup": self.get_system_events_dedup(),
@@ -157,6 +107,7 @@ class AppSettingsService:
         return {
             "dedup": saved_dedup,
         }
+
     def get_security_token_ttl(self) -> dict:
         return self._get_json_setting(
             SECURITY_TOKEN_TTL_KEY,
@@ -175,7 +126,7 @@ class AppSettingsService:
         }
 
         for key, (min_value, max_value) in constraints.items():
-            merged[key] = self._validate_int(
+            merged[key] = validate_int(
                 merged.get(key),
                 key,
                 min_value=min_value,
@@ -194,7 +145,7 @@ class AppSettingsService:
     def save_password_policy(self, value: dict) -> dict:
         merged = self._merge_with_default(DEFAULT_SECURITY_PASSWORD_POLICY, value)
 
-        merged["min_length"] = self._validate_int(
+        merged["min_length"] = validate_int(
             merged.get("min_length"),
             "min_length",
             min_value=8,
@@ -230,7 +181,7 @@ class AppSettingsService:
         }
 
         for key, (min_value, max_value) in constraints.items():
-            merged[key] = self._validate_int(
+            merged[key] = validate_int(
                 merged.get(key),
                 key,
                 min_value=min_value,
@@ -239,6 +190,7 @@ class AppSettingsService:
 
         self._save_json_setting(CLEANUP_RETENTION_KEY, merged)
         return merged
+
     def get_system_events_dedup(self) -> dict:
         return self._get_json_setting(
             SYSTEM_EVENTS_DEDUP_KEY,
@@ -249,7 +201,7 @@ class AppSettingsService:
         merged = self._merge_with_default(DEFAULT_SYSTEM_EVENTS_DEDUP, value)
 
         merged["enabled"] = bool(merged.get("enabled", True))
-        merged["dedup_minutes"] = self._validate_int(
+        merged["dedup_minutes"] = validate_int(
             merged.get("dedup_minutes"),
             "dedup_minutes",
             min_value=1,
@@ -258,6 +210,7 @@ class AppSettingsService:
 
         self._save_json_setting(SYSTEM_EVENTS_DEDUP_KEY, merged)
         return merged
+
     def get_invitation_ttl_hours(self) -> int:
         return int(self.get_security_token_ttl()["invitation_ttl_hours"])
 
@@ -272,61 +225,6 @@ class AppSettingsService:
 
     def get_session_inactivity_minutes(self) -> int:
         return int(self.get_security_token_ttl()["session_inactivity_minutes"])
-
-    def _get_json_setting(self, key: str, default: dict) -> dict:
-        setting = self.repository.get(key)
-        if setting is None:
-            return copy.deepcopy(default)
-
-        try:
-            value = json.loads(setting.value_json or "{}")
-        except json.JSONDecodeError:
-            return copy.deepcopy(default)
-
-        if not isinstance(value, dict):
-            return copy.deepcopy(default)
-
-        return self._merge_with_default(default, value)
-
-    def _save_json_setting(self, key: str, value: dict) -> None:
-        self.repository.upsert(
-            AppSetting(
-                key=key,
-                value_json=json.dumps(value, ensure_ascii=False, sort_keys=True),
-                updated_at=self.now(),
-            )
-        )
-
-    def _merge_with_default(self, default: dict, value: dict) -> dict:
-        merged = copy.deepcopy(default)
-
-        if isinstance(value, dict):
-            for key in default.keys():
-                if key in value:
-                    merged[key] = value[key]
-
-        return merged
-
-    def _validate_int(
-        self,
-        value,
-        name: str,
-        *,
-        min_value: int,
-        max_value: int,
-    ) -> int:
-        try:
-            int_value = int(value)
-        except (TypeError, ValueError) as exc:
-            raise AppSettingsValidationError(f"{name} must be an integer") from exc
-
-        if int_value < min_value:
-            raise AppSettingsValidationError(f"{name} must be >= {min_value}")
-
-        if int_value > max_value:
-            raise AppSettingsValidationError(f"{name} must be <= {max_value}")
-
-        return int_value
 
     def get_restart_cooldowns(self) -> dict:
         return self._get_json_setting(
@@ -347,7 +245,7 @@ class AppSettingsService:
         }
 
         for key, (min_value, max_value) in constraints.items():
-            merged[key] = self._validate_int(
+            merged[key] = validate_int(
                 merged.get(key),
                 key,
                 min_value=min_value,
@@ -370,13 +268,13 @@ class AppSettingsService:
         merged = self._merge_with_default(DEFAULT_NOTIFICATION_DISPATCHER, value)
 
         merged["enabled"] = bool(merged.get("enabled"))
-        merged["interval_seconds"] = self._validate_int(
+        merged["interval_seconds"] = validate_int(
             merged.get("interval_seconds"),
             "interval_seconds",
             min_value=5,
             max_value=86400,
         )
-        merged["limit"] = self._validate_int(
+        merged["limit"] = validate_int(
             merged.get("limit"),
             "limit",
             min_value=1,
@@ -399,13 +297,13 @@ class AppSettingsService:
         merged = self._merge_with_default(DEFAULT_JOBS_ORCHESTRATOR, value)
 
         merged["enabled"] = bool(merged.get("enabled"))
-        merged["interval_seconds"] = self._validate_int(
+        merged["interval_seconds"] = validate_int(
             merged.get("interval_seconds"),
             "interval_seconds",
             min_value=1,
             max_value=3600,
         )
-        merged["max_jobs_per_run"] = self._validate_int(
+        merged["max_jobs_per_run"] = validate_int(
             merged.get("max_jobs_per_run"),
             "max_jobs_per_run",
             min_value=1,
@@ -431,13 +329,13 @@ class AppSettingsService:
         merged = self._merge_with_default(DEFAULT_LOCAL_DOWNLOAD_WORKER, value)
 
         merged["enabled"] = bool(merged.get("enabled"))
-        merged["poll_interval_seconds"] = self._validate_int(
+        merged["poll_interval_seconds"] = validate_int(
             merged.get("poll_interval_seconds"),
             "poll_interval_seconds",
             min_value=1,
             max_value=3600,
         )
-        merged["max_concurrent_downloads"] = self._validate_int(
+        merged["max_concurrent_downloads"] = validate_int(
             merged.get("max_concurrent_downloads"),
             "max_concurrent_downloads",
             min_value=1,
@@ -446,7 +344,6 @@ class AppSettingsService:
 
         self._save_json_setting(LOCAL_DOWNLOAD_WORKER_KEY, merged)
         return merged
-
 
     def get_runtime_settings(self) -> dict:
         return {
@@ -463,6 +360,7 @@ class AppSettingsService:
                 "local_worker": self.get_local_download_worker_settings(),
             },
         }
+
     def save_runtime_settings(self, payload: dict) -> dict:
         if not isinstance(payload, dict):
             raise AppSettingsValidationError("payload must be an object")
@@ -495,11 +393,30 @@ class AppSettingsService:
                 "local_worker": self.save_local_download_worker_settings(local_worker),
             },
         }
+
     def get_notification_dispatcher_runtime(self) -> dict:
         return self._get_json_setting(
             NOTIFICATION_DISPATCHER_RUNTIME_KEY,
             DEFAULT_NOTIFICATION_DISPATCHER_RUNTIME,
         )
+
+    def save_notification_dispatcher_runtime(self, result: dict | None, last_error: str | None = None) -> dict:
+        if result is None:
+            result = {}
+
+        if not isinstance(result, dict):
+            raise AppSettingsValidationError("dispatcher runtime result must be an object")
+
+        finished_at = result.get("finished_at") or result.get("last_run_at") or None
+
+        runtime = {
+            "last_run_at": finished_at,
+            "last_error": last_error,
+            "last_result": result,
+        }
+
+        self._save_json_setting(NOTIFICATION_DISPATCHER_RUNTIME_KEY, runtime)
+        return runtime
 
     def get_public_base_url_override(self) -> str:
         stored = self._get_string_setting(APP_PUBLIC_BASE_URL_KEY)
@@ -562,6 +479,44 @@ class AppSettingsService:
         self._save_string_setting(APP_TAGLINE_KEY, tagline)
         return tagline
 
+    # -------------------------------------------------------------------------
+    # Storage helpers
+    # -------------------------------------------------------------------------
+
+    def _get_json_setting(self, key: str, default: dict) -> dict:
+        setting = self.repository.get(key)
+        if setting is None:
+            return copy.deepcopy(default)
+
+        try:
+            value = json.loads(setting.value_json or "{}")
+        except json.JSONDecodeError:
+            return copy.deepcopy(default)
+
+        if not isinstance(value, dict):
+            return copy.deepcopy(default)
+
+        return self._merge_with_default(default, value)
+
+    def _save_json_setting(self, key: str, value: dict) -> None:
+        self.repository.upsert(
+            AppSetting(
+                key=key,
+                value_json=json.dumps(value, ensure_ascii=False, sort_keys=True),
+                updated_at=self.now(),
+            )
+        )
+
+    def _merge_with_default(self, default: dict, value: dict) -> dict:
+        merged = copy.deepcopy(default)
+
+        if isinstance(value, dict):
+            for key in default.keys():
+                if key in value:
+                    merged[key] = value[key]
+
+        return merged
+
     def _get_string_setting(self, key: str) -> str | None:
         setting = self.repository.get(key)
         if setting is None:
@@ -581,20 +536,3 @@ class AppSettingsService:
             )
         )
 
-    def save_notification_dispatcher_runtime(self, result: dict | None, last_error: str | None = None) -> dict:
-        if result is None:
-            result = {}
-
-        if not isinstance(result, dict):
-            raise AppSettingsValidationError("dispatcher runtime result must be an object")
-
-        finished_at = result.get("finished_at") or result.get("last_run_at") or None
-
-        runtime = {
-            "last_run_at": finished_at,
-            "last_error": last_error,
-            "last_result": result,
-        }
-
-        self._save_json_setting(NOTIFICATION_DISPATCHER_RUNTIME_KEY, runtime)
-        return runtime
