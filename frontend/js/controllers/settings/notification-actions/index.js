@@ -8,39 +8,14 @@ import {
   updateNotificationRule,
   deleteNotificationRule,
 } from "../../../api.js";
-import {
-  fillNotificationChannelForm,
-  resetNotificationChannelForm,
-  fillNotificationRuleForm,
-  resetNotificationRuleForm,
-} from "../../../render/settings.js";
 import { showConfirmModal } from "../../../ui/modals.js";
 import { showNotificationFeedback } from "../feedback.js";
 import { buildNotificationChannelPayload } from "../payloads.js";
 import { loadSettings } from "../loader.js";
+import { handleNotificationFormAction } from "./form-actions.js";
 
 export async function handleNotificationAction(action, button) {
-  if (action === "reset-notification-channel-form") {
-    resetNotificationChannelForm();
-    return true;
-  }
-
-  if (action === "reset-notification-rule-form") {
-    resetNotificationRuleForm();
-    return true;
-  }
-
-  if (action === "cancel-notification-channel-edit") {
-    resetNotificationChannelForm();
-    button.hidden = true;
-    return true;
-  }
-
-  if (action === "cancel-notification-rule-edit") {
-    resetNotificationRuleForm();
-    button.hidden = true;
-    return true;
-  }
+  if (handleNotificationFormAction(action, button)) return true;
 
   if (action === "toggle-notification-channel-enabled") {
     button.disabled = true;
@@ -93,19 +68,6 @@ export async function handleNotificationAction(action, button) {
     return true;
   }
 
-  if (action === "edit-notification-channel") {
-    const configId = button.dataset.notificationConfigId;
-    const config = state.notificationConfigs.find((item) => item.id === configId);
-
-    if (!config) {
-      showNotificationFeedback(t("messages.settings_channel_not_found"), "error");
-      return true;
-    }
-
-    fillNotificationChannelForm(config);
-    return true;
-  }
-
   if (action === "test-stored-notification-channel") {
     const configId = button.dataset.notificationConfigId;
 
@@ -142,19 +104,6 @@ export async function handleNotificationAction(action, button) {
     } catch (error) {
       showNotificationFeedback(error.message || t("messages.settings_action_error"), "error");
     }
-    return true;
-  }
-
-  if (action === "edit-notification-rule") {
-    const ruleId = button.dataset.notificationRuleId;
-    const rule = state.notificationRules.find((item) => item.id === ruleId);
-
-    if (!rule) {
-      showNotificationFeedback(t("messages.settings_rule_not_found"), "error");
-      return true;
-    }
-
-    fillNotificationRuleForm(rule);
     return true;
   }
 
