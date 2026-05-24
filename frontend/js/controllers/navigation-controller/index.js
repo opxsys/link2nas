@@ -1,30 +1,27 @@
 import { state } from "../../state.js";
 import { t } from "../../i18n/index.js";
-import { hasConfiguredProwlarr, renderProwlarrPanel } from "../../render/prowlarr.js";
+import { renderProwlarrPanel } from "../../render/prowlarr.js";
 import { renderCreateJobForm } from "../../render/forms.js";
 import { renderJobDetails } from "../../render/job-details.js";
 import { loadSystemInfo } from "../../actions/system.js";
 import { loadJobs, selectJob } from "../../actions/jobs.js";
-import { showMainApp } from "../../render/auth.js";
 import { loadSettings } from "../settings-controller.js";
 import { loadAdmin, initEmailTemplatesPanel } from "../admin-controller.js";
-import { startPolling } from "../jobs-controller.js";
 import {
   loadAnnouncements,
   renderAnnouncementBanner,
   pickBannerAnnouncement,
   updateAnnouncementBadge,
-  bindBannerEvents,
 } from "../announcements-controller.js";
 import { updateLanguageSwitchUI, updateMainNavUI } from "./navigation-ui.js";
-import { resolveHomePage, renderPageVisibility } from "./page-routing.js";
+import { renderPageVisibility } from "./page-routing.js";
+import { initApplicationEntry } from "./application-entry.js";
 export { hideAdminIfNeeded, updateAuthVisibility, openNavDrawer, closeNavDrawer, updateProwlarrNavVisibility } from "./navigation-ui.js";
 export { resolveHomePage, setActivePage, renderPageVisibility } from "./page-routing.js";
-
-let _bindGlobalEvents;
+export { enterMainApplication } from "./application-entry.js";
 
 export function initNavigation({ bindGlobalEvents }) {
-  _bindGlobalEvents = bindGlobalEvents;
+  initApplicationEntry({ bindGlobalEvents });
 }
 
 export function renderStaticTexts() {
@@ -105,32 +102,4 @@ export async function rerenderAppForLanguageChange() {
     renderProwlarrPanel();
   }
 
-}
-
-export async function enterMainApplication({ useHomePage = false } = {}) {
-  showMainApp();
-  renderJobDetails(null);
-  _bindGlobalEvents();
-  bindBannerEvents();
-
-  await loadSettings();
-
-  if (useHomePage) {
-    state.activePage = resolveHomePage();
-    localStorage.setItem("link2nas_active_page", state.activePage);
-  } else if (state.activePage === "prowlarr" && !hasConfiguredProwlarr()) {
-    state.activePage = "jobs";
-    localStorage.setItem("link2nas_active_page", "jobs");
-  }
-
-  renderPageVisibility();
-
-  await loadSystemInfo();
-  await loadJobs();
-
-  if (state.activePage === "prowlarr") {
-    renderProwlarrPanel();
-  }
-
-  startPolling();
 }
