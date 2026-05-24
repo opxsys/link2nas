@@ -1,10 +1,10 @@
-import { t } from "../../i18n/index.js";
 import { renderUserCardList } from "./users.js";
 import { renderAdminUsersPanel } from "./users-panel.js";
 import { renderAntiAbuseSection } from "./anti-abuse.js";
 import { renderAnnouncementForm, renderAnnouncementTrackingPanel, renderAnnouncementsAdminPanel } from "./announcements.js";
 import { renderAdminSectionPlaceholders } from "./sections-placeholders.js";
 import { renderAdminTabs } from "./tabs.js";
+import { renderAdminPageHeader, renderSingleUserAdminWarning } from "./page-layout.js";
 
 export { renderUserCardList, renderAntiAbuseSection, renderAnnouncementForm, renderAnnouncementTrackingPanel, renderAnnouncementsAdminPanel };
 
@@ -32,37 +32,11 @@ export function renderUsersPanel(
 
   container.innerHTML = `
     <div class="admin-page">
-      <div class="section-header admin-page-header">
-        <div>
-          <h2>${t("admin.page.title")}</h2>
-          <p class="muted">
-            ${singleUserMode ? t("admin.page.subtitle_single_user") : t("admin.page.subtitle")}
-          </p>
-        </div>
-
-        ${
-          singleUserMode
-            ? `<span class="badge badge-warning">${t("settings.account.single_user_title")}</span>`
-            : ""
-        }
-      </div>
+      ${renderAdminPageHeader({ singleUserMode })}
 
       ${renderAdminTabs({ singleUserMode })}
 
-      ${
-        singleUserMode
-          ? `
-            <section class="admin-section-card">
-              <div class="admin-section-title">
-                <div>
-                  <h3>${t("admin.users.single_user_warning_title")}</h3>
-                  <p class="muted">${t("admin.users.single_user_warning_text")}</p>
-                </div>
-              </div>
-            </section>
-          `
-          : ""
-      }
+      ${renderSingleUserAdminWarning({ singleUserMode })}
 
       ${usersPanel}
       ${renderAdminSectionPlaceholders(
