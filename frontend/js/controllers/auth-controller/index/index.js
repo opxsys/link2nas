@@ -1,9 +1,7 @@
-import { setToken } from "../../../core/session.js";
 import { state } from "../../../state.js";
 import { showAppMessage } from "../../../utils.js";
 import { t } from "../../../i18n/index.js";
 import {
-  login,
   requestMagicLogin,
   acceptInvitation,
   confirmPasswordReset,
@@ -11,9 +9,9 @@ import {
   getMe,
 } from "../../../api.js";
 import { bindSetupAuthEvents } from "./setup-actions.js";
+import { bindLoginAuthEvents } from "./login-actions.js";
 import {
   renderLoginForm,
-  renderForcedPasswordChangeForm,
   renderMagicLoginRequestForm,
 } from "../../../render/auth.js";
 import { validatePasswordConfirmation, validateForcedPasswordChangeForm } from "../validation.js";
@@ -41,36 +39,12 @@ export function initAuth({
 
 export function bindAuthEvents() {
   bindSetupAuthEvents({ bindAuthEvents });
-
-  document.getElementById("login-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const form = event.target;
-
-    try {
-      const result = await login({
-        email: form.email.value,
-        password: form.password.value,
-      });
-
-      setToken(result.token);
-      state.currentUser = result.user;
-      _applyCurrentUserTheme(result.user);
-      _updateAuthVisibility();
-
-      if (result.user?.force_password_change) {
-        renderForcedPasswordChangeForm();
-        bindAuthEvents();
-        showAppMessage(t("messages.must_change_password"), "info");
-        return;
-      }
-
-      _hideAdminIfNeeded();
-
-      await _enterMainApplication({ useHomePage: true });
-    } catch (error) {
-      showAppMessage(error.message || t("auth.error.invalid_credentials"), "error");
-    }
+  bindLoginAuthEvents({
+    applyCurrentUserTheme: _applyCurrentUserTheme,
+    updateAuthVisibility: _updateAuthVisibility,
+    hideAdminIfNeeded: _hideAdminIfNeeded,
+    enterMainApplication: _enterMainApplication,
+    bindAuthEvents,
   });
 
   document.getElementById("show-magic-login-btn")?.addEventListener("click", () => {
