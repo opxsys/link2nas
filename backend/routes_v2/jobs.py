@@ -14,64 +14,24 @@ from backend.services_v2.destination_factory import (
     UnknownDestinationError,
 )
 
-from backend.services_v2.provider_factory import (
-    ProviderConfigDisabledError,
-    ProviderConfigNotFoundError,
-    UnknownProviderError,
+from backend.routes_v2.jobs_support.errors import (
+    _error,
+    _handle_provider_exception,
+    _handle_destination_exception,
 )
 
-from backend.services_v2.providers.realdebrid_client import (
-    RealDebridApiError,
-    RealDebridAuthError,
-    RealDebridClientError,
+from backend.routes_v2.jobs_support.helpers import (
+    _bool_from_form,
+    _safe_unlink,
+    _parse_json_object,
+    _filename_from_path,
 )
-
-from backend.services_v2.providers.alldebrid_client import (
-    AllDebridApiError,
-    AllDebridAuthError,
-    AllDebridClientError,
-)
-
-from backend.services_v2.destinations.synology_destination import SynologyDestinationError
-
-def _handle_provider_exception(exc):
-    if isinstance(exc, ValueError):
-        return _error(str(exc), 400)
-
-    if isinstance(exc, RuntimeError):
-        return _error(str(exc), 500)
-
-    if isinstance(exc, (
-        ProviderConfigNotFoundError,
-        ProviderConfigDisabledError,
-        UnknownProviderError,
-    )):
-        return _error(str(exc), 400)
-
-    if isinstance(exc, (RealDebridAuthError, AllDebridAuthError)):
-        return _error(str(exc), 401)
-
-    if isinstance(exc, (RealDebridApiError, AllDebridApiError)):
-        return _error(str(exc), 502)
-
-    if isinstance(exc, (RealDebridClientError, AllDebridClientError)):
-        return _error(str(exc), 500)
-
-    return _error(str(exc), 500)
 
 jobs_v2_bp = Blueprint("jobs_v2", __name__, url_prefix="/api/v2/jobs")
 
 ALLOWED_SOURCE_TYPES = {"magnet", "torrent_file", "direct_link"}
 ALLOWED_PROVIDERS = {"realdebrid", "alldebrid"}
 ALLOWED_DESTINATIONS = {"synology", "nas", "local", "links_only"}
-
-def _error(message: str, status_code: int = 400):
-    return jsonify({"error": message}), status_code
-
-
-def _bool_from_form(value) -> bool:
-    return str(value or "false").strip().lower() in {"1", "true", "yes", "on"}
-
 
 def _check_local_space_permission(ctx, destination_config_id=None, destination_name=None):
     """Return a 403 error response if destination is local and user lacks permission, else None."""
@@ -88,13 +48,6 @@ def _check_local_space_permission(ctx, destination_config_id=None, destination_n
         if not user or not user.can_use_local_space:
             return _error("Local space is not allowed for this account.", 403)
     return None
-
-
-def _safe_unlink(path: Path) -> None:
-    try:
-        path.unlink(missing_ok=True)
-    except Exception:
-        pass
 
 
 def _parse_output_links(job) -> list[dict]:
@@ -125,23 +78,6 @@ def _parse_provider_payload(job) -> dict:
         return {}
     except Exception:
         return {}
-
-
-def _parse_json_object(value):
-    try:
-        if not value:
-            return None
-        parsed = json.loads(value) if isinstance(value, str) else value
-        return parsed if isinstance(parsed, dict) else None
-    except Exception:
-        return None
-
-
-def _filename_from_path(path):
-    if not path:
-        return None
-
-    return str(path).replace("\\", "/").rstrip("/").split("/")[-1] or None
 
 
 def _active_provider_configs(ctx) -> list[dict]:
@@ -432,51 +368,6 @@ def _serialize(job):
         "last_message_key": None,
         "last_message_params": None,
     }
-
-
-def _handle_provider_exception(exc):
-    if isinstance(exc, ValueError):
-        return _error(str(exc), 400)
-
-    if isinstance(exc, RuntimeError):
-        return _error(str(exc), 500)
-
-    if isinstance(exc, (
-        ProviderConfigNotFoundError,
-        ProviderConfigDisabledError,
-        UnknownProviderError,
-    )):
-        return _error(str(exc), 400)
-
-    if isinstance(exc, (
-        RealDebridApiError,
-        RealDebridClientError,
-        AllDebridApiError,
-        AllDebridClientError,
-    )):
-        return _error(str(exc), 502)
-
-    raise exc
-
-
-def _handle_destination_exception(exc):
-    if isinstance(exc, ValueError):
-        return _error(str(exc), 400)
-
-    if isinstance(exc, RuntimeError):
-        return _error(str(exc), 500)
-
-    if isinstance(exc, (
-        DestinationConfigNotFoundError,
-        DestinationConfigDisabledError,
-        UnknownDestinationError,
-    )):
-        return _error(str(exc), 400)
-
-    if isinstance(exc, SynologyDestinationError):
-        return _error(str(exc), 502)
-
-    raise exc
 
 
 def _resolve_destination_ref_for_request(
