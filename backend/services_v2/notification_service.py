@@ -7,14 +7,24 @@ from backend.models.notification_config import NotificationConfig
 from backend.models.notification_event import NotificationEvent
 from backend.models.notification_rule import NotificationRule
 from backend.services_v2.smtp_service import SmtpServiceError
-
-VALID_CHANNELS = {"email", "gotify", "webhook"}
-VALID_SEVERITIES = {"info", "warning", "error", "critical"}
-VALID_SCOPES = {"user", "system"}
-
-
-class NotificationValidationError(Exception):
-    pass
+from backend.services_v2.notification_support.validation import (
+    NotificationValidationError,
+    require_text,
+    validate_channel,
+    validate_severity,
+    validate_scope,
+    validate_event_types,
+    validate_rate_limit,
+    severity_rank,
+)
+from backend.services_v2.notification_support.serialization import (
+    config_to_public_dict,
+    rule_to_public_dict,
+    event_to_public_dict,
+    safe_config,
+)
+from backend.services_v2.notification_support.config_codec import encode_config, decode_config
+from backend.services_v2.notification_support.config_serialization import serialize_config
 
 
 class NotificationNotFoundError(Exception):
@@ -497,221 +507,52 @@ class NotificationService:
         config_payload: dict | None,
         existing_config: NotificationConfig | None,
     ) -> str:
-        existing = {}
-
-        if existing_config:
-            existing = self._decode_config(existing_config.config_json)
-
-        incoming = dict(config_payload or {})
-
-        if channel == "email":
-            config = {
-                "to_email": str(incoming.get("to_email") or existing.get("to_email") or "").strip(),
-            }
-            return self._encode_config(config)
-
-        if channel == "gotify":
-            server_url = str(incoming.get("server_url") or existing.get("server_url") or "").strip().rstrip("/")
-            token = str(incoming.get("token") or existing.get("token") or "").strip()
-
-            if not server_url:
-                raise NotificationValidationError("Gotify server_url is required")
-
-            if not token:
-                raise NotificationValidationError("Gotify token is required")
-
-            return self._encode_config({
-                "server_url": server_url,
-                "token": token,
-            })
-
-        if channel == "webhook":
-            url = str(incoming.get("url") or existing.get("url") or "").strip()
-            method = str(incoming.get("method") or existing.get("method") or "POST").strip().upper()
-            headers = incoming.get("headers", existing.get("headers", {}))
-
-            if not url:
-                raise NotificationValidationError("Webhook url is required")
-
-            if method not in {"POST", "PUT"}:
-                raise NotificationValidationError("Webhook method must be POST or PUT")
-
-            if headers is None:
-                headers = {}
-
-            if not isinstance(headers, dict):
-                raise NotificationValidationError("Webhook headers must be an object")
-
-            return self._encode_config({
-                "url": url,
-                "method": method,
-                "headers": headers,
-            })
-
-        raise NotificationValidationError("Unsupported notification channel")
+        return serialize_config(
+            self._decode_config,
+            self._encode_config,
+            channel,
+            config_payload,
+            existing_config,
+        )
 
     def _encode_config(self, config: dict) -> str:
-        raw = json.dumps(config)
-
-        if self.crypto_service:
-            return self.crypto_service.encrypt(raw)
-
-        return raw
+        return encode_config(self.crypto_service, config)
 
     def _decode_config(self, config_json: str) -> dict:
-        raw = config_json or "{}"
-
-        if self.crypto_service:
-            try:
-                raw = self.crypto_service.decrypt(raw)
-            except Exception:
-                raw = "{}"
-
-        try:
-            value = json.loads(raw)
-        except Exception:
-            return {}
-
-        return value if isinstance(value, dict) else {}
+        return decode_config(self.crypto_service, config_json)
 
     def _config_to_public_dict(self, config: NotificationConfig) -> dict:
-        decoded = self._decode_config(config.config_json)
-        safe_config = self._safe_config(config.channel, decoded)
-
-        return {
-            "id": config.id,
-            "user_id": config.user_id,
-            "name": config.name,
-            "channel": config.channel,
-            "is_enabled": bool(config.is_enabled),
-            "is_default": bool(config.is_default),
-            "config": safe_config,
-            "created_at": config.created_at,
-            "updated_at": config.updated_at,
-        }
+        return config_to_public_dict(self._decode_config, config)
 
     def _rule_to_public_dict(self, rule: NotificationRule) -> dict:
-        return {
-            "id": rule.id,
-            "user_id": rule.user_id,
-            "name": rule.name,
-            "scope": rule.scope,
-            "is_enabled": bool(rule.is_enabled),
-            "config_id": rule.config_id,
-            "severity_min": rule.severity_min,
-            "event_types": json.loads(rule.event_types_json or "[]"),
-            "rate_limit_per_hour": int(rule.rate_limit_per_hour),
-            "created_at": rule.created_at,
-            "updated_at": rule.updated_at,
-        }
+        return rule_to_public_dict(rule)
 
     def _event_to_public_dict(self, event: NotificationEvent) -> dict:
-        return {
-            "id": event.id,
-            "user_id": event.user_id,
-            "job_id": event.job_id,
-            "type": event.type,
-            "severity": event.severity,
-            "title": event.title,
-            "message": event.message,
-            "payload": json.loads(event.payload_json or "{}"),
-            "status": event.status,
-            "attempts": event.attempts,
-            "max_attempts": event.max_attempts,
-            "last_error": event.last_error,
-            "triggered_by_rule_ids": json.loads(event.triggered_by_rule_ids_json or "[]"),
-            "triggered_by_config_ids": json.loads(event.triggered_by_config_ids_json or "[]"),
-            "next_retry_at": event.next_retry_at,
-            "created_at": event.created_at,
-            "updated_at": event.updated_at,
-            "sent_at": event.sent_at,
-        }
+        return event_to_public_dict(event)
 
     def _safe_config(self, channel: str, config: dict) -> dict:
-        if channel == "email":
-            return {
-                "to_email": config.get("to_email") or "",
-            }
-
-        if channel == "gotify":
-            return {
-                "server_url": config.get("server_url") or "",
-                "has_token": bool(config.get("token")),
-            }
-
-        if channel == "webhook":
-            return {
-                "url": config.get("url") or "",
-                "method": config.get("method") or "POST",
-                "has_headers": bool(config.get("headers")),
-            }
-
-        return {}
+        return safe_config(channel, config)
 
     def _require_text(self, value, field_name: str) -> str:
-        text = str(value or "").strip()
-
-        if not text:
-            raise NotificationValidationError(f"{field_name} is required")
-
-        return text
+        return require_text(value, field_name)
 
     def _validate_channel(self, value) -> str:
-        channel = str(value or "").strip().lower()
-
-        if channel not in VALID_CHANNELS:
-            raise NotificationValidationError("Unsupported notification channel")
-
-        return channel
+        return validate_channel(value)
 
     def _validate_severity(self, value) -> str:
-        severity = str(value or "").strip().lower()
-
-        if severity not in VALID_SEVERITIES:
-            raise NotificationValidationError("Unsupported notification severity")
-
-        return severity
+        return validate_severity(value)
 
     def _validate_scope(self, value) -> str:
-        scope = str(value or "").strip().lower()
-
-        if scope not in VALID_SCOPES:
-            raise NotificationValidationError("Unsupported notification scope")
-
-        return scope
+        return validate_scope(value)
 
     def _validate_event_types(self, value) -> list[str]:
-        if value is None:
-            return []
-
-        if not isinstance(value, list):
-            raise NotificationValidationError("event_types must be a list")
-
-        return [str(item).strip() for item in value if str(item).strip()]
+        return validate_event_types(value)
 
     def _validate_rate_limit(self, value) -> int:
-        try:
-            rate = int(value)
-        except Exception as exc:
-            raise NotificationValidationError("rate_limit_per_hour must be an integer") from exc
-
-        if rate < 0:
-            raise NotificationValidationError("rate_limit_per_hour must be >= 0")
-
-        if rate > 1000:
-            raise NotificationValidationError("rate_limit_per_hour must be <= 1000")
-
-        return rate
+        return validate_rate_limit(value)
 
     def _severity_rank(self, severity: str) -> int:
-        order = {
-            "info": 10,
-            "warning": 20,
-            "error": 30,
-            "critical": 40,
-        }
-
-        return order.get(str(severity or "").strip().lower(), 0)
+        return severity_rank(severity)
 
     def list_all_events_admin(self, limit: int = 100, status: str | None = None) -> list[dict]:
         limit = int(limit)
