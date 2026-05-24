@@ -1,7 +1,6 @@
 import {
   getJob,
   getJobs,
-  cloneJobWithProvider,
   ApiError,
 } from "../../api.js";
 import { state } from "../../state.js";
@@ -17,14 +16,10 @@ import {
   clearCopyFlags,
   isRestartCooldownError,
 } from "./state-helpers.js";
-import { selectModal } from "./modals.js";
-import {
-  getOtherProviderConfigs,
-  providerOption,
-} from "./profile-helpers.js";
 import { handleLifecycleJobAction } from "./lifecycle-actions.js";
 import { handleFileJobAction } from "./file-actions.js";
 import { handleDestinationJobAction } from "./destination-actions.js";
+import { handleProviderJobAction } from "./provider-actions.js";
 
 async function reloadJobs() {
   await ensureRestartCooldownsLoaded(true);
@@ -49,49 +44,7 @@ export async function performJobAction(action, jobId, fileId = null) {
     if (await handleLifecycleJobAction(action, jobId, { reloadJobs, selectJob })) return;
     if (await handleFileJobAction(action, jobId, fileId, { reloadJobs, selectJob })) return;
     if (await handleDestinationJobAction(action, jobId, { reloadJobs, selectJob })) return;
-
-    if (action === "clone-with-provider") {
-      const job = state.selectedJob;
-      const availableProviders = getOtherProviderConfigs(job);
-
-      if (!availableProviders.length) {
-        showAppMessage("Aucun autre provider disponible.", "info");
-        return;
-      }
-
-      const providerRef = await selectModal(
-        "Dupliquer avec autre provider",
-        "Provider cible",
-        availableProviders.map(providerOption),
-        availableProviders[0].id
-      );
-
-      if (!providerRef) return;
-
-      const result = await cloneJobWithProvider(
-        jobId,
-        providerRef,
-        job?.send_to_destination ? (job?.destination_config_id || job?.destination_name) : null,
-        true
-      );
-
-      const clonedJob = result.job;
-
-      showAppMessage(
-        result.reused
-          ? "Job existant réutilisé avec ce provider."
-          : "Job dupliqué avec autre provider.",
-        result.reused ? "info" : "success"
-      );
-
-      await reloadJobs();
-
-      if (clonedJob?.id) {
-        await selectJob(clonedJob.id);
-      }
-
-      return;
-    }
+    if (await handleProviderJobAction(action, jobId, { reloadJobs, selectJob })) return;
 
     if (action === "copy-download-url") {
       const job = state.selectedJob;
