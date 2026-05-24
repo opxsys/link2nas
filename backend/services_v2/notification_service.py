@@ -1,7 +1,3 @@
-import json
-import uuid
-from backend.utils.time import utc_now_iso
-
 from backend.models.notification_config import NotificationConfig
 from backend.models.notification_event import NotificationEvent
 from backend.models.notification_rule import NotificationRule
@@ -29,13 +25,15 @@ from backend.services_v2.notification_support.test_config import (
     test_config_webhook,
 )
 from backend.services_v2.notification_support.admin_events import list_all_events_admin_impl
+from backend.services_v2.notification_support.events import create_event_impl
+from backend.services_v2.notification_support.rules import create_rule_impl, update_rule_impl
+from backend.services_v2.notification_support.configs import create_config_impl, update_config_impl
+from backend.services_v2.notification_support.rule_matching import match_rules_impl
 
 
 class NotificationNotFoundError(Exception):
     pass
 
-
-now = utc_now_iso
 
 class NotificationService:
     def __init__(
@@ -75,88 +73,30 @@ class NotificationService:
         return self._config_to_public_dict(config)
 
     def create_config(self, user_id: str, payload: dict) -> dict:
-        timestamp = now()
-
-        name = self._require_text(payload.get("name"), "name")
-        channel = self._validate_channel(payload.get("channel"))
-
-        if channel == "email" and self.smtp_service and not self.smtp_service.is_email_sending_available():
-            raise NotificationValidationError("Email sending is not configured.")
-
-        is_enabled = bool(payload.get("is_enabled", True))
-        is_default = bool(payload.get("is_default", False))
-
-        config_payload = payload.get("config") or {}
-        config_json = self._serialize_config(channel, config_payload, existing_config=None)
-
-        config = NotificationConfig(
-            id=str(uuid.uuid4()),
-            user_id=user_id,
-            name=name,
-            channel=channel,
-            is_enabled=is_enabled,
-            is_default=is_default,
-            config_json=config_json,
-            created_at=timestamp,
-            updated_at=timestamp,
+        return create_config_impl(
+            self.notification_config_repository,
+            self._require_text,
+            self._validate_channel,
+            self._serialize_config,
+            self._config_to_public_dict,
+            self.smtp_service,
+            user_id,
+            payload,
         )
-
-        saved = self.notification_config_repository.create(config)
-        return self._config_to_public_dict(saved)
 
     def update_config(self, user_id: str, config_id: str, payload: dict) -> dict:
-        existing = self.notification_config_repository.get_by_id(user_id, config_id)
-
-        if not existing:
-            raise NotificationNotFoundError("Notification config not found")
-
-        timestamp = now()
-
-        name = self._require_text(payload.get("name", existing.name), "name")
-        channel = self._validate_channel(payload.get("channel", existing.channel))
-        is_enabled = bool(payload.get("is_enabled", existing.is_enabled))
-        is_default = bool(payload.get("is_default", existing.is_default))
-
-        config_payload = payload.get("config")
-        config_json = self._serialize_config(
-            channel,
-            config_payload,
-            existing_config=existing,
+        return update_config_impl(
+            self.notification_config_repository,
+            self.notification_rule_repository,
+            self._require_text,
+            self._validate_channel,
+            self._serialize_config,
+            self._config_to_public_dict,
+            NotificationNotFoundError,
+            user_id,
+            config_id,
+            payload,
         )
-
-        updated = NotificationConfig(
-            id=existing.id,
-            user_id=existing.user_id,
-            name=name,
-            channel=channel,
-            is_enabled=is_enabled,
-            is_default=is_default,
-            config_json=config_json,
-            created_at=existing.created_at,
-            updated_at=timestamp,
-        )
-
-        saved = self.notification_config_repository.update(updated)
-
-        if not is_enabled:
-            timestamp_rules = now()
-            for rule in self.notification_rule_repository.list_for_user(user_id):
-                if rule.config_id == config_id and rule.is_enabled:
-                    self.notification_rule_repository.update(NotificationRule(
-                        id=rule.id,
-                        user_id=rule.user_id,
-                        name=rule.name,
-                        scope=rule.scope,
-                        is_enabled=False,
-                        config_id=rule.config_id,
-                        severity_min=rule.severity_min,
-                        event_types_json=rule.event_types_json,
-                        rate_limit_per_hour=rule.rate_limit_per_hour,
-                        created_at=rule.created_at,
-                        updated_at=timestamp_rules,
-                    ))
-
-        return self._config_to_public_dict(saved)
 
     def delete_config(self, user_id: str, config_id: str) -> bool:
         return self.notification_config_repository.delete(user_id, config_id)
@@ -205,81 +145,34 @@ class NotificationService:
         return self._rule_to_public_dict(rule)
 
     def create_rule(self, user_id: str, payload: dict) -> dict:
-        timestamp = now()
-
-        name = self._require_text(payload.get("name"), "name")
-        scope = self._validate_scope(payload.get("scope", "user"))
-        is_enabled = bool(payload.get("is_enabled", True))
-        config_id = self._require_text(payload.get("config_id"), "config_id")
-        severity_min = self._validate_severity(payload.get("severity_min", "info"))
-        event_types = self._validate_event_types(payload.get("event_types", []))
-        rate_limit_per_hour = self._validate_rate_limit(payload.get("rate_limit_per_hour", 30))
-
-        config = self.notification_config_repository.get_by_id(user_id, config_id)
-        if not config:
-            raise NotificationValidationError("Notification config not found")
-        if is_enabled and not config.is_enabled:
-            raise NotificationValidationError("Notification config is disabled")
-
-        rule = NotificationRule(
-            id=str(uuid.uuid4()),
-            user_id=user_id,
-            name=name,
-            scope=scope,
-            is_enabled=is_enabled,
-            config_id=config_id,
-            severity_min=severity_min,
-            event_types_json=json.dumps(event_types),
-            rate_limit_per_hour=rate_limit_per_hour,
-            created_at=timestamp,
-            updated_at=timestamp,
+        return create_rule_impl(
+            self.notification_config_repository,
+            self.notification_rule_repository,
+            self._require_text,
+            self._validate_scope,
+            self._validate_severity,
+            self._validate_event_types,
+            self._validate_rate_limit,
+            self._rule_to_public_dict,
+            user_id,
+            payload,
         )
-
-        saved = self.notification_rule_repository.create(rule)
-        return self._rule_to_public_dict(saved)
 
     def update_rule(self, user_id: str, rule_id: str, payload: dict) -> dict:
-        existing = self.notification_rule_repository.get_by_id(user_id, rule_id)
-
-        if not existing:
-            raise NotificationNotFoundError("Notification rule not found")
-
-        timestamp = now()
-
-        name = self._require_text(payload.get("name", existing.name), "name")
-        scope = self._validate_scope(payload.get("scope", existing.scope))
-        is_enabled = bool(payload.get("is_enabled", existing.is_enabled))
-        config_id = self._require_text(payload.get("config_id", existing.config_id), "config_id")
-        severity_min = self._validate_severity(payload.get("severity_min", existing.severity_min))
-        event_types = self._validate_event_types(
-            payload.get("event_types", json.loads(existing.event_types_json or "[]"))
+        return update_rule_impl(
+            self.notification_config_repository,
+            self.notification_rule_repository,
+            self._require_text,
+            self._validate_scope,
+            self._validate_severity,
+            self._validate_event_types,
+            self._validate_rate_limit,
+            self._rule_to_public_dict,
+            NotificationNotFoundError,
+            user_id,
+            rule_id,
+            payload,
         )
-        rate_limit_per_hour = self._validate_rate_limit(
-            payload.get("rate_limit_per_hour", existing.rate_limit_per_hour)
-        )
-
-        config = self.notification_config_repository.get_by_id(user_id, config_id)
-        if not config:
-            raise NotificationValidationError("Notification config not found")
-        if is_enabled and not config.is_enabled:
-            raise NotificationValidationError("Notification config is disabled")
-
-        updated = NotificationRule(
-            id=existing.id,
-            user_id=existing.user_id,
-            name=name,
-            scope=scope,
-            is_enabled=is_enabled,
-            config_id=config_id,
-            severity_min=severity_min,
-            event_types_json=json.dumps(event_types),
-            rate_limit_per_hour=rate_limit_per_hour,
-            created_at=existing.created_at,
-            updated_at=timestamp,
-        )
-
-        saved = self.notification_rule_repository.update(updated)
-        return self._rule_to_public_dict(saved)
 
     def delete_rule(self, user_id: str, rule_id: str) -> bool:
         return self.notification_rule_repository.delete(user_id, rule_id)
@@ -303,83 +196,37 @@ class NotificationService:
         payload: dict | None = None,
         scope: str = "user",
     ) -> dict:
-        timestamp = now()
-        severity = self._validate_severity(severity)
-        scope = self._validate_scope(scope)
-
-        matched_rules = self._match_rules(
+        return create_event_impl(
+            self.notification_event_repository,
+            self._match_rules,
+            self._event_to_public_dict,
+            self._require_text,
+            self._validate_severity,
+            self._validate_scope,
             user_id=user_id,
-            event_type=type,
+            type=type,
             severity=severity,
+            title=title,
+            message=message,
+            job_id=job_id,
+            payload=payload,
             scope=scope,
         )
-
-        config_ids = []
-        rule_ids = []
-        seen_config_ids = set()
-        seen_rule_ids = set()
-
-        for rule in matched_rules:
-            rule_id = str(rule.id or "").strip()
-            config_id = str(rule.config_id or "").strip()
-
-            if rule_id and rule_id not in seen_rule_ids:
-                seen_rule_ids.add(rule_id)
-                rule_ids.append(rule_id)
-
-            if config_id and config_id not in seen_config_ids:
-                seen_config_ids.add(config_id)
-                config_ids.append(config_id)
-
-        event = NotificationEvent(
-            id=str(uuid.uuid4()),
-            user_id=user_id,
-            job_id=job_id,
-            type=self._require_text(type, "type"),
-            severity=severity,
-            title=self._require_text(title, "title"),
-            message=self._require_text(message, "message"),
-            payload_json=json.dumps(payload or {}),
-            status="pending" if rule_ids else "ignored",
-            attempts=0,
-            max_attempts=5,
-            last_error=None,
-            triggered_by_rule_ids_json=json.dumps(rule_ids),
-            triggered_by_config_ids_json=json.dumps(config_ids),
-            next_retry_at=None,
-            created_at=timestamp,
-            updated_at=timestamp,
-            sent_at=None,
-        )
-
-        saved = self.notification_event_repository.create(event)
-        return self._event_to_public_dict(saved)
 
     # -------------------------------------------------------------------------
     # Helpers
     # -------------------------------------------------------------------------
 
     def _match_rules(self, user_id: str, event_type: str, severity: str, scope: str) -> list[NotificationRule]:
-        rules = self.notification_rule_repository.list_enabled_for_user(user_id, scope=scope)
-        matched = []
-
-        event_rank = self._severity_rank(severity)
-
-        for rule in rules:
-            if event_rank < self._severity_rank(rule.severity_min):
-                continue
-
-            event_types = json.loads(rule.event_types_json or "[]")
-            if event_types and event_type not in event_types:
-                continue
-
-            config = self.notification_config_repository.get_by_id(user_id, rule.config_id)
-            if not config or not config.is_enabled:
-                continue
-
-            matched.append(rule)
-
-        return matched
+        return match_rules_impl(
+            self.notification_rule_repository,
+            self.notification_config_repository,
+            self._severity_rank,
+            user_id,
+            event_type,
+            severity,
+            scope,
+        )
 
     def _serialize_config(
         self,
