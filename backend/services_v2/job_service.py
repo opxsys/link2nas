@@ -21,6 +21,10 @@ from backend.services_v2.job_support.notifications import (
     emit_notification_event,
     emit_provider_failed,
 )
+from backend.services_v2.job_support.config_resolution import (
+    resolve_provider_config,
+    resolve_destination_config,
+)
 
 now = utc_now_iso
 
@@ -80,11 +84,9 @@ class JobService:
         provider_name: str | None = None,
         provider_config_id: str | None = None,
     ):
-        if self.provider_factory is None:
-            raise RuntimeError("Provider factory is not configured")
-
-        return self.provider_factory.resolve_provider_config_for_user(
-            user_id=context.user_id,
+        return resolve_provider_config(
+            self.provider_factory,
+            context,
             provider_name=provider_name,
             provider_config_id=provider_config_id,
         )
@@ -97,14 +99,9 @@ class JobService:
         *,
         allow_none: bool = True,
     ):
-        if not destination_name and not destination_config_id and allow_none:
-            return None
-
-        if self.destination_factory is None:
-            raise RuntimeError("Destination factory is not configured")
-
-        return self.destination_factory.resolve_destination_config_for_user(
-            user_id=context.user_id,
+        return resolve_destination_config(
+            self.destination_factory,
+            context,
             destination_name=destination_name,
             destination_config_id=destination_config_id,
             allow_none=allow_none,
