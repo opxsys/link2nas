@@ -1,13 +1,12 @@
 
 from __future__ import annotations
-from datetime import UTC, datetime, timedelta
 from backend.utils.time import utc_now_iso
 from backend.services_v2.notification_dispatcher_support.config import load_config_json
 from backend.services_v2.notification_dispatcher_support.gotify import send_gotify
 from backend.services_v2.notification_dispatcher_support.webhook import send_webhook
 from backend.services_v2.notification_dispatcher_support.email import send_email
+from backend.services_v2.notification_dispatcher_support.event_dispatch import dispatch_event, mark_event_failure
 from typing import Any
-import json
 
 now = utc_now_iso
 
@@ -128,26 +127,14 @@ class NotificationDispatcherService:
             raise
 
     def _dispatch_event(self, user_id: str, event) -> str:
-        triggered_config_ids = self._get_triggered_config_ids(event)
-
-        if not triggered_config_ids:
-            # Un event ignored ne devrait normalement pas être pending.
-            self.notification_event_repository.mark_sent(event.id, now())
-            return "skipped"
-
-        for config_id in triggered_config_ids:
-            config = self.notification_config_repository.get_by_id(user_id, config_id)
-
-            if not config:
-                raise ValueError(f"Notification config not found: {config_id}")
-
-            if not getattr(config, "is_enabled", False):
-                continue
-
-            self._send_skeleton(config, event)
-
-        self.notification_event_repository.mark_sent(event.id, now())
-        return "sent"
+        return dispatch_event(
+            user_id,
+            event,
+            self.notification_event_repository,
+            self.notification_config_repository,
+            self._send_skeleton,
+            now,
+        )
 
     def _send_skeleton(self, config, event) -> None:
         channel = str(getattr(config, "channel", "") or "").strip().lower()
@@ -166,67 +153,13 @@ class NotificationDispatcherService:
 
         raise ValueError(f"Unsupported notification channel: {channel}")
 
-    def _event_max_attempts(self, event) -> int:
-        try:
-            value = int(getattr(event, "max_attempts", None) or self.max_attempts)
-        except Exception:
-            value = self.max_attempts
-
-        return max(1, value)
-        
     def _mark_event_failure(self, event, exc: Exception) -> None:
-        attempts = int(getattr(event, "attempts", 0) or 0) + 1
-        event_max_attempts = self._event_max_attempts(event)
-
-        if attempts >= event_max_attempts:
-            self.notification_event_repository.mark_failed(
-                event.id,
-                str(exc),
-            )
-            return
-
-        next_retry_at = (
-            datetime.now(UTC) + timedelta(minutes=min(30, attempts * 5))
-        ).isoformat()
-
-        self.notification_event_repository.mark_retrying(
-            event.id,
-            str(exc),
-            next_retry_at,
+        mark_event_failure(
+            event,
+            exc,
+            self.notification_event_repository,
+            self.max_attempts,
         )
-    def _get_triggered_config_ids(self, event) -> list[str]:
-        value = getattr(event, "triggered_by_config_ids", None)
-
-        if isinstance(value, list):
-            raw_ids = value
-        else:
-            raw = getattr(event, "triggered_by_config_ids_json", None)
-
-            if not raw:
-                return []
-
-            try:
-                decoded = json.loads(raw)
-            except Exception:
-                return []
-
-            if not isinstance(decoded, list):
-                return []
-
-            raw_ids = decoded
-
-        seen = set()
-        result = []
-
-        for item in raw_ids:
-            config_id = str(item).strip()
-            if not config_id or config_id in seen:
-                continue
-
-            seen.add(config_id)
-            result.append(config_id)
-
-        return result
 
     def _load_config_json(self, config) -> dict:
         return load_config_json(config, crypto_service=self.crypto_service)
