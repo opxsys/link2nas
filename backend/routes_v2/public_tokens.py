@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash
 
 from backend.models.api_token import ApiToken
 
-from backend.routes_v2.admin_users import _validate_password
+from backend.routes_v2.admin_users_support.validation import validate_password as _validate_password
 from backend.services_v2.rate_limit_service import rate_limit_response
 from backend.utils.email_templates import build_magic_login_email
 

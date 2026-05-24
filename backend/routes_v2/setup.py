@@ -5,7 +5,10 @@ from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash
 
 from backend.models.user import User
-from backend.routes_v2.admin_users import _validate_email, _validate_password
+from backend.routes_v2.admin_users_support.validation import (
+    validate_email as _validate_email,
+    validate_password as _validate_password,
+)
 
 setup_v2_bp = Blueprint("setup_v2", __name__, url_prefix="/api/v2/setup")
 

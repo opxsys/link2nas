@@ -5,7 +5,12 @@ from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.routes_v2._context import get_user_context
-from backend.routes_v2.admin_users import now, _parse_optional_datetime, _validate_email, _validate_password
+from backend.routes_v2.admin_users import now
+from backend.routes_v2.admin_users_support.validation import (
+    parse_optional_datetime as _parse_optional_datetime,
+    validate_email as _validate_email,
+    validate_password as _validate_password,
+)
 from backend.services_v2.rate_limit_service import rate_limit_response
 from backend.utils.email_templates import build_email_verification_email
 from backend.utils.user_language import validate_preferred_language

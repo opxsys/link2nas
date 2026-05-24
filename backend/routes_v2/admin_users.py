@@ -1,142 +1,28 @@
-from datetime import UTC, datetime
 from backend.utils.time import utc_now_iso
-import re
 import uuid
 
 from flask import Blueprint, current_app, jsonify, request
 from werkzeug.security import generate_password_hash
 
 from backend.models.user import User
-from backend.routes_v2._context import get_user_context
 from backend.services_v2.rate_limit_service import rate_limit_response
 from backend.utils.email_templates import build_invitation_email, build_password_reset_email
 from backend.utils.user_language import validate_preferred_language
+from backend.routes_v2.admin_users_support.auth import require_super_admin, require_admin_user_management
+from backend.routes_v2.admin_users_support.serialization import serialize_user
+from backend.routes_v2.admin_users_support.validation import (
+    parse_optional_datetime,
+    validate_email,
+    validate_password,
+    validate_validity_dates,
+)
 
 
 admin_users_bp = Blueprint("admin_users_v2", __name__, url_prefix="/api/v2/admin/users")
 
 
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-
 now = utc_now_iso
 
-
-def require_super_admin():
-    ctx = get_user_context()
-
-    if ctx.role != "super_admin":
-        return None, (jsonify({"error": "Forbidden"}), 403)
-
-    return ctx, None
-
-
-def require_admin_user_management():
-    ctx, err = require_super_admin()
-    if err:
-        return ctx, err
-
-    settings = current_app.config.get("SETTINGS")
-    if bool(getattr(settings, "LINK2NAS_SINGLE_USER_MODE", False)):
-        return None, (
-            jsonify({"error": "User management is disabled in single-user mode"}),
-            403,
-        )
-
-    return ctx, None
-
-
-def _parse_optional_datetime(value):
-    if value in (None, ""):
-        return None
-
-    raw = str(value).strip()
-    if not raw:
-        return None
-
-    try:
-        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        raise ValueError("Invalid datetime format")
-
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-
-    return parsed.astimezone(UTC).isoformat()
-
-
-def _validate_email(email: str) -> None:
-    if not email:
-        raise ValueError("email is required")
-
-    if not EMAIL_RE.match(email):
-        raise ValueError("Invalid email format")
-
-def _validate_password(password: str, required: bool = True) -> None:
-    if not password:
-        if required:
-            raise ValueError("password is required")
-        return
-
-    policy = _get_password_policy()
-    min_length = int(policy.get("min_length") or 10)
-
-    if len(password) < min_length:
-        raise ValueError(f"Password must contain at least {min_length} characters")
-
-    if policy.get("require_uppercase") and not any(c.isupper() for c in password):
-        raise ValueError("Password must contain at least one uppercase letter")
-
-    if policy.get("require_lowercase") and not any(c.islower() for c in password):
-        raise ValueError("Password must contain at least one lowercase letter")
-
-    if policy.get("require_number") and not any(c.isdigit() for c in password):
-        raise ValueError("Password must contain at least one number")
-
-    if policy.get("require_special") and not any(not c.isalnum() for c in password):
-        raise ValueError("Password must contain at least one special character")
-
-def _validate_validity_dates(valid_from, expires_at) -> None:
-    current = datetime.now(UTC)
-
-    parsed_valid_from = None
-    parsed_expires_at = None
-
-    if valid_from:
-        parsed_valid_from = datetime.fromisoformat(valid_from)
-        if parsed_valid_from.tzinfo is None:
-            parsed_valid_from = parsed_valid_from.replace(tzinfo=UTC)
-
-    if expires_at:
-        parsed_expires_at = datetime.fromisoformat(expires_at)
-        if parsed_expires_at.tzinfo is None:
-            parsed_expires_at = parsed_expires_at.replace(tzinfo=UTC)
-
-        if parsed_expires_at < current:
-            raise ValueError("Expiration date cannot be in the past")
-
-    if parsed_valid_from and parsed_expires_at and parsed_valid_from > parsed_expires_at:
-        raise ValueError("Valid from date cannot be after expiration date")
-
-
-def serialize_user(user: User):
-    return {
-        "id": user.id,
-        "email": user.email,
-        "display_name": user.display_name,
-        "role": user.role,
-        "is_super_admin": user.role == "super_admin",
-        "is_active": user.is_active,
-        "valid_from": user.valid_from,
-        "account_expires_at": user.account_expires_at,
-        "email_verified_at": user.email_verified_at,
-        "email_verified": bool(user.email_verified_at),
-        "created_at": user.created_at,
-        "updated_at": user.updated_at,
-        "last_login_at": user.last_login_at,
-        "preferred_language": user.preferred_language,
-        "can_use_local_space": bool(user.can_use_local_space),
-    }
 
 def _send_account_email(to_email: str, subject: str, body: str):
     smtp_service = current_app.config["SMTP_SERVICE_V2"]
@@ -151,20 +37,6 @@ def _email_template_svc():
 
 def _app_settings_service():
     return current_app.config.get("APP_SETTINGS_SERVICE_V2")
-
-
-def _get_password_policy() -> dict:
-    service = _app_settings_service()
-    if not service:
-        return {
-            "min_length": 10,
-            "require_uppercase": False,
-            "require_lowercase": False,
-            "require_number": False,
-            "require_special": False,
-        }
-
-    return service.get_password_policy()
 
 
 def _get_invitation_ttl_hours() -> int:
@@ -231,14 +103,14 @@ def create_user():
         if creation_mode not in ("password", "invitation"):
             raise ValueError("Invalid creation mode")
 
-        _validate_email(email)
+        validate_email(email)
 
         if creation_mode == "password":
-            _validate_password(password, required=True)
+            validate_password(password, required=True)
 
-        valid_from = _parse_optional_datetime(data.get("valid_from"))
-        account_expires_at = _parse_optional_datetime(data.get("account_expires_at"))
-        _validate_validity_dates(valid_from, account_expires_at)
+        valid_from = parse_optional_datetime(data.get("valid_from"))
+        account_expires_at = parse_optional_datetime(data.get("account_expires_at"))
+        validate_validity_dates(valid_from, account_expires_at)
 
         preferred_language = validate_preferred_language(data.get("preferred_language"))
 
@@ -313,7 +185,7 @@ def update_user(user_id):
     try:
         if "email" in data:
             email = str(data.get("email") or "").strip().lower()
-            _validate_email(email)
+            validate_email(email)
 
             existing = repo.get_by_email(email)
             if existing and existing.id != user.id:
@@ -334,16 +206,16 @@ def update_user(user_id):
             user.is_active = bool(data.get("is_active"))
 
         if "valid_from" in data:
-            user.valid_from = _parse_optional_datetime(data.get("valid_from"))
+            user.valid_from = parse_optional_datetime(data.get("valid_from"))
 
         if "account_expires_at" in data:
-            user.account_expires_at = _parse_optional_datetime(data.get("account_expires_at"))
+            user.account_expires_at = parse_optional_datetime(data.get("account_expires_at"))
 
-        _validate_validity_dates(user.valid_from, user.account_expires_at)
+        validate_validity_dates(user.valid_from, user.account_expires_at)
 
         if "password" in data and data.get("password"):
             password = str(data.get("password") or "")
-            _validate_password(password, required=False)
+            validate_password(password, required=False)
             user.password_hash = generate_password_hash(password)
             user.password_reset_token = None
             user.password_reset_sent_at = None
@@ -436,7 +308,7 @@ def reset_user_password(user_id):
     password = str(data.get("password") or "")
 
     try:
-        _validate_password(password, required=True)
+        validate_password(password, required=True)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -595,6 +467,7 @@ def create_user_password_reset_link(user_id):
         "expires_at": token.expires_at,
         "reset_url": reset_url,
     }), 201
+
 @admin_users_bp.post("/<user_id>/password-reset-link/email")
 def send_user_password_reset_email(user_id):
     limited = rate_limit_response(
