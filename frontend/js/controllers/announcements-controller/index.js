@@ -10,28 +10,12 @@ import {
 import { renderAnnouncementsPage } from "../../render/announcements.js";
 import { escapeForModalHtml } from "../../ui/modals.js";
 import { loadAdmin, switchAdminTab } from "../admin-controller.js";
+import { SEVERITY_ORDER, formatSeverityLabel, getAnnouncementsUnreadCount } from "./helpers.js";
 
 let _setActivePage;
 
 export function initAnnouncements({ setActivePage }) {
   _setActivePage = setActivePage;
-}
-
-const SEVERITY_ORDER = { critical: 0, warning: 1, info: 2 };
-
-function formatSeverityLabel(severity) {
-  if (severity === "critical") return t("admin.announcements.severity_critical");
-  if (severity === "warning") return t("admin.announcements.severity_warning");
-  return t("admin.announcements.severity_info");
-}
-
-function announcementNeedsAttention(ann) {
-  if (Boolean(ann.require_acknowledgement)) return !ann.user_status?.acknowledged_at;
-  return !ann.user_status?.read_at;
-}
-
-function getAnnouncementsUnreadCount(announcements) {
-  return (announcements || []).filter(announcementNeedsAttention).length;
 }
 
 async function refreshAnnouncementsState() {
