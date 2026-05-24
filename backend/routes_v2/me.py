@@ -8,10 +8,10 @@ from backend.routes_v2.admin_users_support.validation import (
     validate_email as _validate_email,
     validate_password as _validate_password,
 )
+from backend.routes_v2.me_support.email_verification import request_email_verification_for_user
 from backend.routes_v2.me_support.serialization import serialize_me, serialize_integration_settings
 from backend.routes_v2.me_support.space import _get_or_create_public_slug, _user_space_path
 from backend.services_v2.rate_limit_service import rate_limit_response
-from backend.utils.email_templates import build_email_verification_email
 from backend.utils.user_language import validate_preferred_language
 
 
@@ -186,63 +186,17 @@ def request_email_verification_v2():
         return limited
 
     ctx = get_user_context()
-    user_repo = current_app.config["USER_REPO_V2"]
-    token_service = current_app.config["ACCOUNT_TOKEN_SERVICE_V2"]
-    smtp_service = current_app.config.get("SMTP_SERVICE_V2")
-    app_settings = current_app.config["APP_SETTINGS_SERVICE_V2"]
-
-    user = user_repo.get_by_id(ctx.user_id)
-
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    if user.email_verified_at:
-        return jsonify({"ok": True, "message": "Email already verified"})
-
-    if not smtp_service or not smtp_service.is_email_sending_available():
-        return jsonify({"error": "Email sending is not configured."}), 503
-
-    token, raw_token = token_service.create_token(
-        user_id=user.id,
-        token_type="email_verification",
-        created_by_user_id=user.id,
-        ttl_hours=app_settings.get_email_verification_ttl_hours(),
+    payload, status = request_email_verification_for_user(
+        user_id=ctx.user_id,
+        user_repo=current_app.config["USER_REPO_V2"],
+        token_service=current_app.config["ACCOUNT_TOKEN_SERVICE_V2"],
+        smtp_service=current_app.config.get("SMTP_SERVICE_V2"),
+        app_settings=current_app.config["APP_SETTINGS_SERVICE_V2"],
+        email_template_service=current_app.config.get("EMAIL_TEMPLATE_SERVICE_V2"),
+        settings=current_app.config.get("SETTINGS"),
+        now_func=now,
     )
-
-    verification_url = token_service.build_email_verification_url(raw_token)
-
-    app_name = app_settings.get_effective_app_name(
-        env_fallback=getattr(current_app.config.get("SETTINGS"), "APP_NAME", "")
-    )
-
-    try:
-        email_svc = current_app.config.get("EMAIL_TEMPLATE_SERVICE_V2")
-        if email_svc:
-            subject, body = email_svc.render(
-                "email_verification", user.preferred_language,
-                app_name=app_name, url=verification_url, expires_at=token.expires_at,
-            )
-        else:
-            subject, body = build_email_verification_email(
-                user.preferred_language, verification_url, token.expires_at, app_name=app_name
-            )
-        smtp_service.send_email(to_email=user.email, subject=subject, body=body)
-    except Exception as exc:
-        return jsonify({
-            "ok": False,
-            "error": f"Email verification failed: {exc}",
-        }), 502
-
-    user.email_verification_token = None
-    user.updated_at = now()
-    user_repo.update(user)
-
-    return jsonify({
-        "ok": True,
-        "message": f"Email verification sent to {user.email}",
-        "expires_at": token.expires_at,
-        "verification_url": verification_url,
-    })
+    return jsonify(payload), status
 
 
 
