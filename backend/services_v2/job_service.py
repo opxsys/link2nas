@@ -1,8 +1,6 @@
 import json
 import uuid
-import re
 import requests
-import hashlib
 from pathlib import Path
 from datetime import UTC, datetime
 from backend.utils.time import utc_now_iso
@@ -14,6 +12,11 @@ from flask import current_app
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
 from backend.services_v2.job_support.status_actions import ACTION_RULES, map_provider_status
+from backend.services_v2.job_support.source_helpers import (
+    detect_source_type,
+    filename_from_path,
+    hash_file,
+)
 
 now = utc_now_iso
 
@@ -241,7 +244,7 @@ class JobService:
         results = []
 
         for line in unique_lines:
-            source_type = self._detect_source_type(line)
+            source_type = detect_source_type(line)
 
             existing = self.job_repository.get_existing_by_source(
                 context.user_id,
@@ -290,7 +293,7 @@ class JobService:
             allow_none=True,
         )
 
-        torrent_hash = self._hash_file(uploaded_path)
+        torrent_hash = hash_file(uploaded_path)
         source_value = f"torrent:{torrent_hash}"
 
         cached_path = Path("data/torrents") / f"{torrent_hash}.torrent"
@@ -756,7 +759,7 @@ class JobService:
             raise ValueError("Provider returned no download URL")
 
         relative_path = file_meta.get("path") or result.get("filename")
-        filename = result.get("filename") or self._filename_from_path(relative_path)
+        filename = result.get("filename") or filename_from_path(relative_path)
 
         had_links = any(item for item in existing_links if item)
 
@@ -835,7 +838,7 @@ class JobService:
                 raise ValueError("Provider returned no download URL")
 
             relative_path = file_meta.get("path") or result.get("filename")
-            filename = result.get("filename") or self._filename_from_path(relative_path)
+            filename = result.get("filename") or filename_from_path(relative_path)
 
             output_links.append({
                 "url": download_url,
@@ -849,12 +852,6 @@ class JobService:
             })
 
         return output_links
-
-    def _filename_from_path(self, path: str | None) -> str | None:
-        if not path:
-            return None
-
-        return str(path).replace("\\", "/").rstrip("/").split("/")[-1] or None
 
     def _enqueue_local_download(
         self,
@@ -1410,24 +1407,3 @@ class JobService:
             self._emit_provider_failed(job, exc)
             raise
 
-    def _hash_file(self, path: str) -> str:
-        digest = hashlib.sha256()
-
-        with Path(path).open("rb") as f:
-            for chunk in iter(lambda: f.read(1024 * 1024), b""):
-                digest.update(chunk)
-
-        return digest.hexdigest()
-
-    def _detect_source_type(self, value: str) -> str:
-        source = str(value or "").strip()
-
-        if source.startswith("magnet:?"):
-            return "magnet"
-
-        if re.match(r"^https?://", source, re.IGNORECASE):
-            return "direct_link"
-
-        raise ValueError(
-            "Invalid source. Must start with magnet:? or http(s)://"
-        )
