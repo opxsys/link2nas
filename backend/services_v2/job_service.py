@@ -3,8 +3,6 @@ from pathlib import Path
 from datetime import UTC, datetime
 from backend.utils.time import utc_now_iso
 
-from redis import Redis
-from rq import Queue
 from flask import current_app
 
 from backend.models.job import Job
@@ -35,6 +33,7 @@ from backend.services_v2.job_support.provider_cleanup import (
     is_unknown_resource_error,
 )
 from backend.services_v2.job_support.output_links import attach_job_metadata_to_output_links
+from backend.services_v2.job_support.local_download_queue import enqueue_local_download
 
 now = utc_now_iso
 
@@ -671,28 +670,11 @@ class JobService:
         job: Job,
         destination_config_id: str | None,
     ) -> None:
-        settings = current_app.config["SETTINGS"]
-
-        redis_conn = Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            db=settings.REDIS_DB,
-            decode_responses=False,
-        )
-
-        queue = Queue(
-            settings.RQ_LOCAL_DOWNLOAD_QUEUE_NAME,
-            connection=redis_conn,
-        )
-
-        queue.enqueue(
-            "backend.services_v2.local_download_worker.perform_local_download_job",
-            context.user_id,
-            job.id,
+        return enqueue_local_download(
+            current_app.config["SETTINGS"],
+            context,
+            job,
             destination_config_id,
-            job_timeout="24h",
-            result_ttl=3600,
-            failure_ttl=86400,
         )
 
     def send_to_destination(
