@@ -5,9 +5,10 @@ from datetime import UTC, datetime, timedelta
 from backend.utils.time import utc_now_iso
 from backend.services_v2.notification_dispatcher_support.content import build_user_summary, resolve_job_name
 from backend.services_v2.notification_dispatcher_support.config import load_config_json
+from backend.services_v2.notification_dispatcher_support.gotify import send_gotify
+from backend.services_v2.notification_dispatcher_support.webhook import send_webhook
 from typing import Any
 import json
-import requests
 
 now = utc_now_iso
 
@@ -233,49 +234,7 @@ class NotificationDispatcherService:
 
     def _send_gotify(self, config, event) -> None:
         cfg = self._load_config_json(config)
-
-        server_url = str(cfg.get("server_url") or "").strip().rstrip("/")
-        token = str(cfg.get("token") or "").strip()
-
-        if not server_url:
-            raise ValueError("Gotify server_url is required")
-
-        if not token:
-            raise ValueError("Gotify token is required")
-
-        title = str(getattr(event, "title", "") or "Link2NAS notification").strip()
-        message = str(getattr(event, "message", "") or "").strip()
-        severity = str(getattr(event, "severity", "") or "info").strip().lower()
-        event_type = str(getattr(event, "type", "") or "").strip()
-
-        priority = self._gotify_priority_for_severity(severity)
-
-        full_message = message
-
-        if event_type:
-            full_message = f"{message}\n\nType: {event_type}".strip()
-
-        job_id = getattr(event, "job_id", None)
-        if job_id:
-            full_message = f"{full_message}\nJob: {job_id}".strip()
-
-        url = f"{server_url}/message"
-
-        response = requests.post(
-            url,
-            params={"token": token},
-            json={
-                "title": title,
-                "message": full_message,
-                "priority": priority,
-            },
-            timeout=8,
-        )
-
-        if response.status_code < 200 or response.status_code >= 300:
-            raise RuntimeError(
-                f"Gotify HTTP {response.status_code}: {response.text[:300]}"
-            )
+        send_gotify(cfg, event)
 
     def _send_email(self, config, event) -> None:
         if not self.smtp_service:
@@ -378,81 +337,7 @@ class NotificationDispatcherService:
 
     def _send_webhook(self, config, event) -> None:
         cfg = self._load_config_json(config)
-
-        url = str(cfg.get("url") or "").strip()
-        method = str(cfg.get("method") or "POST").strip().upper()
-        headers = cfg.get("headers") or {}
-
-        if not url:
-            raise ValueError("Webhook url is required")
-
-        if method not in {"POST", "PUT"}:
-            raise ValueError("Webhook method must be POST or PUT")
-
-        if not isinstance(headers, dict):
-            raise ValueError("Webhook headers must be an object")
-
-        payload = self._build_webhook_payload(config, event)
-
-        response = requests.request(
-            method,
-            url,
-            headers=headers,
-            json=payload,
-            timeout=8,
-        )
-
-        if response.status_code < 200 or response.status_code >= 300:
-            raise RuntimeError(
-                f"Webhook HTTP {response.status_code}: {response.text[:300]}"
-            )
-
-    def _build_webhook_payload(self, config, event) -> dict:
-        raw_payload = getattr(event, "payload", None)
-
-        if isinstance(raw_payload, dict):
-            event_payload = raw_payload
-        else:
-            raw_payload_json = getattr(event, "payload_json", None) or "{}"
-
-            try:
-                decoded = json.loads(raw_payload_json)
-            except Exception:
-                decoded = {}
-
-            event_payload = decoded if isinstance(decoded, dict) else {}
-
-        return {
-            "app": "link2nas",
-            "config_id": getattr(config, "id", None),
-            "config_name": getattr(config, "name", None),
-            "event_id": getattr(event, "id", None),
-            "user_id": getattr(event, "user_id", None),
-            "job_id": getattr(event, "job_id", None),
-            "type": getattr(event, "type", None),
-            "severity": getattr(event, "severity", None),
-            "title": getattr(event, "title", None),
-            "message": getattr(event, "message", None),
-            "status": getattr(event, "status", None),
-            "attempts": getattr(event, "attempts", None),
-            "created_at": getattr(event, "created_at", None),
-            "updated_at": getattr(event, "updated_at", None),
-            "payload": event_payload,
-        }
-
-    def _gotify_priority_for_severity(self, severity: str) -> int:
-        value = str(severity or "").strip().lower()
-
-        if value == "critical":
-            return 10
-
-        if value == "error":
-            return 8
-
-        if value == "warning":
-            return 5
-
-        return 2
+        send_webhook(cfg, config, event)
 
     def run_once_all_users(self, limit: int = 25) -> dict:
         started_at = now()
