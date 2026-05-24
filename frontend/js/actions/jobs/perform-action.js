@@ -1,11 +1,8 @@
 import {
   getJob,
   getJobs,
-  sendJobToDestination,
-  resendJobToDestination,
   cloneJobWithProvider,
   ApiError,
-  cancelLocalDestinationDownload,
 } from "../../api.js";
 import { state } from "../../state.js";
 import { renderJobsList } from "../../render/jobs-list.js";
@@ -20,18 +17,14 @@ import {
   clearCopyFlags,
   isRestartCooldownError,
 } from "./state-helpers.js";
+import { selectModal } from "./modals.js";
 import {
-  confirmModal,
-  selectModal,
-  selectDestinationConfigModal,
-} from "./modals.js";
-import {
-  getActiveDestinationConfigs,
   getOtherProviderConfigs,
   providerOption,
 } from "./profile-helpers.js";
 import { handleLifecycleJobAction } from "./lifecycle-actions.js";
 import { handleFileJobAction } from "./file-actions.js";
+import { handleDestinationJobAction } from "./destination-actions.js";
 
 async function reloadJobs() {
   await ensureRestartCooldownsLoaded(true);
@@ -55,126 +48,7 @@ export async function performJobAction(action, jobId, fileId = null) {
 
     if (await handleLifecycleJobAction(action, jobId, { reloadJobs, selectJob })) return;
     if (await handleFileJobAction(action, jobId, fileId, { reloadJobs, selectJob })) return;
-
-    if (action === "send-to-destination") {
-      const job = state.selectedJob;
-      const destinations = getActiveDestinationConfigs(job);
-
-      if (!destinations.length) {
-        showAppMessage("Aucune destination configurée.", "info");
-        return;
-      }
-
-      let destinationConfigId = null;
-
-      if (destinations.length === 1) {
-        destinationConfigId = destinations[0].id;
-      }
-
-      if (destinations.length > 1 && !destinationConfigId) {
-        destinationConfigId = await selectDestinationConfigModal(
-          "Envoyer vers une destination",
-          "Destination cible",
-          destinations,
-          destinations[0].id
-        );
-
-        if (!destinationConfigId) return;
-      }
-
-      await sendJobToDestination(jobId, destinationConfigId);
-      showAppMessage(t("messages.destination_send_started"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "send-to-other-destination") {
-      const job = state.selectedJob;
-      const currentDestinationConfigId = String(job?.destination_config_id || "");
-
-      const destinations = getActiveDestinationConfigs(job)
-        .filter((destination) => String(destination.id || "") !== currentDestinationConfigId);
-
-      if (!destinations.length) {
-        showAppMessage("Aucune autre destination configurée.", "info");
-        return;
-      }
-
-      const destinationConfigId = await selectDestinationConfigModal(
-        "Envoyer vers une autre destination",
-        "Destination cible",
-        destinations,
-        destinations[0].id
-      );
-
-      if (!destinationConfigId) return;
-
-      await sendJobToDestination(jobId, destinationConfigId);
-      showAppMessage(t("messages.destination_send_started"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "resend-to-destination") {
-      const job = state.selectedJob;
-      const destinations = getActiveDestinationConfigs(job);
-
-      if (!destinations.length) {
-        showAppMessage("Aucune destination configurée.", "info");
-        return;
-      }
-
-      let destinationConfigId = null;
-
-      if (job?.destination_available && job?.destination_config_id) {
-        const currentDestination = destinations.find(
-          (destination) => String(destination.id || "") === String(job.destination_config_id)
-        );
-
-        if (currentDestination) {
-          destinationConfigId = currentDestination.id;
-        }
-      }
-
-      if (!destinationConfigId && destinations.length === 1) {
-        destinationConfigId = destinations[0].id;
-      }
-
-      if (!destinationConfigId) {
-        destinationConfigId = await selectDestinationConfigModal(
-          "Renvoyer vers une destination",
-          "Destination cible",
-          destinations,
-          destinations[0].id
-        );
-
-        if (!destinationConfigId) return;
-      }
-
-      await resendJobToDestination(jobId, destinationConfigId);
-      showAppMessage(t("messages.destination_send_started"), "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
-
-    if (action === "cancel-local-download") {
-      const confirmed = await confirmModal(
-        "Annuler le téléchargement local",
-        "Arrêter le téléchargement local en cours et supprimer le fichier partiel ?",
-        "Annuler le téléchargement"
-      );
-
-      if (!confirmed) return;
-
-      await cancelLocalDestinationDownload(jobId);
-      showAppMessage("Annulation du téléchargement local demandée.", "success");
-      await reloadJobs();
-      await selectJob(jobId);
-      return;
-    }
+    if (await handleDestinationJobAction(action, jobId, { reloadJobs, selectJob })) return;
 
     if (action === "clone-with-provider") {
       const job = state.selectedJob;
