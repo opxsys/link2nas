@@ -18,6 +18,14 @@ import {
   renderLoginForm,
 } from "../render/auth.js";
 import { bindAuthEvents } from "./auth-controller.js";
+import {
+  getPublicTokenFromUrl,
+  isInviteRoute,
+  isPasswordResetRoute,
+  isMagicLoginRoute,
+  isEmailVerificationRoute,
+  isPublicAccountRoute,
+} from "./public-routes/route-utils.js";
 
 let _updateAuthVisibility;
 let _enterMainApplication;
@@ -36,38 +44,12 @@ export function initPublicRoutes({
   _applyCurrentUserTheme = applyCurrentUserTheme;
 }
 
-function getPublicTokenFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return String(params.get("token") || "").trim();
-}
-
-function isInviteRoute() {
-  return window.location.pathname === "/invite";
-}
-
-function isPasswordResetRoute() {
-  return window.location.pathname === "/reset-password";
-}
-
-function isMagicLoginRoute() {
-  return window.location.pathname === "/magic-login";
-}
-
-function isEmailVerificationRoute() {
-  return window.location.pathname === "/verify-email";
-}
-
 export function clearPublicAccountUrl() {
   window.history.replaceState({}, "", "/");
 }
 
 export async function handlePublicAccountRoute() {
-  if (
-    !isInviteRoute() &&
-    !isPasswordResetRoute() &&
-    !isMagicLoginRoute() &&
-    !isEmailVerificationRoute()
-  ) {
+  if (!isPublicAccountRoute()) {
     return false;
   }
 
