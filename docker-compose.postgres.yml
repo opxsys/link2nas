@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: link2nas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-link2nas_v2}
+      POSTGRES_USER: ${POSTGRES_USER:-link2nas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-link2nas} -d ${POSTGRES_DB:-link2nas_v2}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    environment:
+      V2_DATABASE_BACKEND: postgres
+      V2_POSTGRES_DSN: ${V2_POSTGRES_DSN:?V2_POSTGRES_DSN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    environment:
+      V2_DATABASE_BACKEND: postgres
+      V2_POSTGRES_DSN: ${V2_POSTGRES_DSN:?V2_POSTGRES_DSN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      web:
+        condition: service_started
+
+  scheduler:
+    environment:
+      V2_DATABASE_BACKEND: postgres
+      V2_POSTGRES_DSN: ${V2_POSTGRES_DSN:?V2_POSTGRES_DSN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      web:
+        condition: service_started
+
+  local-download-worker:
+    environment:
+      V2_DATABASE_BACKEND: postgres
+      V2_POSTGRES_DSN: ${V2_POSTGRES_DSN:?V2_POSTGRES_DSN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      web:
+        condition: service_started
+
+volumes:
+  postgres_data:

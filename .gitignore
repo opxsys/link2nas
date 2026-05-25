@@ -45,10 +45,9 @@ Thumbs.db
 # Local secrets / environment
 .env
 .env.*
-!.env.example
-!.env.test.example
 !.env.sample
 !.env.docker.sample
+!.env.docker.postgres.sample
 
 # Local/private scripts
 scripts/local/

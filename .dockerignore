@@ -15,6 +15,7 @@ __pycache__
 .env.*
 !.env.sample
 !.env.docker.sample
+!.env.docker.postgres.sample
 
 data
 downloads

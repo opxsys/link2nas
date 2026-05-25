@@ -1,16 +1,41 @@
 # Installation
 
-## Prerequisites
+---
+
+## Docker (recommended)
+
+Docker Compose is the recommended way to run Link2NAS. It manages all services (Redis, web, workers, scheduler) and their dependencies automatically.
+
+```bash
+# SQLite (default)
+cp .env.docker.sample .env
+# Edit .env — set FLASK_SECRET_KEY and V2_SECRET_ENCRYPTION_KEY at minimum
+
+docker compose up -d --build
+```
+
+For a PostgreSQL-backed deployment:
+
+```bash
+cp .env.docker.postgres.sample .env
+# Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and POSTGRES_PASSWORD
+
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
+```
+
+See [DOCKER.md](DOCKER.md) for the complete Docker deployment guide, service descriptions, volume management, and upgrade instructions.
+
+---
+
+## Local installation
+
+### Prerequisites
 
 - **Python 3.10+**
 - **Redis** — required for RQ background workers; also recommended for rate limiting in multi-process deployments
 - **SQLite** — default, no additional setup required
 - **PostgreSQL** — optional alternative to SQLite
 - **A RealDebrid or AllDebrid account** — if you intend to use a debrid provider
-
----
-
-## Local installation
 
 ```bash
 # 1. Copy the environment template
@@ -153,3 +178,5 @@ For explicit backend targeting (SQLite or PostgreSQL), or for a full release val
 | Redis connection refused | Redis is not running or `REDIS_HOST`/`REDIS_PORT` are misconfigured |
 | Provider API error | Provider credential is invalid or expired — re-enter it in Settings |
 | Local download queue not moving | `local_download_worker` not running, or `downloads.local_worker.enabled=false` in Admin settings |
+
+For a complete list of symptoms and solutions, including Docker-specific and destination issues, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
