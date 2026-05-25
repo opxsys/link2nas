@@ -64,6 +64,11 @@ def create_app() -> Flask:
 
     app.config["SETTINGS"] = settings
     app.config["SECRET_KEY"] = settings.FLASK_SECRET_KEY
+
+    @app.get("/health")
+    def health():
+        return {"ok": True}, 200
+
     app.config["RATE_LIMIT_SERVICE_V2"] = RateLimitService(
         enabled=settings.V2_RATE_LIMIT_ENABLED,
         redis_url=settings.REDIS_URL,

@@ -48,7 +48,7 @@ Thumbs.db
 !.env.example
 !.env.test.example
 !.env.sample
-!.env.docker.example
+!.env.docker.sample
 
 # Local/private scripts
 scripts/local/
@@ -64,4 +64,4 @@ export_frontend_backend.txt
 *.old
 
 # Claude local settings
-.claude/n
+.claude/

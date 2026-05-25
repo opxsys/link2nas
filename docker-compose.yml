@@ -1,0 +1,106 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: link2nas-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    container_name: link2nas-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      V2_DATABASE_BACKEND: sqlite
+    ports:
+      - "5000:5000"
+    volumes:
+      - link2nas_data:/app/data
+      - link2nas_downloads:/app/downloads
+      - link2nas_tmp:/app/tmp
+      - link2nas_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      - redis
+    command: ["gunicorn", "-b", "0.0.0.0:5000", "app:create_app()"]
+
+  worker:
+    build: .
+    container_name: link2nas-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      V2_DATABASE_BACKEND: sqlite
+    volumes:
+      - link2nas_data:/app/data
+      - link2nas_downloads:/app/downloads
+      - link2nas_tmp:/app/tmp
+      - link2nas_logs:/app/logs
+    depends_on:
+      - redis
+      - web
+    command: ["python", "worker.py"]
+
+  scheduler:
+    build: .
+    container_name: link2nas-scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      V2_DATABASE_BACKEND: sqlite
+    volumes:
+      - link2nas_data:/app/data
+      - link2nas_downloads:/app/downloads
+      - link2nas_tmp:/app/tmp
+      - link2nas_logs:/app/logs
+    depends_on:
+      - redis
+      - web
+    command: ["python", "-m", "backend.services_v2.scheduler_loop"]
+
+  local-download-worker:
+    build: .
+    container_name: link2nas-local-download-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      V2_DATABASE_BACKEND: sqlite
+    volumes:
+      - link2nas_data:/app/data
+      - link2nas_downloads:/app/downloads
+      - link2nas_tmp:/app/tmp
+      - link2nas_logs:/app/logs
+    depends_on:
+      - redis
+      - web
+    command: ["python", "-m", "backend.services_v2.local_download_worker"]
+
+volumes:
+  redis_data:
+  link2nas_data:
+  link2nas_downloads:
+  link2nas_tmp:
+  link2nas_logs:
