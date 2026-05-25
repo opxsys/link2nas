@@ -62,3 +62,6 @@ export_frontend_backend.txt
 *.tmp
 *.bak
 *.old
+
+# Claude local settings
+.claude/n
