@@ -48,8 +48,12 @@ The PostgreSQL override adds a `postgres` service and switches all application s
 # 1. Copy the PostgreSQL-specific environment sample
 cp .env.docker.postgres.sample .env
 
-# 2. Set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and POSTGRES_PASSWORD in .env.
-#    POSTGRES_PASSWORD must match the password in V2_POSTGRES_DSN — change both together.
+# 2. Open .env and set all three required values before the first start:
+#      FLASK_SECRET_KEY=<strong-random-string>
+#      V2_SECRET_ENCRYPTION_KEY=<fernet-key>
+#      POSTGRES_PASSWORD=<your-chosen-password>
+#    Also update V2_POSTGRES_DSN so its password matches POSTGRES_PASSWORD exactly:
+#      V2_POSTGRES_DSN=postgresql://link2nas:<your-chosen-password>@postgres:5432/link2nas_v2
 
 # 3. Build and start all services with both compose files
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
@@ -58,10 +62,69 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --buil
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml ps
 ```
 
+**Important:** The PostgreSQL password is written into the `postgres_data` volume the first time the container starts. See [PostgreSQL password management](#postgresql-password-management) below for what happens if you need to change it after that.
+
 To stop:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml down
+```
+
+---
+
+## PostgreSQL password management
+
+### Where the password is configured
+
+The PostgreSQL password is configured exclusively in `.env`. Two values must always be identical:
+
+```env
+# Password embedded in the connection string used by the application
+V2_POSTGRES_DSN=postgresql://link2nas:YOUR_PASSWORD@postgres:5432/link2nas_v2
+
+# Password passed to the PostgreSQL container on first initialization
+POSTGRES_PASSWORD=YOUR_PASSWORD
+```
+
+Both values must be set and must match before you run `docker compose up` for the first time on a clean `postgres_data` volume.
+
+### Why changing `.env` alone is not enough after first start
+
+The `POSTGRES_PASSWORD` variable is only read by the PostgreSQL container **once**, when the `postgres_data` volume is created for the first time. After that, the password is stored inside the volume. Changing `POSTGRES_PASSWORD` in `.env` and restarting the containers does not update the password already written in the database — it is silently ignored.
+
+If the password in `V2_POSTGRES_DSN` does not match the one in the database, all application services will fail to connect with an authentication error.
+
+### Changing the password — development or test environment
+
+If you have no data worth keeping, the simplest approach is to destroy the volume and let PostgreSQL reinitialize:
+
+```bash
+# Stop all services and delete the postgres_data volume (all data is lost)
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml down -v
+
+# Update POSTGRES_PASSWORD and V2_POSTGRES_DSN in .env, then restart
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
+```
+
+### Changing the password — production environment
+
+Never run `down -v` in production. Instead, change the password inside the running database, then update `.env`:
+
+```bash
+# 1. Open a psql session in the running postgres container
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml exec postgres \
+  psql -U link2nas -d link2nas_v2
+
+# 2. In the psql prompt, change the password
+ALTER USER link2nas WITH PASSWORD 'your-new-password';
+\q
+
+# 3. Update both values in .env to the new password
+#    V2_POSTGRES_DSN=postgresql://link2nas:your-new-password@postgres:5432/link2nas_v2
+#    POSTGRES_PASSWORD=your-new-password
+
+# 4. Restart the application services (not the postgres container itself)
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml restart web worker scheduler local-download-worker
 ```
 
 ---
@@ -154,10 +217,14 @@ curl -s http://localhost:5000/api/v2/setup/status
 
 All volumes are Docker-managed named volumes. They persist across container restarts and `docker compose down`.
 
-**To destroy all data** (irreversible):
+**To destroy all data and start fresh** (irreversible — development and testing only):
 ```bash
 docker compose down -v
+# For PostgreSQL:
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml down -v
 ```
+
+Do not use `down -v` in production. See [PostgreSQL password management](#postgresql-password-management) for the production procedure to change credentials without data loss.
 
 ---
 

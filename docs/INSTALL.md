@@ -18,10 +18,15 @@ For a PostgreSQL-backed deployment:
 
 ```bash
 cp .env.docker.postgres.sample .env
-# Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and POSTGRES_PASSWORD
+# Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and POSTGRES_PASSWORD.
+# Also update the password in V2_POSTGRES_DSN to match POSTGRES_PASSWORD exactly.
+# These values must be set before the first start — PostgreSQL writes the password
+# into the postgres_data volume on initialization and ignores POSTGRES_PASSWORD afterwards.
 
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
 ```
+
+See [DOCKER.md — PostgreSQL password management](DOCKER.md#postgresql-password-management) if you need to change the password after the first start.
 
 See [DOCKER.md](DOCKER.md) for the complete Docker deployment guide, service descriptions, volume management, and upgrade instructions.
 
