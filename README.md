@@ -47,6 +47,26 @@ It is designed for self-hosted use on a trusted network. Validation on your own 
 
 ## Quick start
 
+### Docker (recommended)
+
+```bash
+cp .env.docker.sample .env
+# Edit .env — set FLASK_SECRET_KEY and V2_SECRET_ENCRYPTION_KEY at minimum
+
+docker compose up -d --build
+```
+
+The app is available at `http://localhost:5000`. On first run, a setup page lets you create the initial admin account.
+
+For PostgreSQL:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
+```
+
+See [docs/DOCKER.md](docs/DOCKER.md) for the full Docker deployment guide.
+
+### Local (without Docker)
+
 ```bash
 cp .env.sample .env
 # Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and PUBLIC_BASE_URL at minimum
@@ -58,9 +78,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-The app is available at `http://localhost:5000`. On first run, a setup page lets you create the initial admin account.
-
-### Workers
+The app is available at `http://localhost:5000`.
 
 Two background worker processes must be running for full functionality:
 
@@ -97,11 +115,13 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model, rate limit
 
 | File | Content |
 |---|---|
-| [docs/INSTALL.md](docs/INSTALL.md) | Installation, workers, first setup, SQLite, PostgreSQL, Redis, troubleshooting |
+| [docs/INSTALL.md](docs/INSTALL.md) | Installation, workers, first setup, SQLite, PostgreSQL, Redis |
+| [docs/DOCKER.md](docs/DOCKER.md) | Docker Compose deployment guide (SQLite + PostgreSQL) |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | All environment variables with defaults and descriptions |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security model, secrets, deployment hardening, publication checklist |
-| [docs/testing.md](docs/testing.md) | Test runners, prerequisites, quick commands, runner architecture |
+| [docs/testing.md](docs/testing.md) | Test runners, unit tests, prerequisites, quick commands |
 | [docs/VALIDATION.md](docs/VALIDATION.md) | Pre-deployment validation checklist |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common symptoms and solutions |
 | [docs/PROWLARR.md](docs/PROWLARR.md) | Prowlarr / qBittorrent integration guide |
 
 ---

@@ -2,7 +2,17 @@
 
 Test runners and quality scripts for Link2NAS. Full documentation: [docs/testing.md](../docs/testing.md)
 
-## Main runners
+## Quality checks (no app required)
+
+| Script | Description |
+|---|---|
+| `quality/check_all.sh` | Run all quality checks (Python, JS, secrets, unit tests) |
+| `quality/check_python.sh` | Python compilation and lint |
+| `quality/check_frontend_js.sh` | JavaScript syntax check |
+| `quality/check_secrets.sh` | Secret detection (gitleaks + grep) |
+| `quality/check_unit_tests.sh` | Python unit tests (`tests/unit/`) |
+
+## Functional runners (app must be running)
 
 | Script | Description |
 |---|---|
@@ -16,6 +26,12 @@ Test runners and quality scripts for Link2NAS. Full documentation: [docs/testing
 ## Quick start
 
 ```bash
+# All quality checks — no app required
+bash scripts/quality/check_all.sh
+
+# Unit tests only
+bash scripts/quality/check_unit_tests.sh
+
 # Static quality (no app required)
 bash scripts/test_quality.sh
 

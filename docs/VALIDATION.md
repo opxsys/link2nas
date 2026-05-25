@@ -58,6 +58,18 @@ find frontend/js -name "*.js" -print0 | xargs -0 -n1 node --check
 
 No output means no parse errors in any JS file.
 
+### Unit tests
+```bash
+bash scripts/quality/check_unit_tests.sh
+```
+
+Runs Python unit tests in `scripts/tests/unit/` — no running app required.
+
+### All static + unit checks at once
+```bash
+bash scripts/quality/check_all.sh
+```
+
 ---
 
 ## 2. Secret checks
@@ -103,11 +115,34 @@ This should return no output. If it does, remove those files from tracking befor
 
 ---
 
-## 4. Runtime checks
+## 4. Endpoint checks
+
+These endpoints require no authentication and can be used to verify the application is running correctly.
+
+### Health check
+```bash
+curl -fsS http://localhost:5000/health
+# Expected: {"ok": true}  (HTTP 200)
+```
+
+### Setup status
+```bash
+curl -s http://localhost:5000/api/v2/setup/status
+# Expected: {"setup_required": true}  (before first admin is created)
+# Expected: {"setup_required": false}  (after setup is complete)
+```
+
+**Note:** `/api/status` is not a valid endpoint — it returns HTTP 404. Use the two endpoints above for monitoring and validation.
+
+---
+
+## 5. Runtime checks
 
 Run through these steps manually on a test instance before production deployment.
 
 ### Auth
+- [ ] `GET /health` returns `{"ok": true}` with HTTP 200
+- [ ] `GET /api/v2/setup/status` returns `{"setup_required": false}` after setup
 - [ ] App starts without errors
 - [ ] Setup page appears on first run
 - [ ] Super Admin account can be created
@@ -147,7 +182,7 @@ Run through these steps manually on a test instance before production deployment
 
 ---
 
-## 5. SQLite validation
+## 6. SQLite validation
 
 - [ ] Start the app with default `V2_DATABASE_BACKEND=sqlite`
 - [ ] Create a user, provider, destination, and job
@@ -156,7 +191,7 @@ Run through these steps manually on a test instance before production deployment
 
 ---
 
-## 6. PostgreSQL validation
+## 7. PostgreSQL validation
 
 If using PostgreSQL:
 
@@ -167,7 +202,7 @@ If using PostgreSQL:
 
 ---
 
-## 7. Worker validation
+## 8. Worker validation
 
 - [ ] `worker.py` is running and consuming the main queue (`RQ_QUEUE_NAME`)
 - [ ] `local_download_worker` is running and consuming the local-download queue (`RQ_LOCAL_DOWNLOAD_QUEUE_NAME`)
@@ -177,7 +212,24 @@ If using PostgreSQL:
 
 ---
 
-## 8. Pre-publication checklist
+## 9. Docker validation
+
+If deploying with Docker Compose, run these checks after `docker compose up -d --build`:
+
+- [ ] All containers are running: `docker compose ps` — status `running` or `healthy` for all services
+- [ ] `web` container passes health check: `docker compose ps` shows `healthy` (may take up to 60s on first start)
+- [ ] Web interface accessible at `http://localhost:5000`
+- [ ] Setup page appears on first run (clean database)
+- [ ] `docker compose logs web` shows no startup errors
+- [ ] `docker compose logs worker` shows the worker is consuming the queue
+- [ ] `docker compose logs local-download-worker` shows the worker is running
+- [ ] For PostgreSQL: `docker compose ps postgres` shows `healthy`
+- [ ] `.env` is not tracked: `git ls-files .env` returns empty
+- [ ] `docker-compose.postgres.yml` does not contain a real production password (use environment override or secrets management)
+
+---
+
+## 10. Pre-publication checklist
 
 Before pushing to a public repository:
 

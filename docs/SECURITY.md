@@ -137,6 +137,14 @@ If the local-download worker is not running, local download jobs will be enqueue
 - **Log rotation:** Configure log rotation to avoid unbounded disk growth.
 - **Network isolation:** Do not expose Redis or PostgreSQL to the public internet. Bind them to localhost or a private network interface.
 
+### Docker-specific recommendations
+
+- **Never commit `.env`** — it contains real secrets. Use `.env.docker.sample` as the public template.
+- **Change the default PostgreSQL password** in `docker-compose.postgres.yml` before first use. The file ships with a placeholder (`change_me_postgres_password`).
+- **Back up Docker volumes** regularly. Use `docker run` with volume mounts to extract the SQLite file, or `pg_dump` for PostgreSQL. Store backups with the matching `V2_SECRET_ENCRYPTION_KEY`.
+- **Do not expose Redis or PostgreSQL ports** to the host unless required. In Docker Compose, neither service publishes ports by default — this is intentional.
+- **Rate limiting in multi-container setups:** Set `V2_RATE_LIMIT_REDIS_REQUIRED=true` in `.env` so the app fails fast if Redis is not available, rather than falling back to per-process in-memory state that is not shared across containers.
+
 ---
 
 ## 9. GitHub publication checklist

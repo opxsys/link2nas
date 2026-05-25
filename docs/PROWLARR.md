@@ -78,6 +78,8 @@ The endpoint returns `Ok.` on success (standard qBittorrent response). Errors fr
 | Jobs created but local destination is pending | The local-download worker is not running (see [INSTALL.md](INSTALL.md#run-workers)) |
 | Prowlarr cannot reach Link2NAS | Check the host, port, and SSL settings; verify that Link2NAS is accessible from the Prowlarr host |
 
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for additional diagnostic steps.
+
 ---
 
 ## Security

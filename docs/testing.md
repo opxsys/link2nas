@@ -12,8 +12,14 @@ Link2NAS V3 still mostly uses the `/api/v2/` HTTP API. Test scripts that call `/
 scripts/
 ├── setup/              Initialization and configuration helpers
 ├── inspect/            Static route wiring checks
-├── quality/            Code quality (compile, lint, secrets)
+├── quality/            Code quality (compile, lint, secrets, unit tests)
+│   ├── check_all.sh       Run all quality checks
+│   ├── check_python.sh    Python compilation + lint
+│   ├── check_frontend_js.sh  JavaScript syntax check
+│   ├── check_secrets.sh   Secret detection (gitleaks + grep)
+│   └── check_unit_tests.sh   Python unit tests (scripts/tests/unit/)
 ├── tests/
+│   ├── unit/           Python unittest — no app required
 │   ├── auth/           Authentication, tokens, auth policies
 │   ├── admin/          User management, modes, permissions
 │   ├── notifications/  Notifications, dispatcher, schema, deduplication
@@ -78,6 +84,29 @@ Tests requiring a live provider (RealDebrid, AllDebrid) or a real NAS are isolat
 ---
 
 ## Runners
+
+### Unit tests — Python unittest
+
+```bash
+bash scripts/quality/check_unit_tests.sh
+```
+
+Runs Python unit tests discovered in `scripts/tests/unit/` using `python3 -m unittest discover`. No running application is required — these tests exercise backend logic in isolation.
+
+Current coverage:
+- `test_destination_error.py` — destination failure classification, field assignment, and `error_message` isolation logic
+
+To run a single test file directly:
+```bash
+python3 -m unittest scripts/tests/unit/test_destination_error -v
+```
+
+To run all quality checks including unit tests:
+```bash
+bash scripts/quality/check_all.sh
+```
+
+---
 
 ### test_quality.sh — Static quality
 
@@ -202,7 +231,8 @@ Legacy runner, kept for compatibility. Prints a deprecation warning on startup. 
 
 | Situation | Recommended |
 |---|---|
-| Before every commit | `test_quality.sh` |
+| Before every commit | `test_quality.sh` + `check_unit_tests.sh` |
+| After changing backend logic (no app needed) | `check_unit_tests.sh` |
 | Quick sanity check after a code change | `test_v3_smoke.sh` |
 | Full suite against current backend | `test_v3_full.sh` |
 | Full suite — explicit SQLite backend | `test_v3_sqlite.sh` |
