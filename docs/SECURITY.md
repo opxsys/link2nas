@@ -140,7 +140,7 @@ If the local-download worker is not running, local download jobs will be enqueue
 ### Docker-specific recommendations
 
 - **Never commit `.env`** — it contains real secrets. Use `.env.docker.sample` as the public template.
-- **Change the default PostgreSQL password** in `docker-compose.postgres.yml` before first use. The file ships with a placeholder (`change_me_postgres_password`).
+- **Set `POSTGRES_PASSWORD` and `V2_POSTGRES_DSN` in `.env`** before the first start. Both must use the same password. PostgreSQL writes this password into the `postgres_data` volume on initialization — changing `.env` afterwards does not update the database password. See [docs/DOCKER.md](DOCKER.md#postgresql-password-management) for the procedure to change it after initialization.
 - **Back up Docker volumes** regularly. Use `docker run` with volume mounts to extract the SQLite file, or `pg_dump` for PostgreSQL. Store backups with the matching `V2_SECRET_ENCRYPTION_KEY`.
 - **Do not expose Redis or PostgreSQL ports** to the host unless required. In Docker Compose, neither service publishes ports by default — this is intentional.
 - **Rate limiting in multi-container setups:** Set `V2_RATE_LIMIT_REDIS_REQUIRED=true` in `.env` so the app fails fast if Redis is not available, rather than falling back to per-process in-memory state that is not shared across containers.

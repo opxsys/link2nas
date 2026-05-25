@@ -60,6 +60,12 @@ The app is available at `http://localhost:5000`. On first run, a setup page lets
 
 For PostgreSQL:
 ```bash
+cp .env.docker.postgres.sample .env
+# Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and POSTGRES_PASSWORD.
+# Update V2_POSTGRES_DSN so its password matches POSTGRES_PASSWORD exactly.
+# These values must be set before the first start — PostgreSQL writes the password
+# into the postgres_data volume on initialization and ignores POSTGRES_PASSWORD afterwards.
+
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
 ```
 

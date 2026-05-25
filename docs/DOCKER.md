@@ -299,7 +299,8 @@ docker run --rm \
   alpine cp /data/link2nas_v2.sqlite3 /backup/link2nas_backup_$(date +%Y%m%d).sqlite3
 
 # For PostgreSQL: dump from the postgres container
-docker compose exec postgres pg_dump -U link2nas link2nas_v2 > link2nas_backup_$(date +%Y%m%d).sql
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml exec postgres \
+  pg_dump -U link2nas link2nas_v2 > link2nas_backup_$(date +%Y%m%d).sql
 ```
 
 Store the backup file and `V2_SECRET_ENCRYPTION_KEY` in a secure, separate location.
