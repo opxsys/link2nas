@@ -1,3 +1,0 @@
-rq worker link2nas
-python -m backend.services_v2.local_download_worker
-python -m backend.services_v2.scheduler_loop
