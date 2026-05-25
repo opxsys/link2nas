@@ -184,11 +184,11 @@ git diff --check
 echo "[OK] git diff --check"
 echo
 
-echo "2b) _build_user_summary — check unitaire Python"
+echo "2b) build_user_summary — check unitaire Python"
 python -c "
 import sys
 sys.path.insert(0, '.')
-from backend.services_v2.notification_dispatcher_service import _build_user_summary
+from backend.services_v2.notification_dispatcher_support.content import build_user_summary
 
 cases = [
     ('job.completed', 'Job terminé', '', 'fr', 'Le job est terminé.'),
@@ -205,22 +205,22 @@ cases = [
 ]
 ok = True
 for et, title, msg, lang, expected in cases:
-    got = _build_user_summary(et, title, msg, lang)
+    got = build_user_summary(et, title, msg, lang)
     if got != expected:
-        print(f'[KO] _build_user_summary({et!r}, {lang!r}): got {got!r}, expected {expected!r}')
+        print(f'[KO] build_user_summary({et!r}, {lang!r}): got {got!r}, expected {expected!r}')
         ok = False
     else:
         print(f'[OK] {et} / {lang}: {got!r}')
 sys.exit(0 if ok else 1)
 "
-echo "[OK] _build_user_summary unitaire"
+echo "[OK] build_user_summary unitaire"
 echo
 
-echo "2c) _resolve_job_name — check unitaire Python"
+echo "2c) resolve_job_name — check unitaire Python"
 python -c "
 import sys
 sys.path.insert(0, '.')
-from backend.services_v2.notification_dispatcher_service import _resolve_job_name
+from backend.services_v2.notification_dispatcher_support.content import resolve_job_name
 
 ok = True
 
@@ -233,38 +233,38 @@ def chk(label, got, expected):
         print(f'[OK] {label}: {got!r}')
 
 # 1. filename top-level
-chk('filename', _resolve_job_name({'filename': 'show.mkv'}, 'abc123', 'fr'), 'show.mkv')
+chk('filename', resolve_job_name({'filename': 'show.mkv'}, 'abc123', 'fr'), 'show.mkv')
 
 # 2. files[].path — single file, no directory
-chk('single file no dir', _resolve_job_name({'files': [{'path': 'movie.mkv'}]}, 'abc', 'fr'), 'movie.mkv')
+chk('single file no dir', resolve_job_name({'files': [{'path': 'movie.mkv'}]}, 'abc', 'fr'), 'movie.mkv')
 
 # 3. files[].path — single file, with directory
-chk('single file with dir', _resolve_job_name({'files': [{'path': '/dl/show/ep1.mkv'}]}, 'abc', 'fr'), 'ep1.mkv')
+chk('single file with dir', resolve_job_name({'files': [{'path': '/dl/show/ep1.mkv'}]}, 'abc', 'fr'), 'ep1.mkv')
 
 # 4. files[].path — multiple files, common directory
-chk('multi files common dir', _resolve_job_name(
+chk('multi files common dir', resolve_job_name(
     {'files': [{'path': '/dl/show/ep1.mkv'}, {'path': '/dl/show/ep2.mkv'}]}, 'abc', 'fr'), 'show')
 
 # 5. files[].path — multiple files, no common root
-chk('multi files no common dir', _resolve_job_name(
+chk('multi files no common dir', resolve_job_name(
     {'files': [{'path': 'ep1.mkv'}, {'path': 'ep2.mkv'}]}, 'abc', 'fr'), 'ep1.mkv')
 
 # 6. fallback: job_id short
-chk('fallback job_id', _resolve_job_name({}, '6f4c27e3-dead-beef', 'fr'), 'Job 6f4c27e3')
+chk('fallback job_id', resolve_job_name({}, '6f4c27e3-dead-beef', 'fr'), 'Job 6f4c27e3')
 
 # 7. fallback: no job_id, FR
-chk('system FR', _resolve_job_name({}, None, 'fr'), 'Système')
+chk('system FR', resolve_job_name({}, None, 'fr'), 'Système')
 
 # 8. fallback: no job_id, EN
-chk('system EN', _resolve_job_name({}, None, 'en'), 'System')
+chk('system EN', resolve_job_name({}, None, 'en'), 'System')
 
 # 9. filename takes priority over files
-chk('filename priority over files', _resolve_job_name(
+chk('filename priority over files', resolve_job_name(
     {'filename': 'priority.mkv', 'files': [{'path': 'ignored.mkv'}]}, 'abc', 'fr'), 'priority.mkv')
 
 sys.exit(0 if ok else 1)
 "
-echo "[OK] _resolve_job_name unitaire"
+echo "[OK] resolve_job_name unitaire"
 echo
 
 # ---- setup & auth -----------------------------------------------------------
