@@ -8,6 +8,12 @@ from backend.services_v2.user_context import UserContext
 
 logger = logging.getLogger(__name__)
 
+IDLE_JOBS_LOG_INTERVAL_SECONDS = 300
+IDLE_NOTIFICATIONS_LOG_INTERVAL_SECONDS = 300
+
+_last_idle_jobs_log_at = 0.0
+_last_idle_notifications_log_at = 0.0
+
 REFRESH_STATUSES = {
     "started",
     "source_added",
@@ -178,16 +184,16 @@ def _run_notifications_once(app, dispatcher_settings: dict) -> dict | None:
                 result,
                 last_error=None if not result.get("errors") else str(result["errors"][-1].get("error")),
             )
-        logger.info(
-            "[V2_NOTIFICATION_DISPATCHER] processed=%s sent=%s retrying=%s failed=%s skipped=%s users=%s",
-            result.get("processed", 0),
-            result.get("sent", 0),
-            result.get("retrying", 0),
-            result.get("failed", 0),
-            result.get("skipped", 0),
-            result.get("users_processed", 0),
-        )
-
+        if _should_log_notifications_result(result):
+            logger.info(
+                "[V2_NOTIFICATION_DISPATCHER] processed=%s sent=%s retrying=%s failed=%s skipped=%s users=%s",
+                result.get("processed", 0),
+                result.get("sent", 0),
+                result.get("retrying", 0),
+                result.get("failed", 0),
+                result.get("skipped", 0),
+                result.get("users_processed", 0),
+            )
         return result
 
 
@@ -196,6 +202,59 @@ def _get_runtime_settings(app) -> dict:
         service = app.config["APP_SETTINGS_SERVICE_V2"]
         return service.get_runtime_settings()
 
+def _has_jobs_activity(result: dict) -> bool:
+    return any(
+        int(result.get(key, 0) or 0) > 0
+        for key in (
+            "processed",
+            "refreshed",
+            "unrestricted",
+            "sent_to_destination",
+            "skipped",
+            "errors",
+        )
+    )
+
+
+def _should_log_jobs_result(result: dict) -> bool:
+    global _last_idle_jobs_log_at
+
+    if _has_jobs_activity(result):
+        return True
+
+    now_monotonic = time.monotonic()
+    if now_monotonic - _last_idle_jobs_log_at >= IDLE_JOBS_LOG_INTERVAL_SECONDS:
+        _last_idle_jobs_log_at = now_monotonic
+        return True
+
+    return False
+
+
+def _has_notifications_activity(result: dict) -> bool:
+    return any(
+        int(result.get(key, 0) or 0) > 0
+        for key in (
+            "processed",
+            "sent",
+            "retrying",
+            "failed",
+            "errors",
+        )
+    )
+
+
+def _should_log_notifications_result(result: dict) -> bool:
+    global _last_idle_notifications_log_at
+
+    if _has_notifications_activity(result):
+        return True
+
+    now_monotonic = time.monotonic()
+    if now_monotonic - _last_idle_notifications_log_at >= IDLE_NOTIFICATIONS_LOG_INTERVAL_SECONDS:
+        _last_idle_notifications_log_at = now_monotonic
+        return True
+
+    return False
 
 def main() -> None:
     logging.basicConfig(
@@ -242,16 +301,20 @@ def main() -> None:
         now_monotonic = time.monotonic()
 
         if now_monotonic - last_jobs_run >= jobs_interval:
+
             jobs_result = _run_jobs_once(app, orchestrator_settings)
-            logger.info(
-                "[V2_JOBS_ORCHESTRATOR] processed=%s refreshed=%s unrestricted=%s sent_destination=%s skipped=%s errors=%s",
-                jobs_result.get("processed", 0),
-                jobs_result.get("refreshed", 0),
-                jobs_result.get("unrestricted", 0),
-                jobs_result.get("sent_to_destination", 0),
-                jobs_result.get("skipped", 0),
-                jobs_result.get("errors", 0),
-            )
+
+            if _should_log_jobs_result(jobs_result):
+                logger.info(
+                    "[V2_JOBS_ORCHESTRATOR] processed=%s refreshed=%s unrestricted=%s sent_destination=%s skipped=%s errors=%s",
+                    jobs_result.get("processed", 0),
+                    jobs_result.get("refreshed", 0),
+                    jobs_result.get("unrestricted", 0),
+                    jobs_result.get("sent_to_destination", 0),
+                    jobs_result.get("skipped", 0),
+                    jobs_result.get("errors", 0),
+                )
+
             last_jobs_run = now_monotonic
 
         now_monotonic = time.monotonic()
