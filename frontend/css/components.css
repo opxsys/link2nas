@@ -468,6 +468,10 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
 }
 
 .job-message-banner.is-info {
@@ -480,6 +484,8 @@
 
 .job-message-banner.is-error {
   border-color: rgba(239, 68, 68, 0.45);
+  max-height: 120px;
+  overflow-y: auto;
 }
 
 .collapsible-block {
@@ -644,6 +650,19 @@
 .destination-message.is-error {
   color: #b91c1c;
   font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+
+.error-technical-detail {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .empty-state {

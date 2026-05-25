@@ -24,6 +24,8 @@ def cancel_local_download_impl(
 
     job.destination_status = "cancel_requested"
     job.destination_message = "Local download cancellation requested"
+    job.destination_message_key = "destination.message.local.cancel_requested"
+    job.destination_message_params = None
     job.send_to_destination = False
     job.sent_to_destination = False
     job.destination_progress = 0

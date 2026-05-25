@@ -38,7 +38,7 @@ def prepare_destination_send(
     if resolved.name != "local":
         job.destination_status = "sending"
         job.destination_message = "Sending to destination"
-        job.destination_message_key = None
+        job.destination_message_key = "destination.message.sending"
         job.destination_message_params = None
         job.destination_progress = 0
         job.sent_to_destination = False

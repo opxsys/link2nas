@@ -7,6 +7,7 @@ from app import create_app
 from config import Settings
 from backend.services_v2.job_service import now
 from backend.services_v2.destinations.local_destination import LocalDownloadCancelled
+from backend.services_v2.job_support.destination_error import apply_destination_failure
 
 
 def _is_cancel_requested(job) -> bool:
@@ -30,6 +31,8 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
         if _is_cancel_requested(job):
             job.destination_status = "cancelled"
             job.destination_message = "Local download cancelled"
+            job.destination_message_key = "destination.message.local.cancelled"
+            job.destination_message_params = None
             job.sent_to_destination = False
             job.updated_at = now()
             job_repository.update_destination_state(job)
@@ -54,7 +57,7 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
         job.send_to_destination = True
         job.destination_status = "downloading"
         job.destination_message = "Downloading to local destination"
-        job.destination_message_key = None
+        job.destination_message_key = "destination.message.local.downloading"
         job.destination_message_params = None
         job.destination_progress = 0
         job.destination_last_attempt = now()
@@ -102,6 +105,8 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
             latest.destination_progress = progress
             latest.destination_status = "downloading"
             latest.destination_message = f"Downloading to local destination ({progress}%)"
+            latest.destination_message_key = "destination.message.local.downloading_progress"
+            latest.destination_message_params = json.dumps({"progress": progress})
             latest.updated_at = now()
 
 
@@ -132,6 +137,8 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
             job.destination_progress = 100
             job.destination_status = "sent"
             job.destination_message = "Sent to local destination"
+            job.destination_message_key = "destination.message.local.sent"
+            job.destination_message_params = None
             job.destination_path = result.get("destination_path") or job.destination_path
             job.completed_at = job.completed_at or now()
             job.updated_at = now()
@@ -145,6 +152,8 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
 
             job.destination_status = "cancelled"
             job.destination_message = "Local download cancelled"
+            job.destination_message_key = "destination.message.local.cancelled"
+            job.destination_message_params = None
             job.sent_to_destination = False
             job.send_to_destination = False
             job.destination_progress = 0
@@ -156,10 +165,7 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
             if not job:
                 raise
 
-            job.destination_status = "failed"
-            job.destination_message = str(exc)
-            job.error_message = str(exc)
-            job.updated_at = now()
+            apply_destination_failure(job, exc)
             job_repository.update_destination_state(job)
             raise
 

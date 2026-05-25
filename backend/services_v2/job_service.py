@@ -51,6 +51,7 @@ from backend.services_v2.job_support.resend_destination import resend_to_destina
 from backend.services_v2.job_support.local_destination_send import send_to_local_destination_impl
 from backend.services_v2.job_support.non_local_destination_send import send_to_non_local_destination_impl
 from backend.services_v2.job_support.destination_prepare import prepare_destination_send
+from backend.services_v2.job_support.destination_error import apply_destination_failure
 from backend.services_v2.job_support.start import start_job_impl
 
 now = utc_now_iso
@@ -315,10 +316,7 @@ class JobService:
             )
 
         except Exception as exc:
-            job.destination_status = "failed"
-            job.destination_message = str(exc)
-            job.error_message = str(exc)
-            job.updated_at = now()
+            apply_destination_failure(job, exc)
             self.job_repository.update_destination_state(job)
 
             self._emit_notification_event(

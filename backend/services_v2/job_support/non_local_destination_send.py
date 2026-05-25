@@ -17,6 +17,8 @@ def send_to_non_local_destination_impl(
     job.sent_to_destination_at = now()
     job.destination_status = "sent"
     job.destination_message = "Sent to destination"
+    job.destination_message_key = "destination.message.sent"
+    job.destination_message_params = None
     job.destination_path = result.get("destination_path") or job.destination_path
     job.completed_at = job.completed_at or now()
     job.updated_at = now()

@@ -15,7 +15,7 @@ export function renderTechnicalBlock(job) {
           <div class="kv-item"><strong>${t("job.torrent_id")}</strong><div class="code-block">${escapeHtml(job.torrent_id || t("common.none"))}</div></div>
           <div class="kv-item"><strong>${t("job.torrent_status")}</strong><div>${escapeHtml(job.torrent_status || t("common.none"))}</div></div>
           <div class="kv-item"><strong>${t("job.selected_files")}</strong><div>${escapeHtml(job.selected_files || t("common.none"))}</div></div>
-          <div class="kv-item"><strong>${t("job.error")}</strong><div>${escapeHtml(job.error_message || t("common.none"))}</div></div>
+          <div class="kv-item"><strong>${t("job.error")}</strong><div class="error-technical-detail">${escapeHtml(job.error_message || t("common.none"))}</div></div>
         </div>
       </div>
     </details>

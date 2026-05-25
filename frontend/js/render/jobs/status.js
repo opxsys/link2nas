@@ -37,11 +37,16 @@ export function renderJobMessage(job) {
   const status = String(job.status || "").trim().toLowerCase();
   const hasError = Boolean(job.error_message);
 
-  const message = resolveTranslatedMessage(
-    job.last_message_key,
-    job.last_message_params,
-    job.last_message || job.error_message
-  );
+  let message;
+  if (job.last_message_key) {
+    message = resolveTranslatedMessage(job.last_message_key, job.last_message_params, job.last_message || "");
+  } else if (job.last_message) {
+    message = job.last_message;
+  } else if (hasError) {
+    message = t("job.error_occurred");
+  } else {
+    message = "";
+  }
 
   if (!message) return "";
   if (status === "completed" && !hasError) return "";

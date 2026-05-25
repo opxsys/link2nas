@@ -27,7 +27,7 @@ def send_to_local_destination_impl(
 
     job.destination_status = "queued"
     job.destination_message = "Local download queued"
-    job.destination_message_key = None
+    job.destination_message_key = "destination.message.local.queued"
     job.destination_message_params = None
     job.sent_to_destination = False
     job.sent_to_destination_at = None

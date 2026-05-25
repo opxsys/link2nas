@@ -16,4 +16,8 @@ echo "[check_all] Running secret checks..."
 scripts/quality/check_secrets.sh
 
 echo
+echo "[check_all] Running unit tests..."
+scripts/quality/check_unit_tests.sh
+
+echo
 echo "[check_all] OK"
