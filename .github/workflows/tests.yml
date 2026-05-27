@@ -41,5 +41,8 @@ jobs:
 
       - name: Validate Docker Compose files
         run: |
+          cp .env.docker.sample .env
           docker compose config >/dev/null
+
+          cp .env.docker.postgres.sample .env
           docker compose -f docker-compose.yml -f docker-compose.postgres.yml config >/dev/null
