@@ -121,6 +121,7 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model, rate limit
 
 | File | Content |
 |---|---|
+| [docs/API.md](docs/API.md) | API reference — auth, scopes, all endpoints, curl examples |
 | [docs/INSTALL.md](docs/INSTALL.md) | Installation, workers, first setup, SQLite, PostgreSQL, Redis |
 | [docs/DOCKER.md](docs/DOCKER.md) | Docker Compose deployment guide (SQLite + PostgreSQL) |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | All environment variables with defaults and descriptions |
