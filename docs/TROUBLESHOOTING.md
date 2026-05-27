@@ -160,6 +160,44 @@ REDIS_DB=0
 
 ---
 
+### Redis warning: Memory overcommit must be enabled
+
+**Symptom:** Redis logs show this warning:
+
+```text
+WARNING Memory overcommit must be enabled!
+```
+
+**Cause:** The Docker host has `vm.overcommit_memory` disabled. Redis can still start, but background save or persistence operations may fail under memory pressure.
+
+**Fix:** Enable memory overcommit immediately and persist it across reboots:
+
+```bash
+sudo sysctl vm.overcommit_memory=1
+echo 'vm.overcommit_memory=1' | sudo tee /etc/sysctl.d/99-link2nas-redis.conf
+sudo sysctl --system
+```
+
+Then restart Redis if needed:
+
+```bash
+docker compose restart redis
+```
+
+Verify:
+
+```bash
+sysctl vm.overcommit_memory
+```
+
+Expected output:
+
+```text
+vm.overcommit_memory = 1
+```
+
+---
+
 ### PostgreSQL connection refused or authentication failed
 
 **Cause:** PostgreSQL is not running, the DSN is incorrect, or the role/database does not exist.

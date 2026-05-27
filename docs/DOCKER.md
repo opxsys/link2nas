@@ -156,6 +156,41 @@ The Docker-specific paths (`DATA_DIR`, `TEMP_DIR`, `LOG_DIR`) are pre-configured
 
 Redis connection variables (`REDIS_HOST=redis`, `REDIS_PORT=6379`) are set by the compose file itself and do not need to be in `.env`.
 
+### Redis host kernel setting
+
+Redis can log this warning on Linux hosts:
+
+```text
+WARNING Memory overcommit must be enabled!
+```
+
+This is a host kernel setting, not a Link2NAS application error. Enable it on the Docker host to avoid Redis persistence issues under memory pressure.
+
+Apply it immediately:
+
+```bash
+sudo sysctl vm.overcommit_memory=1
+```
+
+Persist it across reboots:
+
+```bash
+echo 'vm.overcommit_memory=1' | sudo tee /etc/sysctl.d/99-link2nas-redis.conf
+sudo sysctl --system
+```
+
+Verify:
+
+```bash
+sysctl vm.overcommit_memory
+```
+
+Expected output:
+
+```text
+vm.overcommit_memory = 1
+```
+
 See [CONFIGURATION.md](CONFIGURATION.md) for the complete variable reference.
 
 ---
@@ -299,8 +334,7 @@ docker run --rm \
   alpine cp /data/link2nas_v2.sqlite3 /backup/link2nas_backup_$(date +%Y%m%d).sqlite3
 
 # For PostgreSQL: dump from the postgres container
-docker compose -f docker-compose.yml -f docker-compose.postgres.yml exec postgres \
-  pg_dump -U link2nas link2nas_v2 > link2nas_backup_$(date +%Y%m%d).sql
+docker compose exec postgres pg_dump -U link2nas link2nas_v2 > link2nas_backup_$(date +%Y%m%d).sql
 ```
 
 Store the backup file and `V2_SECRET_ENCRYPTION_KEY` in a secure, separate location.
