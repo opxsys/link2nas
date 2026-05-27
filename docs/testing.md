@@ -29,13 +29,11 @@ scripts/
 │   ├── qbittorrent/    qBittorrent API compatibility
 │   ├── dev/            Development routes (not included by default)
 │   └── manual/         Heavy manual tests (real NAS, live providers)
-├── legacy/v1/          V1 scripts kept outside V3 runners
 ├── test_quality.sh     Static quality runner — no app required
 ├── test_v3_smoke.sh    Smoke runner — fast, no provider, called by test_v3_full.sh
 ├── test_v3_full.sh     Core test suite runner ★ (primary)
 ├── test_v3_sqlite.sh   SQLite backend wrapper → calls test_v3_full.sh
 ├── test_v3_postgres.sh PostgreSQL backend wrapper → calls test_v3_full.sh
-└── test_v2_full.sh     V2 runner (deprecated)
 ```
 
 ---
@@ -79,7 +77,6 @@ Without these variables, email tests only verify template rendering and configur
 Tests requiring a live provider (RealDebrid, AllDebrid) or a real NAS are isolated in:
 
 - `scripts/tests/manual/` — heavy manual tests, not included in automatic runners
-- `scripts/legacy/v1/` — V1 scripts kept for reference, not included in V3 runners
 
 ---
 
@@ -221,11 +218,6 @@ Expected output ends with:
 
 ---
 
-### test_v2_full.sh — V2 runner (deprecated)
-
-Legacy runner, kept for compatibility. Prints a deprecation warning on startup. Replaced by `test_v3_full.sh`.
-
----
 
 ## When to use each runner
 
@@ -278,6 +270,5 @@ ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/tests/email/run_
 |---|---|
 | `scripts/tests/dev/` | Development routes — not available in production |
 | `scripts/tests/manual/` | Requires a real NAS or live provider — manual execution only |
-| `scripts/legacy/v1/` | V1 architecture — kept for reference, not actively maintained |
 | `scripts/inspect/` | Static wiring checks — no app required, run separately as needed |
 | `scripts/tests/auth/test_account_expired_existing_token.sh` | Requires PostgreSQL + direct `docker exec` access — not part of SQLite runner |

@@ -21,7 +21,6 @@ Test runners and quality scripts for Link2NAS. Full documentation: [docs/testing
 | `test_v3_full.sh` | **Core test suite** — all tests, single admin login ★ |
 | `test_v3_sqlite.sh` | SQLite backend wrapper → sets SQLite env, calls `test_v3_full.sh` |
 | `test_v3_postgres.sh` | PostgreSQL backend wrapper → sets PostgreSQL env, calls `test_v3_full.sh` |
-| `test_v2_full.sh` | _(deprecated — replaced by `test_v3_full.sh`)_ |
 
 ## Quick start
 
