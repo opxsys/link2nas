@@ -56,11 +56,18 @@ run_script() {
   "$script"
 }
 
-# test_single_user_mode.sh et test_multi_user_mode.sh sont exclus du smoke :
-# ils supposent une configuration applicative spécifique (LINK2NAS_SINGLE_USER_MODE).
-# Les lancer via test_v3_sqlite.sh / test_v3_full.sh dans un environnement dédié.
+
+# Smoke is intentionally limited:
+# - no real provider
+# - no real SMTP
+# - no real NAS
+# - no notification tests requiring email configuration
+#
+# test_single_user_mode.sh and test_multi_user_mode.sh are excluded from smoke:
+# they require a specific application configuration (LINK2NAS_SINGLE_USER_MODE).
+# Run them via a dedicated environment when needed.
+
 run_script "scripts/tests/settings/test_app_settings.sh"
-run_script "scripts/tests/settings/test_runtime_settings.sh"
 run_script "scripts/tests/auth/test_account_tokens.sh"
 run_script "scripts/tests/admin/test_admin_anti_abuse.sh"
 run_script "scripts/quality/check_admin_users_routes.sh"

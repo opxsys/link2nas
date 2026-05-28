@@ -10,6 +10,9 @@ Link2NAS V3 still mostly uses the `/api/v2/` HTTP API. Test scripts that call `/
 
 ```
 scripts/
+├── ci/                 CI Docker runners (used by GitHub Actions)
+│   ├── test_docker_smoke_sqlite.sh   Start Docker (SQLite) → smoke → teardown
+│   └── test_docker_smoke_postgres.sh Start Docker (PostgreSQL) → smoke → teardown
 ├── setup/              Initialization and configuration helpers
 ├── inspect/            Static route wiring checks
 ├── quality/            Code quality (compile, lint, secrets, unit tests)
@@ -30,7 +33,7 @@ scripts/
 │   ├── dev/            Development routes (not included by default)
 │   └── manual/         Heavy manual tests (real NAS, live providers)
 ├── test_quality.sh     Static quality runner — no app required
-├── test_v3_smoke.sh    Smoke runner — fast, no provider, called by test_v3_full.sh
+├── test_v3_smoke.sh    Smoke runner — fast, no provider, called by ci/ scripts and test_v3_full.sh
 ├── test_v3_full.sh     Core test suite runner ★ (primary)
 ├── test_v3_sqlite.sh   SQLite backend wrapper → calls test_v3_full.sh
 ├── test_v3_postgres.sh PostgreSQL backend wrapper → calls test_v3_full.sh
@@ -219,11 +222,46 @@ Expected output ends with:
 ---
 
 
+## CI runners (GitHub Actions)
+
+`scripts/ci/` contains scripts designed to run in GitHub Actions without any pre-existing application, secrets, or external services. Each script:
+
+- generates ephemeral CI secrets using Python stdlib (no real secrets, no hardcoded values)
+- starts Docker Compose from the appropriate sample `.env`
+- waits for the app to become reachable
+- creates the first admin (`admin@test.local` / `AdminPassword123!`)
+- runs `scripts/test_v3_smoke.sh`
+- tears down Docker with `down -v --remove-orphans` on exit, even on failure
+
+### `scripts/ci/test_docker_smoke_sqlite.sh`
+
+```bash
+bash scripts/ci/test_docker_smoke_sqlite.sh
+```
+
+Uses `docker-compose.yml` with the SQLite backend. Runs the full smoke suite against the containerised app.
+
+### `scripts/ci/test_docker_smoke_postgres.sh`
+
+```bash
+bash scripts/ci/test_docker_smoke_postgres.sh
+```
+
+Uses `docker-compose.yml` + `docker-compose.postgres.yml`. Waits up to 450 seconds for PostgreSQL to initialise and the app to become ready, then runs the smoke suite.
+
+**Not run in standard CI:**
+
+- Tests requiring a real debrid provider, real SMTP server, or real NAS
+- `scripts/test_v3_full.sh` (too heavy for standard CI; run locally or in a dedicated `workflow_dispatch` job)
+
+---
+
 ## When to use each runner
 
 | Situation | Recommended |
 |---|---|
-| Before every commit | `test_quality.sh` + `check_unit_tests.sh` |
+| GitHub Actions — on every push | CI runs `quality` + `docker-smoke-sqlite` + `docker-smoke-postgres` automatically |
+| Before every commit (local) | `test_quality.sh` + `check_unit_tests.sh` |
 | After changing backend logic (no app needed) | `check_unit_tests.sh` |
 | Quick sanity check after a code change | `test_v3_smoke.sh` |
 | Full suite against current backend | `test_v3_full.sh` |

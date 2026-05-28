@@ -57,3 +57,27 @@ jobs:
 
           cp .env.docker.postgres.sample .env
           docker compose -f docker-compose.yml -f docker-compose.postgres.yml config >/dev/null
+
+  docker-smoke-sqlite:
+    name: Docker smoke (SQLite)
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Docker smoke — SQLite
+        run: bash scripts/ci/test_docker_smoke_sqlite.sh
+
+  docker-smoke-postgres:
+    name: Docker smoke (PostgreSQL)
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Docker smoke — PostgreSQL
+        run: bash scripts/ci/test_docker_smoke_postgres.sh
