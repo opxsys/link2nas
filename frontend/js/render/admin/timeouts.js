@@ -8,7 +8,7 @@ export function renderTimeoutsSettingsPanel(timeoutSettings = null) {
   const realdebridSeconds = settings.realdebrid_seconds ?? 60;
   const alldebridSeconds = settings.alldebrid_seconds ?? 8;
 
-  // TODO V3/backlog: Advanced timeout settings intentionally hidden for now.
+  // Advanced timeout settings are intentionally hidden for now.
   // Future sections: Provider HTTP timeouts, Destination timeouts, Worker/job timeouts.
 
   return `

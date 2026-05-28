@@ -8,6 +8,8 @@ Link2NAS is a self-hosted job management application for debrid providers. It le
 
 Link2NAS V3 is feature-complete and a publication candidate.
 
+> Current release: `3.0.0-rc1`. This release candidate is feature-complete for V3. Standard CI validates code quality and Docker smoke tests for SQLite and PostgreSQL. Live integrations such as debrid providers, SMTP, NAS, and Prowlarr must be validated manually before production use.
+
 It is designed for self-hosted use on a trusted network. Validation on your own infrastructure is recommended before exposing it publicly. See [docs/SECURITY.md](docs/SECURITY.md) for deployment guidance.
 
 ---

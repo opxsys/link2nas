@@ -10,7 +10,7 @@ export function renderCleanupSettingsPanel(cleanupSettings = null) {
   const cancelledJobsDays = retention.cancelled_jobs_days ?? 15;
   const expiredTokensDays = retention.expired_tokens_days ?? 7;
 
-  // TODO V3/backlog: Advanced cleanup sections intentionally hidden for now.
+  // Advanced cleanup sections are intentionally hidden for now.
   // Future sections: Manual cleanup details/results, User data cleanup.
 
   return `
