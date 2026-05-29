@@ -6,13 +6,47 @@
 
 Docker Compose is the recommended way to run Link2NAS. It manages all services (Redis, web, workers, scheduler) and their dependencies automatically.
 
+### Fresh install from the published GHCR image
+
+Use this mode for release-candidate or production-like validation. It pulls the published image instead of building locally.
+
 ```bash
-# SQLite (default)
+mkdir -p /opt/link2nas
+cd /opt/link2nas
+
+curl -fsSL -o docker-compose.ghcr.yml \
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/docker-compose.ghcr.yml
+
+curl -fsSL -o .env.sample \
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/.env.docker.sample
+
+cp .env.sample .env
+# Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and PUBLIC_BASE_URL at minimum
+
+docker compose -f docker-compose.ghcr.yml up -d
+docker compose -f docker-compose.ghcr.yml ps
+```
+
+Then open:
+
+```text
+http://<server-ip>:5000
+```
+
+and create the first Super Admin account.
+
+### Local source build — SQLite
+
+Use this mode when working from a source checkout.
+
+```bash
 cp .env.docker.sample .env
 # Edit .env — set FLASK_SECRET_KEY and V2_SECRET_ENCRYPTION_KEY at minimum
 
 docker compose up -d --build
 ```
+
+### Local source build — PostgreSQL
 
 For a PostgreSQL-backed deployment:
 

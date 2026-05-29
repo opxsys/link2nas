@@ -8,8 +8,6 @@ Link2NAS is a self-hosted job management application for debrid providers. It le
 
 Link2NAS V3 is feature-complete and a publication candidate.
 
-> Current release: `3.0.0-rc1`. This release candidate is feature-complete for V3. Standard CI validates code quality and Docker smoke tests for SQLite and PostgreSQL. Live integrations such as debrid providers, SMTP, NAS, and Prowlarr must be validated manually before production use.
-
 It is designed for self-hosted use on a trusted network. Validation on your own infrastructure is recommended before exposing it publicly. See [docs/SECURITY.md](docs/SECURITY.md) for deployment guidance.
 
 ---
@@ -51,14 +49,48 @@ It is designed for self-hosted use on a trusted network. Validation on your own 
 
 ### Docker (recommended)
 
+There are two Docker deployment modes:
+
+| Mode | Compose file | Use case |
+|---|---|---|
+| Published GHCR image | `docker-compose.ghcr.yml` | Fresh install from a released image |
+| Local source build | `docker-compose.yml` | Development or local build from a source checkout |
+
+#### Fresh install from GHCR
+
+```bash
+mkdir -p /opt/link2nas
+cd /opt/link2nas
+
+curl -fsSL -o docker-compose.ghcr.yml \
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/docker-compose.ghcr.yml
+
+curl -fsSL -o .env.sample \
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/.env.docker.sample
+
+cp .env.sample .env
+# Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and PUBLIC_BASE_URL at minimum
+
+docker compose -f docker-compose.ghcr.yml up -d
+docker compose -f docker-compose.ghcr.yml ps
+```
+
+The image used by this release candidate is:
+
+```bash
+ghcr.io/opxsys/link2nas:v3.0.0-rc2
+```
+
+The app is available at `http://localhost:5000`. On first run, a setup page lets you create the initial admin account.
+
+#### Local source build
+
 ```bash
 cp .env.docker.sample .env
 # Edit .env — set FLASK_SECRET_KEY and V2_SECRET_ENCRYPTION_KEY at minimum
 
 docker compose up -d --build
 ```
-
-The app is available at `http://localhost:5000`. On first run, a setup page lets you create the initial admin account.
 
 For PostgreSQL:
 ```bash

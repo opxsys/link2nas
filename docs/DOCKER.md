@@ -2,12 +2,15 @@
 
 Link2NAS ships with a Docker Compose configuration that runs all required services: Redis, the web application, the main job worker, the scheduler, and the local-download worker.
 
-Two compose files are provided:
+Three compose files are provided:
 
 | File | Description |
 |---|---|
-| `docker-compose.yml` | Default configuration — SQLite database |
+| `docker-compose.ghcr.yml` | Fresh deployment from the published GHCR image — SQLite + Redis |
+| `docker-compose.yml` | Local source build — SQLite database |
 | `docker-compose.postgres.yml` | PostgreSQL override — use together with the base file |
+
+Use `docker-compose.ghcr.yml` when validating or deploying a released image. Use `docker-compose.yml` when building from a local source checkout.
 
 ---
 
@@ -17,10 +20,64 @@ Two compose files are provided:
 - [Docker Compose](https://docs.docker.com/compose/) v2 (the `docker compose` plugin)
 
 ---
+## Quick start — GHCR image, SQLite + Redis
 
-## Quick start — SQLite (default)
+This is the recommended path for a fresh deployment from a released image. It does not build the image locally.
 
-SQLite requires no external database. This is the simplest setup.
+```bash
+# 1. Create the deployment directory
+mkdir -p /opt/link2nas
+cd /opt/link2nas
+
+# 2. Download the release Compose file
+curl -fsSL -o docker-compose.ghcr.yml \
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/docker-compose.ghcr.yml
+
+# 3. Download the Docker environment sample
+curl -fsSL -o .env.sample \
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/.env.docker.sample
+
+# 4. Create and edit the private environment file
+cp .env.sample .env
+nano .env
+
+# 5. Start the stack
+docker compose -f docker-compose.ghcr.yml up -d
+
+# 6. Check service status
+docker compose -f docker-compose.ghcr.yml ps
+```
+
+Set at least these values before first start:
+
+```env
+FLASK_SECRET_KEY=<strong-random-string>
+V2_SECRET_ENCRYPTION_KEY=<fernet-key>
+PUBLIC_BASE_URL=http://<server-ip>:5000
+```
+
+The image used by this release candidate is:
+
+```bash
+ghcr.io/opxsys/link2nas:v3.0.0-rc2
+```
+
+The expected services are:
+
+- `link2nas-redis`
+- `link2nas-web`
+- `link2nas-worker`
+- `link2nas-scheduler`
+- `link2nas-local-download-worker`
+
+The web interface is available at `http://<server-ip>:5000`.
+
+---
+
+
+## Quick start — local source build, SQLite (default)
+
+SQLite requires no external database. This mode builds the image from the local source checkout.
 
 ```bash
 # 1. Copy and edit the environment file
@@ -40,7 +97,7 @@ The web interface is available at `http://localhost:5000` once the `web` service
 
 ---
 
-## Quick start — PostgreSQL
+## Quick start — local source build, PostgreSQL
 
 The PostgreSQL override adds a `postgres` service and switches all application services to use it.
 
@@ -206,7 +263,7 @@ See [CONFIGURATION.md](CONFIGURATION.md) for the complete variable reference.
 | `local-download-worker` | `link2nas-local-download-worker` | Local storage download queue processor |
 | `postgres` *(optional)* | `link2nas-postgres` | PostgreSQL 16 (only with the postgres override) |
 
-All services share the same image, built from the project `Dockerfile`. Only `redis` (and optionally `postgres`) use external images.
+All application services share the same image. With `docker-compose.yml`, the image is built from the project `Dockerfile`. With `docker-compose.ghcr.yml`, the image is pulled from GHCR. Only `redis` (and optionally `postgres`) use external images.
 
 ### Start order
 
@@ -278,6 +335,16 @@ On first run, Link2NAS detects an empty database and redirects to a setup page.
 
 ## Useful commands
 
+For GHCR deployments, add `-f docker-compose.ghcr.yml` to the commands below, for example:
+
+```bash
+docker compose -f docker-compose.ghcr.yml ps
+docker compose -f docker-compose.ghcr.yml logs -f
+docker compose -f docker-compose.ghcr.yml restart worker
+```
+
+For local source-build deployments:
+
 ```bash
 # View logs for all services
 docker compose logs -f
@@ -305,6 +372,17 @@ docker compose down -v
 ---
 
 ## Upgrading
+
+### GHCR deployment
+
+Update `docker-compose.ghcr.yml` to the target image tag, then pull and restart:
+
+```bash
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+### Local source-build deployment
 
 ```bash
 # Pull the latest code
