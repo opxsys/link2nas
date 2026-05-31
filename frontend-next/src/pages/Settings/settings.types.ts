@@ -1,0 +1,57 @@
+export type SettingsSection =
+  | 'account'
+  | 'providers'
+  | 'destinations'
+  | 'api-keys'
+  | 'notifications'
+  | 'prowlarr'
+  | 'accessibility'
+  | 'language'
+
+export interface MockAccount {
+  username: string
+  email: string
+  role: string
+}
+
+export interface MockProviderProfile {
+  id: string
+  name: string
+  type: string
+  typeLabel: string
+  isActive: boolean
+  isDefault: boolean
+}
+
+export interface MockDestinationProfile {
+  id: string
+  name: string
+  type: string
+  typeLabel: string
+  path: string
+  isActive: boolean
+  isDefault: boolean
+}
+
+export interface MockApiKey {
+  id: string
+  name: string
+  maskedKey: string
+  scopes: string[]
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+export interface MockNotificationRule {
+  id: string
+  event: string
+  channel: string
+  enabled: boolean
+}
+
+export interface MockProwlarrConfig {
+  enabled: boolean
+  url: string
+  openMode: 'iframe' | 'newtab'
+  setAsHomePage: boolean
+}
