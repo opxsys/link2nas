@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { NAV_ITEMS } from '@/lib/nav'
 import SidebarNavItem from './SidebarNavItem'
 
@@ -48,12 +48,31 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </ul>
         </nav>
 
-        {/* Footer */}
-        {!collapsed && (
-          <div className="shrink-0 border-t border-sidebar-border px-4 py-3">
-            <p className="text-xs text-muted-foreground">v3.1-next</p>
-          </div>
-        )}
+        {/* User block */}
+        <div className="shrink-0 border-t border-sidebar-border">
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex cursor-default items-center justify-center p-3">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary select-none">
+                    A
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">admin</TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary select-none">
+                A
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-sidebar-foreground">admin</p>
+                <p className="truncate text-xs text-muted-foreground">Administrator</p>
+              </div>
+            </div>
+          )}
+        </div>
       </aside>
     </TooltipProvider>
   )

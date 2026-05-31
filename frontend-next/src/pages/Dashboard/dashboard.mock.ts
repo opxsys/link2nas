@@ -29,8 +29,8 @@ export interface MockDefaultConfig {
 }
 
 export const MOCK_DEFAULT_CONFIG: MockDefaultConfig = {
-  providerName: 'Bad Debt (pure)',
-  destinationName: 'NAS Mount (nfs)',
+  providerName: 'Real-Debrid (perso)',
+  destinationName: 'NAS Maison',
   linksOnly: false,
 }
 
@@ -44,8 +44,8 @@ export interface MockStorageItem {
 
 export const MOCK_STORAGE: MockStorageItem[] = [
   {
-    id: 'allotted',
-    label: 'Allotted',
+    id: 'jobs',
+    label: '/data/jobs',
     usedLabel: '476 MB used',
     freeLabel: '476 MB free',
     freePercent: 99,
@@ -73,31 +73,31 @@ export const MOCK_RECENT_JOBS: MockRecentJob[] = [
     id: '1',
     name: 'Film.Example.2024.1080p.BluRay',
     status: 'completed',
-    provider: 'Bad Dest (pure)',
-    destination: 'NAS Mount (nfs)',
+    provider: 'Real-Debrid (perso)',
+    destination: 'NAS Maison',
     created: '29/05/2026 09:54',
   },
   {
     id: '2',
     name: 'Serie.Example.S03E01-S03.Blu.1080p',
     status: 'downloading',
-    provider: 'Alldebrid',
-    destination: 'NAS Mount (nfs)',
+    provider: 'AllDebrid',
+    destination: 'NAS Maison',
     created: '29/05/2026 08:32',
   },
   {
     id: '3',
     name: 'Documentary.Example.4K.HDR.BluRay',
     status: 'completed',
-    provider: 'Bad Dest (pure)',
-    destination: 'NAS Mount (nfs)',
+    provider: 'Real-Debrid (perso)',
+    destination: 'NAS Maison',
     created: '28/05/2026 22:01',
   },
   {
     id: '4',
     name: 'Film.DV.Example.2160p.DDP5.1.Atmos',
     status: 'failed',
-    provider: 'NAS Mount',
+    provider: 'Real-Debrid (perso)',
     destination: null,
     created: '28/05/2026 19:17',
   },
@@ -105,8 +105,8 @@ export const MOCK_RECENT_JOBS: MockRecentJob[] = [
     id: '5',
     name: 'Serie.Example.S01E01.720p.BluRay',
     status: 'sent',
-    provider: 'Bad Dest (pure)',
-    destination: 'NAS Mount (nfs)',
+    provider: 'AllDebrid',
+    destination: 'NAS Maison',
     created: '28/05/2026 17:30',
   },
 ]

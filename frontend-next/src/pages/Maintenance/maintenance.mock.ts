@@ -40,10 +40,10 @@ export interface MockDirectory {
 }
 
 export const MOCK_DIRECTORIES: MockDirectory[] = [
-  { label: 'Data', path: '/app/data', status: 'ok' },
-  { label: 'Temp', path: '/app/tmp', status: 'ok' },
-  { label: 'User data', path: '/app/data/userdata', status: 'ok' },
-  { label: 'Logs', path: '/app/logs', status: 'ok' },
-  { label: 'Torrent storage', path: '/app/data/torrents', status: 'unknown' },
-  { label: 'Downloads', path: '/app/downloads', status: 'ok' },
+  { label: 'Data', path: '/data', status: 'ok' },
+  { label: 'Temp', path: '/tmp', status: 'ok' },
+  { label: 'User data', path: '/data/userdata', status: 'ok' },
+  { label: 'Logs', path: '/logs', status: 'ok' },
+  { label: 'Torrent storage', path: '/tmp/torrents', status: 'unknown' },
+  { label: 'Downloads', path: '/downloads', status: 'ok' },
 ]

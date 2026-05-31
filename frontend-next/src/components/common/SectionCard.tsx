@@ -19,7 +19,7 @@ export default function SectionCard({
   bodyClassName,
 }: SectionCardProps) {
   return (
-    <div className={cn('rounded-lg border border-border bg-card', className)}>
+    <div className={cn('rounded-lg border border-border bg-card shadow-sm', className)}>
       <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
         <div>
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
