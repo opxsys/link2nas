@@ -29,7 +29,7 @@ export default function JobDetailsSheet({ job, onClose }: JobDetailsSheetProps) 
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="flex items-start gap-3 border-b border-border p-4">
+      <div className="flex items-start gap-3 border-b border-border p-5">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground" title={job.name}>
             {job.name}
@@ -48,7 +48,7 @@ export default function JobDetailsSheet({ job, onClose }: JobDetailsSheetProps) 
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+      <div className="flex items-center gap-2 border-b border-border px-5 py-3">
         <Button variant="outline" size="sm" disabled>
           <Copy size={13} aria-hidden="true" />
           Copy Links
@@ -66,7 +66,7 @@ export default function JobDetailsSheet({ job, onClose }: JobDetailsSheetProps) 
       </div>
 
       {/* Metadata */}
-      <div className="space-y-2.5 border-b border-border p-4">
+      <div className="space-y-3 border-b border-border p-5">
         {(
           [
             ['Provider', job.provider],
@@ -116,20 +116,20 @@ export default function JobDetailsSheet({ job, onClose }: JobDetailsSheetProps) 
       {/* Tab content */}
       {activeTab === 'files' && <JobFilesTable files={job.files} />}
       {activeTab === 'links' && (
-        <p className="p-4 text-sm text-muted-foreground">Links — coming soon.</p>
+        <p className="px-5 py-4 text-sm text-muted-foreground">Links — coming soon.</p>
       )}
       {activeTab === 'details' && (
-        <p className="p-4 text-sm text-muted-foreground">Details — coming soon.</p>
+        <p className="px-5 py-4 text-sm text-muted-foreground">Details — coming soon.</p>
       )}
       {activeTab === 'logs' && (
-        <p className="p-4 text-sm text-muted-foreground">Logs — coming soon.</p>
+        <p className="px-5 py-4 text-sm text-muted-foreground">Logs — coming soon.</p>
       )}
 
       {/* Progress */}
       <JobProgressCard progress={job.progress} />
 
       {/* Destructive footer */}
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border p-5">
         <Button variant="outline" size="sm" disabled className={DESTRUCTIVE_BTN}>
           <CircleMinus size={13} aria-hidden="true" />
           Cancel Job

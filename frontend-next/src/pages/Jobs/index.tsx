@@ -1,7 +1,4 @@
-import { Link } from 'react-router-dom'
-import { PlusCircle } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
 import { useJobsMockState } from './useJobsMockState'
 import JobsToolbar from './JobsToolbar'
 import JobsTable from './JobsTable'
@@ -25,14 +22,6 @@ export default function Jobs() {
       <PageHeader
         title="Jobs"
         description="Manage and monitor your download jobs."
-        actions={
-          <Button asChild size="sm">
-            <Link to="/jobs/new">
-              <PlusCircle size={14} aria-hidden="true" />
-              New Job
-            </Link>
-          </Button>
-        }
       />
 
       <div className="flex flex-col gap-4">
@@ -53,7 +42,7 @@ export default function Jobs() {
           </div>
 
           {selectedJob && (
-            <div className="border-t border-border lg:w-[440px] lg:shrink-0 lg:border-l lg:border-t-0">
+            <div className="border-t border-border lg:w-[clamp(480px,34vw,620px)] lg:shrink-0 lg:border-l lg:border-t-0">
               <JobDetailsSheet job={selectedJob} onClose={clearSelection} />
             </div>
           )}

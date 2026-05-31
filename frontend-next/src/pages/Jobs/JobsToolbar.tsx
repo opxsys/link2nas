@@ -1,4 +1,5 @@
-import { Search, RefreshCw } from 'lucide-react'
+import { Search, RefreshCw, PlusCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { JOB_STATUS_OPTIONS } from './jobs.utils'
 import type { JobsFilters } from './jobs.types'
@@ -75,6 +76,13 @@ export default function JobsToolbar({
 
       <Button variant="outline" size="icon" aria-label="Refresh jobs list">
         <RefreshCw size={14} aria-hidden="true" />
+      </Button>
+
+      <Button asChild size="sm">
+        <Link to="/jobs/new">
+          <PlusCircle size={14} aria-hidden="true" />
+          New Job
+        </Link>
       </Button>
     </div>
   )

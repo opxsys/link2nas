@@ -29,7 +29,7 @@ export default function JobProgressCard({ progress }: JobProgressCardProps) {
     (progress.connections !== null && progress.connections > 0)
 
   return (
-    <div className="border-t border-border p-4">
+    <div className="border-t border-border p-5">
       <p className="mb-2 text-xs font-semibold text-foreground">Progress</p>
 
       <div className="mb-1.5 flex items-center justify-between text-xs">
