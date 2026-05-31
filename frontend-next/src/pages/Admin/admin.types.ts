@@ -8,6 +8,8 @@ export type AdminSection =
   | 'cleanup'
   | 'system-events'
   | 'maintenance'
+  | 'general'
+  | 'timeouts'
 
 export type UserRole = 'admin' | 'user' | 'viewer'
 export type UserStatus = 'active' | 'disabled' | 'pending'
@@ -142,4 +144,25 @@ export interface MaintenanceStatus {
   database: MaintenanceDatabase
   paths: MaintenancePath[]
   disk: MaintenanceDisk
+}
+
+// Real API types for GET/PUT /api/v2/admin/app-settings/general
+export interface GeneralSettings {
+  app_name: string
+  app_tagline: string
+  public_base_url: string
+  effective_public_base_url: string
+}
+
+export interface GeneralSettingsPayload {
+  app_name: string
+  app_tagline: string
+  public_base_url: string
+}
+
+// Real API types for GET/PUT /api/v2/admin/timeouts/restart-cooldowns
+export interface RestartCooldowns {
+  default_seconds: number
+  realdebrid_seconds: number
+  alldebrid_seconds: number
 }

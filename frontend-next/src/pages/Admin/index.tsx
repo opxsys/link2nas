@@ -10,6 +10,8 @@ import AdminRuntime from './AdminRuntime'
 import AdminCleanup from './AdminCleanup'
 import AdminSystemEvents from './AdminSystemEvents'
 import AdminMaintenance from './AdminMaintenance'
+import AdminGeneral from './AdminGeneral'
+import AdminTimeouts from './AdminTimeouts'
 
 export default function Admin() {
   const { activeSection, setActiveSection, smtpTestStatus, runSmtpTest, cleanupStatus, runCleanup } =
@@ -30,6 +32,8 @@ export default function Admin() {
           {activeSection === 'cleanup'       && <AdminCleanup cleanupStatus={cleanupStatus} onRun={runCleanup} />}
           {activeSection === 'system-events' && <AdminSystemEvents />}
           {activeSection === 'maintenance'   && <AdminMaintenance />}
+          {activeSection === 'general'       && <AdminGeneral />}
+          {activeSection === 'timeouts'      && <AdminTimeouts />}
         </div>
       </div>
     </>

@@ -8,6 +8,8 @@ import {
   Trash2,
   AlertTriangle,
   Wrench,
+  Settings2,
+  Timer,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -21,10 +23,12 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'overview',      label: 'Overview',       icon: LayoutDashboard },
+  { id: 'general',       label: 'General',        icon: Settings2 },
   { id: 'users',         label: 'Users',          icon: Users },
   { id: 'announcements', label: 'Announcements',  icon: Megaphone },
   { id: 'smtp',          label: 'SMTP',           icon: Mail },
   { id: 'security',      label: 'Security',       icon: ShieldCheck },
+  { id: 'timeouts',      label: 'Timeouts',       icon: Timer },
   { id: 'runtime',       label: 'Runtime',        icon: Cpu },
   { id: 'cleanup',       label: 'Cleanup',        icon: Trash2 },
   { id: 'system-events', label: 'System Events',  icon: AlertTriangle },
