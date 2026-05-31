@@ -8,7 +8,7 @@ services:
       - redis_data:/data
 
   web:
-    image: ghcr.io/opxsys/link2nas:v3.0.0-rc1
+    image: ${LINK2NAS_IMAGE:-ghcr.io/opxsys/link2nas:v3.0.0}
     container_name: link2nas-web
     restart: unless-stopped
     env_file:
@@ -36,7 +36,7 @@ services:
     command: ["gunicorn", "-b", "0.0.0.0:5000", "app:create_app()"]
 
   worker:
-    image: ghcr.io/opxsys/link2nas:v3.0.0-rc1
+    image: ${LINK2NAS_IMAGE:-ghcr.io/opxsys/link2nas:v3.0.0}
     container_name: link2nas-worker
     restart: unless-stopped
     env_file:
@@ -57,7 +57,7 @@ services:
     command: ["python", "worker.py"]
 
   scheduler:
-    image: ghcr.io/opxsys/link2nas:v3.0.0-rc1
+    image: ${LINK2NAS_IMAGE:-ghcr.io/opxsys/link2nas:v3.0.0}
     container_name: link2nas-scheduler
     restart: unless-stopped
     env_file:
@@ -78,7 +78,7 @@ services:
     command: ["python", "-m", "backend.services_v2.scheduler_loop"]
 
   local-download-worker:
-    image: ghcr.io/opxsys/link2nas:v3.0.0-rc1
+    image: ${LINK2NAS_IMAGE:-ghcr.io/opxsys/link2nas:v3.0.0}
     container_name: link2nas-local-download-worker
     restart: unless-stopped
     env_file:

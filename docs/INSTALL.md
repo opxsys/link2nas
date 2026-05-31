@@ -15,10 +15,10 @@ mkdir -p /opt/link2nas
 cd /opt/link2nas
 
 curl -fsSL -o docker-compose.ghcr.yml \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/docker-compose.ghcr.yml
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/docker-compose.ghcr.yml
 
 curl -fsSL -o .env.sample \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/.env.docker.sample
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/.env.docker.sample
 
 cp .env.sample .env
 # Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and PUBLIC_BASE_URL at minimum

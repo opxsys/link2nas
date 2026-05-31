@@ -31,11 +31,11 @@ cd /opt/link2nas
 
 # 2. Download the release Compose file
 curl -fsSL -o docker-compose.ghcr.yml \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/docker-compose.ghcr.yml
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/docker-compose.ghcr.yml
 
 # 3. Download the Docker environment sample
 curl -fsSL -o .env.sample \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0-rc2/.env.docker.sample
+  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/.env.docker.sample
 
 # 4. Create and edit the private environment file
 cp .env.sample .env
@@ -59,7 +59,7 @@ PUBLIC_BASE_URL=http://<server-ip>:5000
 The image used by this release candidate is:
 
 ```bash
-ghcr.io/opxsys/link2nas:v3.0.0-rc2
+ghcr.io/opxsys/link2nas:v3.0.0
 ```
 
 The expected services are:
