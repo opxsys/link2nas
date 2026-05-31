@@ -119,3 +119,36 @@ The first implementation should only create the `/next` shell:
 - Flask route/static serving for `/next`
 
 Do not migrate Jobs, Settings, Admin, or provider/destination logic in the first step.
+
+## Code size and file structure rules
+
+Avoid large files.
+
+Preferred limits:
+- React page files should stay under ~250 lines when possible.
+- Shared components should stay focused and small.
+- If a page grows, split it into subcomponents.
+- If logic grows, extract hooks or helper modules.
+- If API calls grow, create dedicated files under `src/api/`.
+- If status/theme/mapping logic grows, extract it under `src/lib/`.
+
+Do not create monolithic files such as:
+- one huge `App.tsx`;
+- one huge `JobsPage.tsx`;
+- one huge `SettingsPage.tsx`;
+- one huge `api.ts`;
+- one huge `components.tsx`.
+
+Preferred structure:
+- `src/pages/<PageName>/index.tsx`
+- `src/pages/<PageName>/<SubComponent>.tsx`
+- `src/pages/<PageName>/<pageName>.types.ts`
+- `src/pages/<PageName>/<pageName>.utils.ts`
+- `src/api/<domain>.ts`
+- `src/components/common/*`
+- `src/components/layout/*`
+- `src/components/status/*`
+
+When implementing a complex page, first create a small page container, then move sections into dedicated components.
+
+Before adding more than ~250 lines to a file, stop and split it.
