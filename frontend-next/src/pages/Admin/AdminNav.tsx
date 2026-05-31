@@ -7,6 +7,7 @@ import {
   Cpu,
   Trash2,
   AlertTriangle,
+  Wrench,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'runtime',       label: 'Runtime',        icon: Cpu },
   { id: 'cleanup',       label: 'Cleanup',        icon: Trash2 },
   { id: 'system-events', label: 'System Events',  icon: AlertTriangle },
+  { id: 'maintenance',   label: 'Maintenance',    icon: Wrench },
 ]
 
 interface Props {

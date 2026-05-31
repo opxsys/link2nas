@@ -7,6 +7,7 @@ export type AdminSection =
   | 'runtime'
   | 'cleanup'
   | 'system-events'
+  | 'maintenance'
 
 export type UserRole = 'admin' | 'user' | 'viewer'
 export type UserStatus = 'active' | 'disabled' | 'pending'
@@ -95,4 +96,50 @@ export interface SystemEvent {
   message: string
   timestamp: string
   resolved: boolean
+}
+
+// Real API response types for GET /api/v2/admin/maintenance/status
+export interface MaintenanceApp {
+  name: string
+  tagline: string
+  version: string
+  debug: boolean
+  public_base_url: string
+}
+
+export interface MaintenanceDatabase {
+  backend: string
+  ok: boolean
+  message: string
+}
+
+export interface MaintenancePath {
+  name: string
+  path: string | null
+  required: boolean
+  exists: boolean
+  is_dir: boolean
+  writable: boolean
+  ok: boolean
+  message: string
+}
+
+export interface MaintenanceDisk {
+  ok: boolean
+  path: string
+  total_bytes: number
+  used_bytes: number
+  free_bytes: number
+  percent_used: number
+  percent_free: number
+  message: string
+}
+
+export interface MaintenanceStatus {
+  ok: boolean
+  generated_at: string
+  app: MaintenanceApp
+  database: MaintenanceDatabase
+  paths: MaintenancePath[]
+  disk: MaintenanceDisk
 }
