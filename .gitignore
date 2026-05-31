@@ -64,3 +64,8 @@ export_frontend_backend.txt
 
 # Claude local settings
 .claude/
+
+# frontend-next build artifacts
+frontend-next/node_modules/
+frontend-next/dist/
+frontend-next/.vite/

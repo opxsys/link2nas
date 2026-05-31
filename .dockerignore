@@ -26,3 +26,7 @@ logs
 *.local
 *.secret
 export_frontend_backend.txt
+
+# frontend-next build context — node_modules built in Docker stage; dist copied from builder
+frontend-next/node_modules/
+frontend-next/dist/

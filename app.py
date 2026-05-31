@@ -1,4 +1,6 @@
 
+import os
+
 from flask import Flask, send_from_directory
 
 from config import Settings
@@ -68,6 +70,22 @@ def create_app() -> Flask:
     @app.get("/health")
     def health():
         return {"ok": True}, 200
+
+    _NEXT_DIST = os.path.join(os.path.dirname(__file__), "frontend-next", "dist")
+
+    @app.get("/next")
+    @app.get("/next/")
+    @app.get("/next/<path:subpath>")
+    def serve_next_frontend(subpath: str = "") -> object:
+        if not os.path.isdir(_NEXT_DIST):
+            return (
+                "Next UI is not built yet. Run: cd frontend-next && npm install && npm run build",
+                503,
+                {"Content-Type": "text/plain"},
+            )
+        if subpath and os.path.isfile(os.path.join(_NEXT_DIST, subpath)):
+            return send_from_directory(_NEXT_DIST, subpath)
+        return send_from_directory(_NEXT_DIST, "index.html")
 
     app.config["RATE_LIMIT_SERVICE_V2"] = RateLimitService(
         enabled=settings.V2_RATE_LIMIT_ENABLED,
