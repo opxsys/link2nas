@@ -9,8 +9,8 @@ export default function Maintenance() {
   return (
     <>
       <PageHeader
-        title="Maintenance"
-        description="System health, diagnostics, and operational tools."
+        title="System Status"
+        description="Quick operational health check — infrastructure, services, and directories at a glance."
       />
       <div className="space-y-6">
         <MaintenanceHealth />

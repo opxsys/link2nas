@@ -1,26 +1,11 @@
-import type { JobStatus, HealthStatus } from '@/lib/types'
+import type { JobStatus } from '@/lib/types'
 
 export const MOCK_METRICS = {
   activeJobs: 3,
+  waitingJobs: 5,
   completedToday: 12,
   failedToday: 1,
-  totalJobs: 142,
 } as const
-
-export interface MockServiceStatus {
-  id: string
-  name: string
-  status: HealthStatus
-  statusLabel: string
-  detail?: string
-}
-
-export const MOCK_SYSTEM_SERVICES: MockServiceStatus[] = [
-  { id: 'redis', name: 'Redis', status: 'ok', statusLabel: 'Connected' },
-  { id: 'worker', name: 'Worker', status: 'ok', statusLabel: 'Running' },
-  { id: 'scheduler', name: 'Scheduler', status: 'ok', statusLabel: 'Running' },
-  { id: 'database', name: 'Database', status: 'ok', statusLabel: 'OK', detail: '1% used' },
-]
 
 export interface MockDefaultConfig {
   providerName: string | null

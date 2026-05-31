@@ -1,4 +1,4 @@
-import { Activity, CircleCheck, CircleX, BarChart3 } from 'lucide-react'
+import { Activity, Clock, CircleCheck, CircleX } from 'lucide-react'
 import MetricCard from '@/components/common/MetricCard'
 import { MOCK_METRICS } from './dashboard.mock'
 
@@ -10,6 +10,14 @@ export default function DashboardMetrics() {
         value={MOCK_METRICS.activeJobs}
         icon={Activity}
         description="Running now"
+        iconClassName="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+      />
+      <MetricCard
+        label="Waiting"
+        value={MOCK_METRICS.waitingJobs}
+        icon={Clock}
+        description="Queued"
+        iconClassName="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
       />
       <MetricCard
         label="Completed Today"
@@ -24,12 +32,6 @@ export default function DashboardMetrics() {
         icon={CircleX}
         description="Since midnight"
         iconClassName="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-      />
-      <MetricCard
-        label="Total Jobs"
-        value={MOCK_METRICS.totalJobs}
-        icon={BarChart3}
-        description="All time"
       />
     </div>
   )
