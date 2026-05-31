@@ -2,9 +2,6 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard,
   List,
-  PlusCircle,
-  Cloud,
-  FolderOutput,
   Search,
   Bell,
   Settings,
@@ -23,9 +20,6 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/jobs', label: 'Jobs', icon: List, end: false },
-  { to: '/jobs/new', label: 'New Job', icon: PlusCircle, end: true },
-  { to: '/providers', label: 'Providers', icon: Cloud, end: false },
-  { to: '/destinations', label: 'Destinations', icon: FolderOutput, end: false },
   { to: '/prowlarr', label: 'Prowlarr', icon: Search, end: false },
   { to: '/notifications', label: 'Notifications', icon: Bell, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
@@ -34,12 +28,24 @@ export const NAV_ITEMS: NavItem[] = [
 ]
 
 /**
+ * Titles for pages that exist but are not top-level sidebar items.
+ * /jobs/new is an action; /providers and /destinations will live under Settings.
+ */
+const NON_NAV_TITLES: Record<string, string> = {
+  '/jobs/new': 'New Job',
+  '/providers': 'Providers',
+  '/destinations': 'Destinations',
+}
+
+/**
  * Derives a page title from the current pathname.
- * Exact matches win over prefix matches; longer prefixes win over shorter ones.
+ * Priority: exact sidebar match → non-nav exact match → longest prefix match.
  */
 export function getPageTitle(pathname: string): string {
   const exact = NAV_ITEMS.find((item) => pathname === item.to)
   if (exact) return exact.label
+
+  if (NON_NAV_TITLES[pathname]) return NON_NAV_TITLES[pathname]
 
   const prefix = NAV_ITEMS.filter(
     (item) => !item.end && pathname.startsWith(item.to + '/'),
