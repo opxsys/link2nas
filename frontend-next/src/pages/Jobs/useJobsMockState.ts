@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { MOCK_JOBS, MOCK_JOB_DETAILS } from './jobs.mock'
 import { filterJobs, getUniqueProviders, getUniqueDestinations } from './jobs.utils'
 import type { JobDetails, JobsFilters } from './jobs.types'
@@ -27,6 +27,12 @@ export function useJobsMockState() {
     if (!job) return null
     return { ...job, jobPath: null, files: [], progress: EMPTY_PROGRESS }
   }, [selectedJobId])
+
+  useEffect(() => {
+    if (selectedJobId && !filteredJobs.some((j) => j.id === selectedJobId)) {
+      setSelectedJobId(filteredJobs[0]?.id ?? null)
+    }
+  }, [filteredJobs, selectedJobId])
 
   const providers = useMemo(() => getUniqueProviders(MOCK_JOBS), [])
   const destinations = useMemo(() => getUniqueDestinations(MOCK_JOBS), [])
