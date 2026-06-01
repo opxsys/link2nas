@@ -146,6 +146,43 @@ export interface MaintenanceStatus {
   disk: MaintenanceDisk
 }
 
+// Real API types for GET/PUT /api/v2/admin/app-settings/runtime
+export interface DispatcherSettings {
+  enabled: boolean
+  interval_seconds: number
+  limit: number
+  last_run_at?: string | null
+  last_error?: string | null
+  last_result?: unknown
+}
+
+export interface OrchestratorSettings {
+  enabled: boolean
+  interval_seconds: number
+  max_jobs_per_run: number
+  auto_refresh_enabled: boolean
+  auto_unrestrict_enabled: boolean
+  auto_send_destination_enabled: boolean
+}
+
+export interface LocalWorkerSettings {
+  enabled: boolean
+  poll_interval_seconds: number
+  max_concurrent_downloads: number
+}
+
+export interface RuntimeSettings {
+  notifications: { dispatcher: DispatcherSettings }
+  jobs: { orchestrator: OrchestratorSettings }
+  downloads: { local_worker: LocalWorkerSettings }
+}
+
+export interface RuntimeSettingsPayload {
+  notifications: { dispatcher: Pick<DispatcherSettings, 'enabled' | 'interval_seconds' | 'limit'> }
+  jobs: { orchestrator: OrchestratorSettings }
+  downloads: { local_worker: LocalWorkerSettings }
+}
+
 // Real API types for GET/PUT /api/v2/admin/app-settings/cleanup and POST /api/v2/admin/cleanup/run
 export interface CleanupRetention {
   torrent_tmp_days: number
