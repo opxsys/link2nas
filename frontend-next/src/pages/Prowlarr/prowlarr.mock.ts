@@ -1,12 +1,4 @@
-import type { ProwlarrConfig, MockSubmission } from './prowlarr.types'
-
-export const MOCK_PROWLARR_CONFIG: ProwlarrConfig = {
-  enabled: true,
-  url: 'http://nas.local:9696',
-  openMode: 'iframe',
-  setAsHomePage: false,
-  connectionStatus: 'connected',
-}
+import type { MockSubmission } from './prowlarr.types'
 
 export const MOCK_SUBMISSIONS: MockSubmission[] = [
   {

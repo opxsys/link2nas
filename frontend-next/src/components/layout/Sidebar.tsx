@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { NAV_ITEMS } from '@/lib/nav'
 import SidebarNavItem from './SidebarNavItem'
+import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
 
 interface SidebarProps {
   collapsed: boolean
@@ -10,6 +11,11 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const { settings: integrationSettings } = useIntegrationSettings()
+  const visibleItems = NAV_ITEMS.filter((item) =>
+    item.to === '/prowlarr' ? isProwlarrAvailable(integrationSettings) : true,
+  )
+
   return (
     <TooltipProvider delayDuration={150}>
       <aside
@@ -40,7 +46,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
           <ul className={cn('space-y-0.5', collapsed ? 'px-1.5' : 'px-2')}>
-            {NAV_ITEMS.map((item) => (
+            {visibleItems.map((item) => (
               <li key={item.to}>
                 <SidebarNavItem item={item} collapsed={collapsed} />
               </li>
