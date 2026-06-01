@@ -146,6 +146,39 @@ export interface MaintenanceStatus {
   disk: MaintenanceDisk
 }
 
+// Real API types for GET/PUT /api/v2/admin/smtp-settings
+export interface RealSmtpSettings {
+  enabled: boolean
+  host: string
+  port: number
+  username: string
+  has_password: boolean
+  from_email: string
+  from_name: string
+  use_tls: boolean
+  use_ssl: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface SmtpSettingsPayload {
+  enabled: boolean
+  host: string
+  port: number
+  username: string
+  password: string
+  from_email: string
+  from_name: string
+  use_tls: boolean
+  use_ssl: boolean
+}
+
+export interface SmtpTestResult {
+  ok: boolean
+  message?: string
+  error?: string
+}
+
 // Real API types for GET/PUT /api/v2/admin/app-settings/general
 export interface GeneralSettings {
   app_name: string
