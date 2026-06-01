@@ -1,12 +1,43 @@
 import { cn } from '@/lib/utils'
 import SectionCard from '@/components/common/SectionCard'
-import { MOCK_SYSTEM_INFO } from './maintenance.mock'
+import type { MaintenanceStatus } from '@/pages/Admin/admin.types'
+import { formatBytes } from './maintenance.utils'
 
-export default function MaintenanceInfo() {
+interface InfoRow {
+  key: string
+  value: string
+  available: boolean
+}
+
+function buildInfoRows(status: MaintenanceStatus): InfoRow[] {
+  return [
+    { key: 'App name', value: status.app.name, available: Boolean(status.app.name) },
+    { key: 'Version', value: status.app.version, available: Boolean(status.app.version) },
+    { key: 'Database', value: status.database.backend, available: Boolean(status.database.backend) },
+    {
+      key: 'Disk free',
+      value: `${formatBytes(status.disk.free_bytes)} (${status.disk.percent_free}%)`,
+      available: true,
+    },
+    {
+      key: 'Public URL',
+      value: status.app.public_base_url || 'Not configured',
+      available: Boolean(status.app.public_base_url),
+    },
+    { key: 'Debug', value: status.app.debug ? 'On' : 'Off', available: true },
+  ]
+}
+
+interface Props {
+  status: MaintenanceStatus
+}
+
+export default function MaintenanceInfo({ status }: Props) {
+  const rows = buildInfoRows(status)
   return (
     <SectionCard title="System Information">
       <dl className="divide-y divide-border">
-        {MOCK_SYSTEM_INFO.map(({ key, value, available }) => (
+        {rows.map(({ key, value, available }) => (
           <div
             key={key}
             className="flex items-baseline gap-4 py-2.5 first:pt-0 last:pb-0"

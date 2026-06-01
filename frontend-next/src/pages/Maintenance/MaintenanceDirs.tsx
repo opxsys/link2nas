@@ -1,8 +1,9 @@
 import { CircleCheck, CircleX, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SectionCard from '@/components/common/SectionCard'
-import { MOCK_DIRECTORIES } from './maintenance.mock'
-import type { DirStatus } from './maintenance.mock'
+import type { MaintenanceStatus } from '@/pages/Admin/admin.types'
+
+type DirStatus = 'ok' | 'error' | 'unknown'
 
 const STATUS_ICON: Record<DirStatus, typeof CircleCheck> = {
   ok: CircleCheck,
@@ -22,7 +23,19 @@ const STATUS_LABEL: Record<DirStatus, string> = {
   unknown: 'Unknown',
 }
 
-export default function MaintenanceDirs() {
+interface Props {
+  status: MaintenanceStatus
+}
+
+export default function MaintenanceDirs({ status }: Props) {
+  if (status.paths.length === 0) {
+    return (
+      <SectionCard title="Directory Checks">
+        <p className="text-sm text-muted-foreground">No directory checks configured.</p>
+      </SectionCard>
+    )
+  }
+
   return (
     <SectionCard title="Directory Checks" bodyClassName="p-0">
       <div className="overflow-x-auto">
@@ -41,25 +54,26 @@ export default function MaintenanceDirs() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {MOCK_DIRECTORIES.map((dir) => {
-              const Icon = STATUS_ICON[dir.status]
+            {status.paths.map((p) => {
+              const dirStatus: DirStatus = p.ok ? 'ok' : p.path === null ? 'unknown' : 'error'
+              const Icon = STATUS_ICON[dirStatus]
               return (
-                <tr key={dir.path} className="hover:bg-muted/40">
+                <tr key={p.name} className="hover:bg-muted/40">
                   <td className="px-4 py-2.5 font-medium text-foreground">
-                    {dir.label}
+                    {p.name}{!p.required && <span className="ml-1 text-xs text-muted-foreground">(opt)</span>}
                   </td>
                   <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                    {dir.path}
+                    {p.path ?? '—'}
                   </td>
                   <td className="px-4 py-2.5">
                     <span
                       className={cn(
                         'flex items-center gap-1.5 text-xs font-medium',
-                        STATUS_CLASS[dir.status],
+                        STATUS_CLASS[dirStatus],
                       )}
                     >
                       <Icon size={14} aria-hidden="true" />
-                      {STATUS_LABEL[dir.status]}
+                      {STATUS_LABEL[dirStatus]}
                     </span>
                   </td>
                 </tr>
