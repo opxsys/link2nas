@@ -14,8 +14,7 @@ import AdminGeneral from './AdminGeneral'
 import AdminTimeouts from './AdminTimeouts'
 
 export default function Admin() {
-  const { activeSection, setActiveSection, cleanupStatus, runCleanup } =
-    useAdminMockState()
+  const { activeSection, setActiveSection } = useAdminMockState()
 
   return (
     <>
@@ -29,7 +28,7 @@ export default function Admin() {
           {activeSection === 'smtp'          && <AdminSmtp />}
           {activeSection === 'security'      && <AdminSecurity />}
           {activeSection === 'runtime'       && <AdminRuntime />}
-          {activeSection === 'cleanup'       && <AdminCleanup cleanupStatus={cleanupStatus} onRun={runCleanup} />}
+          {activeSection === 'cleanup'       && <AdminCleanup />}
           {activeSection === 'system-events' && <AdminSystemEvents />}
           {activeSection === 'maintenance'   && <AdminMaintenance />}
           {activeSection === 'general'       && <AdminGeneral />}

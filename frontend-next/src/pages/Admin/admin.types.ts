@@ -146,6 +146,31 @@ export interface MaintenanceStatus {
   disk: MaintenanceDisk
 }
 
+// Real API types for GET/PUT /api/v2/admin/app-settings/cleanup and POST /api/v2/admin/cleanup/run
+export interface CleanupRetention {
+  torrent_tmp_days: number
+  completed_jobs_days: number
+  failed_jobs_days: number
+  cancelled_jobs_days: number
+  expired_tokens_days: number
+}
+
+export interface CleanupSettings {
+  retention: CleanupRetention
+}
+
+export interface CleanupRunResult {
+  enabled: boolean
+  started_at: string
+  finished_at: string | null
+  tokens_deleted: number
+  completed_jobs_deleted: number
+  failed_jobs_deleted: number
+  cancelled_jobs_deleted: number
+  temp_files_deleted: number
+  temp_files_errors: string[]
+}
+
 // Real API types for GET/PUT /api/v2/admin/smtp-settings
 export interface RealSmtpSettings {
   enabled: boolean
