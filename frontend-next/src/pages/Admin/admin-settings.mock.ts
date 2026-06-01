@@ -1,4 +1,4 @@
-import type { SmtpConfig, SecurityConfig, RuntimeComponent } from './admin.types'
+import type { SmtpConfig, RuntimeComponent } from './admin.types'
 
 export const MOCK_SMTP: SmtpConfig = {
   configured: true,
@@ -7,16 +7,6 @@ export const MOCK_SMTP: SmtpConfig = {
   port: 587,
   from: 'link2nas@maison.local',
   tlsEnabled: true,
-}
-
-export const MOCK_SECURITY: SecurityConfig = {
-  tokenTtlDays: 30,
-  sessionInactivityMinutes: 60,
-  passwordMinLength: 12,
-  requireUppercase: true,
-  requireNumbers: true,
-  rateLimitEnabled: true,
-  rateLimitPerMinute: 60,
 }
 
 export const MOCK_RUNTIME: RuntimeComponent[] = [

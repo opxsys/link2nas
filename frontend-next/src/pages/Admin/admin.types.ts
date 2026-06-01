@@ -146,6 +146,57 @@ export interface MaintenanceStatus {
   disk: MaintenanceDisk
 }
 
+// Real API types for GET/PUT /api/v2/admin/app-settings/security
+export interface SecurityTokenTtl {
+  invitation_ttl_hours: number
+  password_reset_ttl_hours: number
+  magic_login_ttl_minutes: number
+  email_verification_ttl_hours: number
+  session_inactivity_minutes: number
+}
+
+export interface SecurityPasswordPolicy {
+  min_length: number
+  require_uppercase: boolean
+  require_lowercase: boolean
+  require_number: boolean
+  require_special: boolean
+}
+
+export interface SecuritySettings {
+  token_ttl: SecurityTokenTtl
+  password_policy: SecurityPasswordPolicy
+}
+
+// Real API types for GET /api/v2/admin/security/anti-abuse
+export interface AntiAbuseCounter {
+  kind: string
+  label: string
+  limit: number
+  window_seconds: number
+  configurable: boolean
+  status: 'ok' | 'unavailable'
+  active_identities?: number | null
+  estimated_hits?: number | null
+  ttl_seconds?: number | null
+}
+
+export interface AntiAbuseStatus {
+  backend: string
+  redis_enabled: boolean
+  redis_url_configured: boolean
+  key_prefix: string
+  counters: AntiAbuseCounter[]
+  note?: string
+}
+
+export interface AntiAbuseResetResult {
+  ok: boolean
+  results?: Record<string, unknown>
+  kind?: string
+  error?: string
+}
+
 // Real API types for GET/PUT /api/v2/admin/app-settings/runtime
 export interface DispatcherSettings {
   enabled: boolean
