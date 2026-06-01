@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle, Loader2, AlertCircle, Send } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getSmtpSettings, saveSmtpSettings, testSmtpSettings } from '@/api/admin-smtp'
+import { invalidateSmtpStatus } from '@/lib/useSmtpStatus'
 import type { RealSmtpSettings } from './admin.types'
 import AdminSmtpFields, { type SmtpFields } from './AdminSmtpFields'
 
@@ -76,6 +77,7 @@ export default function AdminSmtp() {
       setFields(settingsToFields(updated))
       setSaveStatus('saved')
       setSaveMessage('SMTP settings saved.')
+      invalidateSmtpStatus()
     } catch (err) {
       setSaveStatus('error')
       setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
@@ -123,29 +125,37 @@ export default function AdminSmtp() {
   }
 
   const busy = saveStatus === 'saving'
+  const smtpTestable = fields.enabled && fields.host.trim() !== ''
 
   return (
     <SectionCard title="SMTP Configuration" description="Email delivery settings for notifications and invitations.">
       <form onSubmit={handleSave} className="flex flex-col gap-6">
         <AdminSmtpFields fields={fields} disabled={busy} onChange={handleChange} />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={busy}>
-            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            Save changes
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={testStatus === 'sending'}
-            onClick={handleTest}
-          >
-            {testStatus === 'sending'
-              ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
-              : <Send size={13} className="mr-1.5" aria-hidden="true" />}
-            Send test email
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" size="sm" disabled={busy}>
+              {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+              Save changes
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!smtpTestable || busy || testStatus === 'sending'}
+              onClick={handleTest}
+            >
+              {testStatus === 'sending'
+                ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+                : <Send size={13} className="mr-1.5" aria-hidden="true" />}
+              Send test email
+            </Button>
+          </div>
+          {!smtpTestable && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              SMTP is not configured or disabled. Email sending is unavailable.
+            </p>
+          )}
         </div>
 
         {saveStatus === 'saved' && (

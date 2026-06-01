@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, XCircle } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { createAnnouncement, updateAnnouncement } from '@/api/admin-announcements'
+import { useSmtpStatus } from '@/lib/useSmtpStatus'
 import type { RealAnnouncement, AnnouncementPayload, AnnouncementType, AnnouncementSeverityLevel } from './admin.types'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
@@ -30,9 +31,17 @@ interface Props {
 }
 
 export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) {
+  const { smtpAvailable, smtpLoading } = useSmtpStatus()
   const [fields, setFields] = useState<AnnouncementPayload>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Force send_email off when SMTP is confirmed unavailable.
+  useEffect(() => {
+    if (!smtpLoading && !smtpAvailable) {
+      setFields((p) => ({ ...p, send_email: false }))
+    }
+  }, [smtpAvailable, smtpLoading])
 
   useEffect(() => {
     if (ann) {
@@ -135,7 +144,6 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
             ['show_as_banner',         'Show as banner'],
             ['require_acknowledgement','Require acknowledgement'],
             ['track_open',             'Track opens'],
-            ['send_email',             'Send email notification'],
           ] as [keyof AnnouncementPayload, string][]).map(([key, label]) => (
             <div key={key} className={CHECK_ROW}>
               <input id={`ann-${key}`} type="checkbox" className={CHECK}
@@ -144,6 +152,27 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
               <label htmlFor={`ann-${key}`} className={CHECK_LABEL}>{label}</label>
             </div>
           ))}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <div className={CHECK_ROW}>
+            <input
+              id="ann-send_email"
+              type="checkbox"
+              className={CHECK}
+              checked={fields.send_email}
+              disabled={saving || (!smtpLoading && !smtpAvailable)}
+              onChange={(e) => set('send_email', e.target.checked)}
+            />
+            <label htmlFor="ann-send_email" className={!smtpLoading && !smtpAvailable ? 'text-sm text-muted-foreground' : CHECK_LABEL}>
+              Send email notification
+            </label>
+          </div>
+          {!smtpLoading && !smtpAvailable && (
+            <p className="ml-6 text-xs text-amber-700 dark:text-amber-400">
+              SMTP is not configured or disabled. Email sending is unavailable.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -161,12 +190,6 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
           )}
         </div>
 
-        {ann?.send_email && !ann.id && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <CheckCircle2 size={12} aria-hidden="true" className="text-emerald-600 dark:text-emerald-400" />
-            Email will be sent to active users on creation.
-          </p>
-        )}
       </form>
     </SectionCard>
   )
