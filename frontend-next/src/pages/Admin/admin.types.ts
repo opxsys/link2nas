@@ -306,6 +306,58 @@ export interface GeneralSettingsPayload {
   public_base_url: string
 }
 
+// Real API types for /api/v2/admin/users
+export type RealUserRole = 'super_admin' | 'user'
+
+export interface RealUser {
+  id: string
+  email: string
+  display_name: string | null
+  role: RealUserRole
+  is_super_admin: boolean
+  is_active: boolean
+  valid_from: string | null
+  account_expires_at: string | null
+  email_verified_at: string | null
+  email_verified: boolean
+  created_at: string
+  updated_at: string
+  last_login_at: string | null
+  preferred_language: string | null
+  can_use_local_space: boolean
+}
+
+export interface CreateUserPayload {
+  email: string
+  creation_mode: 'password' | 'invitation'
+  password?: string
+  display_name?: string
+  is_super_admin?: boolean
+  email_verified?: boolean
+}
+
+export interface UserInvitationResult {
+  token_type: string
+  expires_at: string
+  invitation_url: string
+}
+
+export interface UserResetLinkResult {
+  token_type: string
+  expires_at: string
+  reset_url: string
+}
+
+export interface UserEmailActionResult {
+  ok: boolean
+  message?: string
+  error?: string
+}
+
+export interface CreateUserResponse extends RealUser {
+  invitation?: UserInvitationResult
+}
+
 // Real API types for GET/POST/PATCH/DELETE /api/v2/admin/announcements
 export type AnnouncementType = 'news' | 'maintenance' | 'incident' | 'security'
 export type AnnouncementSeverityLevel = 'info' | 'warning' | 'critical'
