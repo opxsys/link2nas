@@ -306,6 +306,30 @@ export interface GeneralSettingsPayload {
   public_base_url: string
 }
 
+// Real API types for GET /api/v2/admin/notifications/events
+export type NotificationEventStatus = 'pending' | 'sent' | 'retrying' | 'failed' | 'ignored'
+
+export interface AdminNotificationEvent {
+  id: string
+  user_id: string | null
+  job_id: string | null
+  type: string
+  severity: SystemEventSeverity
+  title: string
+  message: string
+  payload: Record<string, unknown>
+  status: NotificationEventStatus
+  attempts: number
+  max_attempts: number
+  last_error: string | null
+  triggered_by_rule_ids: string[]
+  triggered_by_config_ids: string[]
+  next_retry_at: string | null
+  created_at: string
+  updated_at: string
+  sent_at: string | null
+}
+
 // Real API types for /api/v2/admin/users
 export type RealUserRole = 'super_admin' | 'user'
 

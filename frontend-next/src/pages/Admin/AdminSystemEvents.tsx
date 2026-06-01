@@ -1,80 +1,160 @@
-import { AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { AlertCircle, AlertTriangle, Info, Loader2, RefreshCw } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
-import type { SystemEventSeverity } from './admin.types'
-import { MOCK_SYSTEM_EVENT_TYPES, MOCK_SYSTEM_EVENTS } from './admin-system.mock'
+import { Button } from '@/components/ui/button'
+import { listNotificationEvents } from '@/api/admin-notifications'
+import type { AdminNotificationEvent, NotificationEventStatus, SystemEventSeverity } from './admin.types'
 
-const SEV_CONFIG: Record<SystemEventSeverity, { icon: React.ReactNode; className: string; badge: string }> = {
-  error:   { icon: <AlertCircle size={13} aria-hidden="true" />,   className: 'text-red-600 dark:text-red-400',     badge: 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400' },
-  warning: { icon: <AlertTriangle size={13} aria-hidden="true" />, className: 'text-orange-600 dark:text-orange-400', badge: 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-400' },
-  info:    { icon: <Info size={13} aria-hidden="true" />,           className: 'text-blue-600 dark:text-blue-400',   badge: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400' },
+const SEV: Record<SystemEventSeverity, { icon: React.ReactNode; color: string }> = {
+  error:   { icon: <AlertCircle size={13} aria-hidden="true" />,   color: 'text-red-600 dark:text-red-400'    },
+  warning: { icon: <AlertTriangle size={13} aria-hidden="true" />, color: 'text-orange-600 dark:text-orange-400' },
+  info:    { icon: <Info size={13} aria-hidden="true" />,           color: 'text-blue-600 dark:text-blue-400'  },
 }
 
-const PILL = 'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium'
+const STATUS_BADGE: Record<NotificationEventStatus, string> = {
+  sent:     'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400',
+  failed:   'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400',
+  retrying: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400',
+  pending:  'border-border bg-muted text-muted-foreground',
+  ignored:  'border-border bg-muted text-muted-foreground',
+}
+
+const PILL = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium'
+
+const STATUS_CHIPS: { key: NotificationEventStatus | 'all'; label: string }[] = [
+  { key: 'all',      label: 'All'      },
+  { key: 'pending',  label: 'Pending'  },
+  { key: 'sent',     label: 'Sent'     },
+  { key: 'failed',   label: 'Failed'   },
+  { key: 'retrying', label: 'Retrying' },
+  { key: 'ignored',  label: 'Ignored'  },
+]
+
+const LIMITS = [25, 50, 100, 200]
+
+function fmt(iso: string | null | undefined): string {
+  return iso ? new Date(iso).toLocaleString() : '—'
+}
+
+function EventItem({ ev }: { ev: AdminNotificationEvent }) {
+  const sev = SEV[ev.severity] ?? SEV.info
+  return (
+    <li className="flex items-start gap-3 py-3">
+      <span className={`mt-0.5 shrink-0 ${sev.color}`}>{sev.icon}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-mono text-xs text-foreground">{ev.type}</span>
+          <span className={`${PILL} ${STATUS_BADGE[ev.status]}`}>{ev.status}</span>
+          {ev.attempts > 1 && (
+            <span className="text-xs text-muted-foreground">{ev.attempts}/{ev.max_attempts} attempts</span>
+          )}
+        </div>
+        <p className="mt-0.5 text-sm font-medium text-foreground">{ev.title}</p>
+        {ev.message && ev.message !== ev.title && (
+          <p className="mt-0.5 text-xs text-muted-foreground">{ev.message}</p>
+        )}
+        {ev.last_error && (
+          <p className="mt-1 rounded bg-red-50 px-2 py-1 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
+            {ev.last_error}
+          </p>
+        )}
+        <p className="mt-1 text-xs text-muted-foreground">
+          {fmt(ev.created_at)}
+          {ev.sent_at && ` · sent ${fmt(ev.sent_at)}`}
+          {ev.next_retry_at && ` · retry ${fmt(ev.next_retry_at)}`}
+        </p>
+      </div>
+    </li>
+  )
+}
 
 export default function AdminSystemEvents() {
-  return (
-    <div className="flex flex-col gap-6">
-      <SectionCard title="Event Types" description="Tracked system event codes with severity and dedup settings.">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Code</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Severity</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Dedup</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Rate limited</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Enabled</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_SYSTEM_EVENT_TYPES.map((t) => {
-                const sev = SEV_CONFIG[t.severity]
-                return (
-                  <tr key={t.code} className="border-b border-border last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-2.5 font-mono text-xs text-foreground">{t.code}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`${PILL} ${sev.badge}`}>{sev.icon}{t.severity}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{t.deduplicated ? 'Yes' : 'No'}</td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{t.rateLimited ? 'Yes' : 'No'}</td>
-                    <td className="px-4 py-2.5">
-                      {t.enabled
-                        ? <CheckCircle2 size={14} className="text-green-600 dark:text-green-400" aria-label="Enabled" />
-                        : <XCircle size={14} className="text-muted-foreground" aria-label="Disabled" />
-                      }
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </SectionCard>
+  const [events, setEvents] = useState<AdminNotificationEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<NotificationEventStatus | 'all'>('all')
+  const [limit, setLimit] = useState(50)
 
-      <SectionCard title="Recent System Events" description="Latest system-level events logged by Link2NAS.">
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      setEvents(await listNotificationEvents({
+        limit,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+      }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load events.')
+    } finally {
+      setLoading(false)
+    }
+  }, [statusFilter, limit])
+
+  useEffect(() => { load() }, [load])
+
+  return (
+    <SectionCard
+      title="System Events"
+      description="Notification events generated by Link2NAS, including system-level alerts."
+      actions={
+        <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+          <RefreshCw size={13} className="mr-1.5" aria-hidden="true" /> Refresh
+        </Button>
+      }
+    >
+      {/* Filter bar */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {STATUS_CHIPS.map(({ key, label }) => (
+            <Button key={key} size="sm"
+              variant={statusFilter === key ? 'default' : 'outline'}
+              className="h-7 text-xs"
+              onClick={() => setStatusFilter(key)}>
+              {label}
+            </Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span className="text-xs text-muted-foreground">Limit:</span>
+          <select
+            value={limit}
+            onChange={(e) => setLimit(Number(e.target.value))}
+            className="h-7 rounded-md border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {LIMITS.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="flex items-center gap-2 py-8 text-muted-foreground">
+          <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+          <span className="text-sm">Loading events…</span>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-medium">Failed to load events</p>
+            <p className="mt-0.5 text-xs">{error}</p>
+            <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && events.length === 0 && (
+        <p className="py-6 text-sm text-muted-foreground">
+          No events found{statusFilter !== 'all' ? ` with status "${statusFilter}"` : ''}.
+        </p>
+      )}
+
+      {!loading && !error && events.length > 0 && (
         <ul className="divide-y divide-border">
-          {MOCK_SYSTEM_EVENTS.map((ev) => {
-            const sev = SEV_CONFIG[ev.severity]
-            return (
-              <li key={ev.id} className="flex items-start gap-3 py-3">
-                <span className={`mt-0.5 shrink-0 ${sev.className}`}>{sev.icon}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-mono text-xs text-foreground">{ev.code}</span>
-                    <span className="text-xs text-muted-foreground">{ev.timestamp}</span>
-                    {ev.resolved && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-xs text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
-                        <CheckCircle2 size={9} aria-hidden="true" />Resolved
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{ev.message}</p>
-                </div>
-              </li>
-            )
-          })}
+          {events.map((ev) => <EventItem key={ev.id} ev={ev} />)}
         </ul>
-      </SectionCard>
-    </div>
+      )}
+    </SectionCard>
   )
 }
