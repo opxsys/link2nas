@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loader2, XCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
+import DateTimeField from '@/components/common/DateTimeField'
 import { updateUser, resetUserPassword } from '@/api/admin-users'
 import type { RealUser, EditUserPayload } from './admin.types'
 
@@ -122,16 +123,10 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
           </div>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label htmlFor="eu-vf" className={LABEL}>Valid from <span className={HINT}>(optional, clear to remove)</span></label>
-              <input id="eu-vf" type="datetime-local" className={INPUT} value={validFrom} disabled={saving}
-                onChange={(e) => setValidFrom(e.target.value)} />
-            </div>
-            <div>
-              <label htmlFor="eu-ea" className={LABEL}>Account expires <span className={HINT}>(optional, clear to remove)</span></label>
-              <input id="eu-ea" type="datetime-local" className={INPUT} value={expiresAt} disabled={saving}
-                onChange={(e) => setExpiresAt(e.target.value)} />
-            </div>
+            <DateTimeField id="eu-vf" label="Valid from" hint="(clear to remove)"
+              value={validFrom} disabled={saving} onChange={setValidFrom} />
+            <DateTimeField id="eu-ea" label="Account expires" hint="(clear to remove)"
+              value={expiresAt} disabled={saving} onChange={setExpiresAt} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

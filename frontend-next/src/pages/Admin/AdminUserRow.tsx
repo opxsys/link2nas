@@ -1,5 +1,6 @@
 import { Ban, UserCheck, Link2, Mail, KeyRound, BadgeCheck, Trash2, Loader2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { RealUser } from './admin.types'
 
 const BADGE = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium'
@@ -15,6 +16,26 @@ function fmtDate(iso: string | null | undefined): string {
 
 function isExpired(iso: string | null | undefined): boolean {
   return Boolean(iso && new Date(iso) < new Date())
+}
+
+function TipBtn({ tip, className, disabled, onClick, children }: {
+  tip: string
+  className?: string
+  disabled?: boolean
+  onClick?: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" className={`${ICON_BTN}${className ? ` ${className}` : ''}`}
+          disabled={disabled} aria-label={tip} onClick={onClick}>
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{tip}</TooltipContent>
+    </Tooltip>
+  )
 }
 
 export interface UserRowHandlers {
@@ -46,7 +67,7 @@ export default function AdminUserRow({ user, isActing, smtpAvailable, handlers }
         <p className="text-sm font-medium text-foreground">{user.display_name || user.email}</p>
         {user.display_name && <p className="text-xs text-muted-foreground">{user.email}</p>}
         {user.preferred_language && user.preferred_language !== 'en' && (
-          <p className="text-xs text-muted-foreground uppercase">{user.preferred_language}</p>
+          <p className="text-xs uppercase text-muted-foreground">{user.preferred_language}</p>
         )}
       </td>
       <td className="px-4 py-2.5">
@@ -83,40 +104,56 @@ export default function AdminUserRow({ user, isActing, smtpAvailable, handlers }
             <Loader2 size={14} className="animate-spin text-muted-foreground" aria-hidden="true" />
           ) : (
             <>
-              <Button variant="ghost" size="icon" className={ICON_BTN} disabled={dis} aria-label={`Edit ${user.email}`} onClick={handlers.onEdit}>
+              <TipBtn tip="Edit user" disabled={dis} onClick={handlers.onEdit}>
                 <Pencil size={13} />
-              </Button>
+              </TipBtn>
+
               {user.is_active ? (
-                <Button variant="ghost" size="icon" className={ICON_BTN} disabled={dis} aria-label={`Disable ${user.email}`} onClick={handlers.onDisable}>
+                <TipBtn tip="Disable account" disabled={dis} onClick={handlers.onDisable}>
                   <Ban size={13} />
-                </Button>
+                </TipBtn>
               ) : (
-                <Button variant="ghost" size="icon" className={ICON_BTN} disabled={dis} aria-label={`Enable ${user.email}`} onClick={handlers.onEnable}>
+                <TipBtn tip="Enable account" disabled={dis} onClick={handlers.onEnable}>
                   <UserCheck size={13} />
-                </Button>
+                </TipBtn>
               )}
+
               {!user.email_verified && (
-                <Button variant="ghost" size="icon" className={ICON_BTN} disabled={dis} aria-label="Mark email verified" onClick={handlers.onVerifyEmail}>
+                <TipBtn tip="Mark email as verified" disabled={dis} onClick={handlers.onVerifyEmail}>
                   <BadgeCheck size={13} />
-                </Button>
+                </TipBtn>
               )}
-              <Button variant="ghost" size="icon" className={ICON_BTN} disabled={dis} aria-label="Copy invitation link" onClick={handlers.onGetInvitationLink}>
+
+              <TipBtn tip="Copy invitation link" disabled={dis} onClick={handlers.onGetInvitationLink}>
                 <Link2 size={13} />
-              </Button>
-              <Button variant="ghost" size="icon" className={`${ICON_BTN} ${!smtpAvailable ? 'opacity-40' : ''}`}
-                disabled={dis || !smtpAvailable} aria-label={smtpAvailable ? 'Send invitation email' : 'SMTP not configured'} onClick={handlers.onSendInvitationEmail}>
+              </TipBtn>
+
+              <TipBtn
+                tip={smtpAvailable ? 'Send invitation email' : 'SMTP not configured — email unavailable'}
+                className={!smtpAvailable ? 'opacity-40' : ''}
+                disabled={dis || !smtpAvailable}
+                onClick={handlers.onSendInvitationEmail}
+              >
                 <Mail size={13} />
-              </Button>
-              <Button variant="ghost" size="icon" className={ICON_BTN} disabled={dis} aria-label="Copy password reset link" onClick={handlers.onGetResetLink}>
+              </TipBtn>
+
+              <TipBtn tip="Copy password reset link" disabled={dis} onClick={handlers.onGetResetLink}>
                 <KeyRound size={13} />
-              </Button>
-              <Button variant="ghost" size="icon" className={`${ICON_BTN} ${!smtpAvailable ? 'opacity-40' : ''}`}
-                disabled={dis || !smtpAvailable} aria-label={smtpAvailable ? 'Send password reset email' : 'SMTP not configured'} onClick={handlers.onSendResetEmail}>
+              </TipBtn>
+
+              <TipBtn
+                tip={smtpAvailable ? 'Send password reset email' : 'SMTP not configured — email unavailable'}
+                className={!smtpAvailable ? 'opacity-40' : ''}
+                disabled={dis || !smtpAvailable}
+                onClick={handlers.onSendResetEmail}
+              >
                 <Mail size={13} className="text-amber-600 dark:text-amber-400" />
-              </Button>
-              <Button variant="ghost" size="icon" className={`${ICON_BTN} text-destructive hover:text-destructive`} disabled={dis} aria-label={`Delete ${user.email}`} onClick={handlers.onDelete}>
+              </TipBtn>
+
+              <TipBtn tip="Delete user" className="text-destructive hover:text-destructive"
+                disabled={dis} onClick={handlers.onDelete}>
                 <Trash2 size={13} />
-              </Button>
+              </TipBtn>
             </>
           )}
         </div>

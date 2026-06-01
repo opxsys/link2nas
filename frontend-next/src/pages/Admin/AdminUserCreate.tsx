@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Loader2, XCircle } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
+import DateTimeField from '@/components/common/DateTimeField'
 import { createUser } from '@/api/admin-users'
 import { useSmtpStatus } from '@/lib/useSmtpStatus'
 import type { CreateUserResponse } from './admin.types'
@@ -112,16 +113,10 @@ export default function AdminUserCreate({ onSave, onCancel }: Props) {
         )}
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div>
-            <label htmlFor="cu-vf" className={LABEL}>Valid from <span className={HINT}>(optional)</span></label>
-            <input id="cu-vf" type="datetime-local" className={INPUT} value={validFrom} disabled={saving}
-              onChange={(e) => setValidFrom(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="cu-ea" className={LABEL}>Account expires <span className={HINT}>(optional)</span></label>
-            <input id="cu-ea" type="datetime-local" className={INPUT} value={expiresAt} disabled={saving}
-              onChange={(e) => setExpiresAt(e.target.value)} />
-          </div>
+          <DateTimeField id="cu-vf" label="Valid from" hint="(optional)"
+            value={validFrom} disabled={saving} onChange={setValidFrom} />
+          <DateTimeField id="cu-ea" label="Account expires" hint="(optional)"
+            value={expiresAt} disabled={saving} onChange={setExpiresAt} />
         </div>
 
         <div className="flex flex-wrap gap-5">
