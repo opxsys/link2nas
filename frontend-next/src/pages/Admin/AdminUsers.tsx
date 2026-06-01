@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Loader2, AlertCircle, RefreshCw, CheckCircle2, XCircle, Copy, Plus } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -11,18 +11,23 @@ import {
 import type { RealUser, CreateUserResponse } from './admin.types'
 import AdminUserRow from './AdminUserRow'
 import AdminUserCreate from './AdminUserCreate'
+import AdminUserEdit from './AdminUserEdit'
+import AdminUsersFilter, { type FilterChip } from './AdminUsersFilter'
 
-type View = 'list' | 'create'
-interface Banner { ok: boolean; message: string; url?: string; urlLabel?: string }
+type View = 'list' | 'create' | 'edit'
+interface Banner { ok: boolean; message: string; url?: string }
 
 export default function AdminUsers() {
   const { smtpAvailable } = useSmtpStatus()
   const [view, setView] = useState<View>('list')
+  const [editingUser, setEditingUser] = useState<RealUser | null>(null)
   const [users, setUsers] = useState<RealUser[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
+  const [search, setSearch] = useState('')
+  const [filterChip, setFilterChip] = useState<FilterChip>('all')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -33,6 +38,23 @@ export default function AdminUsers() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const filtered = useMemo(() => {
+    const now = new Date()
+    const q = search.toLowerCase()
+    return users
+      .filter((u) => !q || u.email.toLowerCase().includes(q) || (u.display_name?.toLowerCase().includes(q) ?? false))
+      .filter((u) => {
+        switch (filterChip) {
+          case 'active':     return u.is_active
+          case 'disabled':   return !u.is_active
+          case 'super_admin': return u.is_super_admin
+          case 'unverified': return !u.email_verified
+          case 'expired':    return Boolean(u.account_expires_at && new Date(u.account_expires_at) < now)
+          default:           return true
+        }
+      })
+  }, [users, search, filterChip])
 
   function updateUser(updated: RealUser) {
     setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u))
@@ -48,6 +70,7 @@ export default function AdminUsers() {
 
   function makeHandlers(user: RealUser) {
     return {
+      onEdit: () => { setBanner(null); setEditingUser(user); setView('edit') },
       onEnable: () => act(user.id, 'Enable', async () => updateUser(await enableUser(user.id))),
       onDisable: () => act(user.id, 'Disable', async () => updateUser(await disableUser(user.id))),
       onVerifyEmail: () => act(user.id, 'Verify email', async () => updateUser(await verifyUserEmail(user.id))),
@@ -61,7 +84,7 @@ export default function AdminUsers() {
       onGetInvitationLink: () => act(user.id, 'Invitation link', async () => {
         const r = await createInvitationLink(user.id)
         navigator.clipboard.writeText(r.invitation_url).catch(() => undefined)
-        setBanner({ ok: true, message: 'Invitation link copied to clipboard.', url: r.invitation_url, urlLabel: 'Invitation URL' })
+        setBanner({ ok: true, message: 'Invitation link copied to clipboard.', url: r.invitation_url })
       }),
       onSendInvitationEmail: () => act(user.id, 'Send invitation', async () => {
         const r = await sendInvitationEmail(user.id)
@@ -70,7 +93,7 @@ export default function AdminUsers() {
       onGetResetLink: () => act(user.id, 'Reset link', async () => {
         const r = await createResetLink(user.id)
         navigator.clipboard.writeText(r.reset_url).catch(() => undefined)
-        setBanner({ ok: true, message: 'Password reset link copied to clipboard.', url: r.reset_url, urlLabel: 'Reset URL' })
+        setBanner({ ok: true, message: 'Password reset link copied to clipboard.', url: r.reset_url })
       }),
       onSendResetEmail: () => act(user.id, 'Send reset', async () => {
         const r = await sendResetEmail(user.id)
@@ -84,15 +107,21 @@ export default function AdminUsers() {
     setView('list')
     if (result.invitation?.invitation_url) {
       navigator.clipboard.writeText(result.invitation.invitation_url).catch(() => undefined)
-      setBanner({ ok: true, message: 'User created. Invitation link copied to clipboard.', url: result.invitation.invitation_url, urlLabel: 'Invitation URL' })
+      setBanner({ ok: true, message: 'User created. Invitation link copied to clipboard.', url: result.invitation.invitation_url })
     } else {
       setBanner({ ok: true, message: `User ${result.email} created.` })
     }
   }
 
-  if (view === 'create') {
-    return <AdminUserCreate onSave={handleCreateSave} onCancel={() => setView('list')} />
+  function handleEditSave(updated: RealUser) {
+    updateUser(updated)
+    setView('list')
+    setEditingUser(null)
+    setBanner({ ok: true, message: `User ${updated.email} updated.` })
   }
+
+  if (view === 'create') return <AdminUserCreate onSave={handleCreateSave} onCancel={() => setView('list')} />
+  if (view === 'edit' && editingUser) return <AdminUserEdit user={editingUser} onSave={handleEditSave} onCancel={() => { setView('list'); setEditingUser(null) }} />
 
   return (
     <SectionCard
@@ -130,6 +159,8 @@ export default function AdminUsers() {
         </div>
       )}
 
+      <AdminUsersFilter search={search} filter={filterChip} onSearch={setSearch} onFilter={setFilterChip} />
+
       {loading && (
         <div className="flex items-center gap-2 py-8 text-muted-foreground">
           <Loader2 size={18} className="animate-spin" aria-hidden="true" />
@@ -157,17 +188,14 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-6 text-sm text-muted-foreground">No users found.</td></tr>
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-6 text-sm text-muted-foreground">
+                  {users.length === 0 ? 'No users found.' : 'No users match the current filter.'}
+                </td></tr>
               )}
-              {users.map((user) => (
-                <AdminUserRow
-                  key={user.id}
-                  user={user}
-                  isActing={actingId === user.id}
-                  smtpAvailable={smtpAvailable}
-                  handlers={makeHandlers(user)}
-                />
+              {filtered.map((user) => (
+                <AdminUserRow key={user.id} user={user} isActing={actingId === user.id}
+                  smtpAvailable={smtpAvailable} handlers={makeHandlers(user)} />
               ))}
             </tbody>
           </table>

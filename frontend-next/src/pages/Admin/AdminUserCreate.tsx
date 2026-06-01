@@ -7,8 +7,10 @@ import { useSmtpStatus } from '@/lib/useSmtpStatus'
 import type { CreateUserResponse } from './admin.types'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
+const SELECT = INPUT
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
 const CHECK = 'h-4 w-4 rounded border-input accent-primary disabled:opacity-50'
+const HINT = 'text-xs text-muted-foreground'
 
 interface Props {
   onSave: (result: CreateUserResponse) => void
@@ -20,9 +22,14 @@ export default function AdminUserCreate({ onSave, onCancel }: Props) {
   const [mode, setMode] = useState<'password' | 'invitation'>('invitation')
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [language, setLanguage] = useState('')
   const [password, setPassword] = useState('')
+  const [forcePasswordChange, setForcePasswordChange] = useState(true)
+  const [validFrom, setValidFrom] = useState('')
+  const [expiresAt, setExpiresAt] = useState('')
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [emailVerified, setEmailVerified] = useState(false)
+  const [canUseLocalSpace, setCanUseLocalSpace] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -35,9 +42,14 @@ export default function AdminUserCreate({ onSave, onCancel }: Props) {
         email: email.trim().toLowerCase(),
         creation_mode: mode,
         password: mode === 'password' ? password : undefined,
+        force_password_change: mode === 'password' ? forcePasswordChange : undefined,
         display_name: displayName.trim() || undefined,
+        preferred_language: language || undefined,
+        valid_from: validFrom || null,
+        account_expires_at: expiresAt || null,
         is_super_admin: isSuperAdmin,
         email_verified: emailVerified,
+        can_use_local_space: canUseLocalSpace,
       })
       onSave(result)
     } catch (err) {
@@ -51,7 +63,7 @@ export default function AdminUserCreate({ onSave, onCancel }: Props) {
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div className="flex gap-4">
           {(['invitation', 'password'] as const).map((m) => (
-            <label key={m} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+            <label key={m} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
               <input type="radio" name="mode" value={m} checked={mode === m}
                 onChange={() => setMode(m)} className={CHECK} />
               {m === 'invitation' ? 'Invitation link' : 'Set password now'}
@@ -66,36 +78,69 @@ export default function AdminUserCreate({ onSave, onCancel }: Props) {
               required onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="cu-name" className={LABEL}>Display name <span className="text-muted-foreground">(optional)</span></label>
+            <label htmlFor="cu-name" className={LABEL}>Display name <span className={HINT}>(optional)</span></label>
             <input id="cu-name" type="text" className={INPUT} value={displayName} disabled={saving}
               onChange={(e) => setDisplayName(e.target.value)} />
           </div>
         </div>
 
-        {mode === 'password' && (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="cu-pw" className={LABEL}>Password <span className="text-destructive">*</span></label>
-            <input id="cu-pw" type="password" className={INPUT} value={password} disabled={saving}
-              required autoComplete="new-password" onChange={(e) => setPassword(e.target.value)} />
+            <label htmlFor="cu-lang" className={LABEL}>Language</label>
+            <select id="cu-lang" className={SELECT} value={language} disabled={saving}
+              onChange={(e) => setLanguage(e.target.value)}>
+              <option value="">Default (en)</option>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+            </select>
+          </div>
+        </div>
+
+        {mode === 'password' && (
+          <div className="flex flex-col gap-4">
+            <div>
+              <label htmlFor="cu-pw" className={LABEL}>Password <span className="text-destructive">*</span></label>
+              <input id="cu-pw" type="password" className={INPUT} value={password} disabled={saving}
+                required autoComplete="new-password" onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" className={CHECK} checked={forcePasswordChange} disabled={saving}
+                onChange={(e) => setForcePasswordChange(e.target.checked)} />
+              Force password change at next login
+            </label>
           </div>
         )}
 
-        <div className="flex flex-wrap gap-6">
-          <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-            <input type="checkbox" className={CHECK} checked={isSuperAdmin} disabled={saving}
-              onChange={(e) => setIsSuperAdmin(e.target.checked)} />
-            Super admin
-          </label>
-          <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-            <input type="checkbox" className={CHECK} checked={emailVerified} disabled={saving}
-              onChange={(e) => setEmailVerified(e.target.checked)} />
-            Mark email verified
-          </label>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="cu-vf" className={LABEL}>Valid from <span className={HINT}>(optional)</span></label>
+            <input id="cu-vf" type="datetime-local" className={INPUT} value={validFrom} disabled={saving}
+              onChange={(e) => setValidFrom(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="cu-ea" className={LABEL}>Account expires <span className={HINT}>(optional)</span></label>
+            <input id="cu-ea" type="datetime-local" className={INPUT} value={expiresAt} disabled={saving}
+              onChange={(e) => setExpiresAt(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-5">
+          {([
+            [isSuperAdmin, setIsSuperAdmin, 'cu-super', 'Super admin'],
+            [emailVerified, setEmailVerified, 'cu-verified', 'Mark email verified'],
+            [canUseLocalSpace, setCanUseLocalSpace, 'cu-space', 'Can use local space'],
+          ] as [boolean, (v: boolean) => void, string, string][]).map(([val, setter, id, label]) => (
+            <label key={id} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+              <input id={id} type="checkbox" className={CHECK} checked={val} disabled={saving}
+                onChange={(e) => setter(e.target.checked)} />
+              {label}
+            </label>
+          ))}
         </div>
 
         {mode === 'invitation' && !smtpAvailable && (
           <p className="text-xs text-amber-700 dark:text-amber-400">
-            SMTP is not configured or disabled. The invitation link will be shown after creation — copy it manually.
+            SMTP is not configured or disabled. Email sending is unavailable. The invitation link will be shown after creation.
           </p>
         )}
 

@@ -334,6 +334,23 @@ export interface CreateUserPayload {
   display_name?: string
   is_super_admin?: boolean
   email_verified?: boolean
+  preferred_language?: string
+  valid_from?: string | null
+  account_expires_at?: string | null
+  can_use_local_space?: boolean
+  force_password_change?: boolean
+}
+
+export interface EditUserPayload {
+  email?: string
+  display_name?: string | null
+  is_super_admin?: boolean
+  is_active?: boolean
+  email_verified?: boolean
+  preferred_language?: string | null
+  valid_from?: string | null
+  account_expires_at?: string | null
+  can_use_local_space?: boolean
 }
 
 export interface UserInvitationResult {
