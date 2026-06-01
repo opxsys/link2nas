@@ -1,64 +1,224 @@
-import { Users, UserCheck, UserPlus, AlertTriangle, Mail, ShieldCheck, Cpu, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Users, UserCheck, HardDrive, Mail, CheckCircle2, XCircle, Loader2, RefreshCw } from 'lucide-react'
 import MetricCard from '@/components/common/MetricCard'
 import SectionCard from '@/components/common/SectionCard'
-import { MOCK_ADMIN_SUMMARY } from './admin-system.mock'
-import { MOCK_SMTP } from './admin-settings.mock'
-import { MOCK_RUNTIME } from './admin-settings.mock'
+import { Button } from '@/components/ui/button'
+import { getMaintenanceStatus } from '@/api/admin-maintenance'
+import { getSmtpSettings } from '@/api/admin-smtp'
+import { getGeneralSettings } from '@/api/admin-settings'
+import { getRuntimeSettings } from '@/api/admin-runtime'
+import { listUsers } from '@/api/admin-users'
+import { listAnnouncements } from '@/api/admin-announcements'
+import type {
+  MaintenanceStatus, RealSmtpSettings, GeneralSettings,
+  RuntimeSettings, RealUser, RealAnnouncement,
+} from './admin.types'
 
-const runningCount = MOCK_RUNTIME.filter((r) => r.status === 'running').length
+function fmtBytes(b: number): string {
+  if (b === 0) return '0 B'
+  const u = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.min(Math.floor(Math.log(b) / Math.log(1024)), u.length - 1)
+  return `${(b / Math.pow(1024, i)).toFixed(1)} ${u[i]}`
+}
 
-const HEALTH_ITEMS = [
-  {
-    label: 'SMTP',
-    icon: Mail,
-    ok: MOCK_SMTP.configured,
-    note: MOCK_SMTP.configured ? `${MOCK_SMTP.host}:${MOCK_SMTP.port}` : 'Not configured',
-  },
-  {
-    label: 'Security',
-    icon: ShieldCheck,
-    ok: true,
-    note: 'Policy active',
-  },
-  {
-    label: 'Runtime',
-    icon: Cpu,
-    ok: runningCount >= 3,
-    note: `${runningCount}/${MOCK_RUNTIME.length} running`,
-  },
-  {
-    label: 'Cleanup',
-    icon: Trash2,
-    ok: true,
-    note: 'Last run 28/05/2026',
-  },
-]
+function ok<T>(r: PromiseSettledResult<T>): T | null {
+  return r.status === 'fulfilled' ? r.value : null
+}
+
+function ConfigRow({ label, value, bad, mono }: { label: string; value: string; bad?: boolean; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-4 py-2 first:pt-0 last:pb-0">
+      <dt className="w-28 shrink-0 text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className={`min-w-0 truncate text-sm ${mono ? 'font-mono text-xs' : ''} ${bad ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+        {value}
+      </dd>
+    </div>
+  )
+}
 
 export default function AdminOverview() {
+  const [maintenance, setMaintenance] = useState<MaintenanceStatus | null>(null)
+  const [smtp, setSmtp] = useState<RealSmtpSettings | null>(null)
+  const [general, setGeneral] = useState<GeneralSettings | null>(null)
+  const [runtime, setRuntime] = useState<RuntimeSettings | null>(null)
+  const [users, setUsers] = useState<RealUser[] | null>(null)
+  const [announcements, setAnnouncements] = useState<RealAnnouncement[] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [m, s, g, r, u, a] = await Promise.allSettled([
+      getMaintenanceStatus(),
+      getSmtpSettings(),
+      getGeneralSettings(),
+      getRuntimeSettings(),
+      listUsers(),
+      listAnnouncements(),
+    ])
+    setMaintenance(ok(m))
+    setSmtp(ok(s))
+    setGeneral(ok(g))
+    setRuntime(ok(r))
+    setUsers(ok(u))
+    setAnnouncements(ok(a))
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const smtpReady = smtp ? smtp.enabled && smtp.host.trim() !== '' : null
+  const now = new Date()
+
+  const userStats = users ? {
+    total:      users.length,
+    active:     users.filter((u) => u.is_active).length,
+    disabled:   users.filter((u) => !u.is_active).length,
+    unverified: users.filter((u) => !u.email_verified).length,
+    expired:    users.filter((u) => Boolean(u.account_expires_at && new Date(u.account_expires_at) < now)).length,
+    superAdmins: users.filter((u) => u.is_super_admin).length,
+  } : null
+
+  const runtimeEnabled = runtime ? [
+    runtime.notifications.dispatcher.enabled,
+    runtime.jobs.orchestrator.enabled,
+    runtime.downloads.local_worker.enabled,
+  ].filter(Boolean).length : null
+
+  const activeAnn = announcements ? announcements.filter((a) => a.is_active).length : null
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-12 text-muted-foreground">
+        <Loader2 size={20} className="animate-spin" aria-hidden="true" />
+        <span className="text-sm">Loading overview…</span>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricCard label="Total Users"          value={MOCK_ADMIN_SUMMARY.totalUsers}         icon={Users}     description="All accounts" />
-        <MetricCard label="Active Users"          value={MOCK_ADMIN_SUMMARY.activeUsers}        icon={UserCheck} description="Enabled accounts"   iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" />
-        <MetricCard label="Pending Invitations"   value={MOCK_ADMIN_SUMMARY.pendingInvitations} icon={UserPlus}  description="Awaiting first login" iconClassName="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" />
-        <MetricCard label="System Events Today"   value={MOCK_ADMIN_SUMMARY.systemEventsToday}  icon={AlertTriangle} description="Warnings and errors" iconClassName="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" />
+      {/* Status bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {maintenance ? (
+          <div className="flex items-center gap-2">
+            {maintenance.ok
+              ? <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+              : <XCircle size={15} className="text-red-600 dark:text-red-400" aria-hidden="true" />}
+            <span className={`text-sm font-medium ${maintenance.ok
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : 'text-red-700 dark:text-red-400'}`}>
+              {maintenance.ok ? 'All systems operational' : 'Issues detected'}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              · checked {new Date(maintenance.generated_at).toLocaleTimeString()}
+            </span>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">System status unavailable</span>
+        )}
+        <Button size="sm" variant="outline" onClick={load}>
+          <RefreshCw size={13} className="mr-1.5" aria-hidden="true" /> Refresh
+        </Button>
       </div>
 
-      <SectionCard title="Quick Health">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {HEALTH_ITEMS.map(({ label, icon: Icon, ok, note }) => (
-            <div key={label} className="flex items-start gap-3 rounded-md border border-border bg-muted/20 p-3">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${ok ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                <Icon size={15} aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">{label}</p>
-                <p className="text-xs text-muted-foreground">{note}</p>
-              </div>
+      {/* Metric cards */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <MetricCard
+          label="Total Users"
+          value={userStats?.total ?? '—'}
+          icon={Users}
+          description={userStats ? `${userStats.active} active` : undefined}
+        />
+        <MetricCard
+          label="Active Users"
+          value={userStats?.active ?? '—'}
+          icon={UserCheck}
+          description={userStats ? `${userStats.disabled} disabled` : undefined}
+          iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+        />
+        <MetricCard
+          label="SMTP"
+          value={smtpReady === null ? '—' : smtpReady ? 'Ready' : 'Not set'}
+          icon={Mail}
+          description={smtpReady && smtp?.host ? smtp.host : undefined}
+          iconClassName={smtpReady === false ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : undefined}
+        />
+        <MetricCard
+          label="Disk free"
+          value={maintenance ? `${maintenance.disk.percent_free}%` : '—'}
+          icon={HardDrive}
+          description={maintenance ? `${fmtBytes(maintenance.disk.free_bytes)} available` : undefined}
+          iconClassName={maintenance && !maintenance.disk.ok ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : undefined}
+        />
+      </div>
+
+      {/* Lower two-column grid */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SectionCard title="User Accounts">
+          {userStats ? (
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                ['Active',      userStats.active,      false],
+                ['Disabled',    userStats.disabled,    userStats.disabled > 0],
+                ['Unverified',  userStats.unverified,  userStats.unverified > 0],
+                ['Expired',     userStats.expired,     userStats.expired > 0],
+                ['Super admins', userStats.superAdmins, false],
+                ['Total',       userStats.total,       false],
+              ] as [string, number, boolean][]).map(([label, value, warn]) => (
+                <div key={label} className="rounded-md border border-border bg-muted/20 p-2.5 text-center">
+                  <p className={`text-lg font-semibold ${warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
+                    {value}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </SectionCard>
+          ) : (
+            <p className="text-sm text-muted-foreground">User data unavailable.</p>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Configuration">
+          <dl className="divide-y divide-border">
+            {general && (
+              <ConfigRow
+                label="App"
+                value={`${general.app_name}${maintenance ? ` v${maintenance.app.version}` : ''}`}
+              />
+            )}
+            {general?.effective_public_base_url && (
+              <ConfigRow label="Public URL" value={general.effective_public_base_url} mono />
+            )}
+            {maintenance && (
+              <ConfigRow
+                label="Database"
+                value={`${maintenance.database.backend} — ${maintenance.database.ok ? 'connected' : 'error'}`}
+                bad={!maintenance.database.ok}
+              />
+            )}
+            {smtp && (
+              <ConfigRow
+                label="SMTP"
+                value={smtpReady ? `${smtp.host}:${smtp.port}` : 'Not configured'}
+                bad={!smtpReady}
+              />
+            )}
+            {runtimeEnabled !== null && (
+              <ConfigRow
+                label="Runtime"
+                value={`${runtimeEnabled}/3 services enabled`}
+                bad={runtimeEnabled < 3}
+              />
+            )}
+            {announcements !== null && (
+              <ConfigRow
+                label="Announcements"
+                value={`${activeAnn} active · ${announcements.length} total`}
+              />
+            )}
+          </dl>
+        </SectionCard>
+      </div>
     </div>
   )
 }

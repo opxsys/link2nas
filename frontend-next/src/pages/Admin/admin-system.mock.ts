@@ -1,11 +1,4 @@
-import type { AdminSummary, SystemEventTypeDef, SystemEvent } from './admin.types'
-
-export const MOCK_ADMIN_SUMMARY: AdminSummary = {
-  totalUsers: 6,
-  activeUsers: 3,
-  pendingInvitations: 2,
-  systemEventsToday: 3,
-}
+import type { SystemEventTypeDef, SystemEvent } from './admin.types'
 
 export const MOCK_SYSTEM_EVENT_TYPES: SystemEventTypeDef[] = [
   { code: 'system.cleanup.failed',              severity: 'error',   deduplicated: true,  rateLimited: false, enabled: true,  description: 'Cleanup task failed to complete.' },
