@@ -306,6 +306,69 @@ export interface GeneralSettingsPayload {
   public_base_url: string
 }
 
+// Real API types for GET/POST/PATCH/DELETE /api/v2/admin/announcements
+export type AnnouncementType = 'news' | 'maintenance' | 'incident' | 'security'
+export type AnnouncementSeverityLevel = 'info' | 'warning' | 'critical'
+
+export interface RealAnnouncement {
+  id: string
+  title: string
+  body: string
+  type: AnnouncementType
+  severity: AnnouncementSeverityLevel
+  is_active: boolean
+  show_as_banner: boolean
+  require_acknowledgement: boolean
+  track_open: boolean
+  send_email: boolean
+  starts_at: string | null
+  ends_at: string | null
+  created_by_user_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AnnouncementPayload {
+  title: string
+  body: string
+  type: AnnouncementType
+  severity: AnnouncementSeverityLevel
+  is_active: boolean
+  show_as_banner: boolean
+  require_acknowledgement: boolean
+  track_open: boolean
+  send_email: boolean
+  starts_at: string | null
+  ends_at: string | null
+}
+
+export interface AnnouncementTrackingStats {
+  sent_count: number
+  opened_count: number
+  read_count: number
+  acknowledged_count: number
+  failed_count: number
+  targeted_email_recipients: number
+}
+
+export interface AnnouncementTrackingRead {
+  user_id: string
+  email: string | null
+  display_name: string | null
+  opened_at: string | null
+  read_at: string | null
+  acknowledged_at: string | null
+  email_sent_at: string | null
+  email_status: string | null
+  email_error: string | null
+}
+
+export interface AnnouncementTracking {
+  announcement: RealAnnouncement
+  stats: AnnouncementTrackingStats
+  reads: AnnouncementTrackingRead[]
+}
+
 // Real API types for GET/PUT /api/v2/admin/timeouts/restart-cooldowns
 export interface RestartCooldowns {
   default_seconds: number
