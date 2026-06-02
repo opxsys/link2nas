@@ -1,27 +1,7 @@
 import type {
-  MockProviderProfile,
   MockDestinationProfile,
   MockProwlarrConfig,
 } from './settings.types'
-
-export const MOCK_PROVIDERS: MockProviderProfile[] = [
-  {
-    id: 'rd-perso',
-    name: 'Real-Debrid (perso)',
-    type: 'realdebrid',
-    typeLabel: 'Real-Debrid',
-    isActive: true,
-    isDefault: true,
-  },
-  {
-    id: 'alldebrid',
-    name: 'AllDebrid',
-    type: 'alldebrid',
-    typeLabel: 'AllDebrid',
-    isActive: true,
-    isDefault: false,
-  },
-]
 
 export const MOCK_DESTINATIONS: MockDestinationProfile[] = [
   {

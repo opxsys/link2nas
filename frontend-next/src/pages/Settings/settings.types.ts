@@ -8,15 +8,6 @@ export type SettingsSection =
   | 'accessibility'
   | 'language'
 
-export interface MockProviderProfile {
-  id: string
-  name: string
-  type: string
-  typeLabel: string
-  isActive: boolean
-  isDefault: boolean
-}
-
 export interface MockDestinationProfile {
   id: string
   name: string
