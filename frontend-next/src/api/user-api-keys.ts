@@ -8,6 +8,8 @@ export interface UserApiKey {
   is_active: boolean
   revoked_at: string | null
   last_used_at: string | null
+  last_used_ip: string | null
+  last_used_scope: string | null
   created_at: string
   updated_at: string
 }
