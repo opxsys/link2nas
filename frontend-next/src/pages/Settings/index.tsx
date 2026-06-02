@@ -24,7 +24,9 @@ export default function Settings() {
           {activeSection === 'destinations' && <DestinationSettings />}
           {activeSection === 'api-keys' && <ApiKeysSettings />}
           {activeSection === 'notifications' && <NotificationSettings />}
-          {activeSection === 'prowlarr' && <ProwlarrSettings />}
+          {activeSection === 'prowlarr' && (
+            <ProwlarrSettings onGoToApiKeys={() => setActiveSection('api-keys')} />
+          )}
           {activeSection === 'accessibility' && <AccessibilitySettings />}
           {activeSection === 'language' && <LanguageSettings />}
         </div>
