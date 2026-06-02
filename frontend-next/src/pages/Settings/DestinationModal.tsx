@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { saveDestinationConfig } from '@/api/destination-configs'
 import { ApiError } from '@/api/client'
 import type { DestinationConfig } from '@/api/destination-configs'
+import { getMe } from '@/api/me'
 
-const DEST_TYPES = [
+const ALL_DEST_TYPES = [
   { value: 'synology', label: 'Synology NAS' },
   { value: 'local',    label: 'Local'         },
 ]
@@ -38,6 +39,19 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
   const [isDefault,       setIsDefault]       = useState(initial?.is_default                    ?? false)
   const [saving,          setSaving]          = useState(false)
   const [error,           setError]           = useState<string | null>(null)
+  const [canUseLocal,     setCanUseLocal]     = useState(false)  // safe default until me resolves
+
+  // Fetch local-space capability once on mount
+  useEffect(() => {
+    getMe().then(me => setCanUseLocal(me.can_use_local_space)).catch(() => {/* keep false */})
+  }, [])
+
+  // Available types: local only shown when account has local-space permission,
+  // OR when editing an existing local destination (type is locked, so it stays in the list).
+  const availableTypes = ALL_DEST_TYPES.filter(t => {
+    if (t.value !== 'local') return true
+    return canUseLocal || (isEdit && initial?.destination_type === 'local')
+  })
 
   useEffect(() => {
     setName(initial?.name ?? '')
@@ -122,7 +136,7 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
             <label htmlFor="dest-type" className={LABEL}>Destination type</label>
             <select id="dest-type" value={destType} onChange={(e) => setDestType(e.target.value)}
               disabled={isEdit} className={SELECT}>
-              {DEST_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {availableTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
             {isEdit && (
               <p className="mt-1 text-xs text-muted-foreground">Type cannot be changed after creation.</p>
@@ -160,10 +174,13 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
                 </div>
               )}
               <div>
-                <label htmlFor="dest-base" className={LABEL}>Destination base path (optional)</label>
+                <label htmlFor="dest-base" className={LABEL}>Destination folder (optional)</label>
                 <input id="dest-base" type="text" value={destinationBase}
                   onChange={(e) => setDestinationBase(e.target.value)}
-                  placeholder="/volume1/downloads" className={INPUT} />
+                  placeholder="downloads" className={INPUT} />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Logical destination folder managed by Link2NAS — e.g. <code>downloads</code>, <code>movies</code>.
+                </p>
               </div>
               <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={verifySSL} onChange={(e) => setVerifySSL(e.target.checked)}
