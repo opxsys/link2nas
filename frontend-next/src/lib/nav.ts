@@ -24,7 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/notifications', label: 'My Notifications', icon: Bell, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
   { to: '/admin', label: 'Admin', icon: ShieldCheck, end: false },
-  { to: '/maintenance', label: 'Maintenance', icon: Wrench, end: false },
+  { to: '/maintenance', label: 'System Status', icon: Wrench, end: false },
 ]
 
 /**
