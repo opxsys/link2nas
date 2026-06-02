@@ -8,12 +8,6 @@ export type SettingsSection =
   | 'accessibility'
   | 'language'
 
-export interface MockAccount {
-  username: string
-  email: string
-  role: string
-}
-
 export interface MockProviderProfile {
   id: string
   name: string

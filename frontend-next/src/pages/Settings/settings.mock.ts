@@ -1,15 +1,8 @@
 import type {
-  MockAccount,
   MockProviderProfile,
   MockDestinationProfile,
   MockProwlarrConfig,
 } from './settings.types'
-
-export const MOCK_ACCOUNT: MockAccount = {
-  username: 'admin',
-  email: 'admin@maison.local',
-  role: 'Administrator',
-}
 
 export const MOCK_PROVIDERS: MockProviderProfile[] = [
   {

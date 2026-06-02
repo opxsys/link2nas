@@ -1,98 +1,50 @@
-import { useState } from 'react'
-import SectionCard from '@/components/common/SectionCard'
-import { Button } from '@/components/ui/button'
-import { MOCK_ACCOUNT } from './settings.mock'
-
-const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
-const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
+import { useState, useEffect } from 'react'
+import { Loader2, AlertCircle } from 'lucide-react'
+import { getMe } from '@/api/me'
+import { ApiError } from '@/api/client'
+import type { MeProfile } from '@/api/me'
+import AccountProfileCard from './AccountProfileCard'
+import AccountPasswordCard from './AccountPasswordCard'
 
 export default function AccountSettings() {
-  const [username, setUsername] = useState(MOCK_ACCOUNT.username)
-  const [email, setEmail] = useState(MOCK_ACCOUNT.email)
-  const [currentPw, setCurrentPw] = useState('')
-  const [newPw, setNewPw] = useState('')
-  const [saved, setSaved] = useState(false)
+  const [me, setMe] = useState<MeProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  useEffect(() => {
+    let cancelled = false
+    getMe()
+      .then((data) => { if (!cancelled) setMe(data) })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof ApiError ? err.message : 'Failed to load account')
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+        <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+        Loading account…
+      </div>
+    )
+  }
+
+  if (error || !me) {
+    return (
+      <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+        <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+        {error ?? 'Account data unavailable.'}
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionCard title="Profile">
-        <div className="mb-5 flex items-center gap-4 border-b border-border pb-5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold uppercase text-primary">
-            {MOCK_ACCOUNT.username.charAt(0)}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">{MOCK_ACCOUNT.username}</p>
-            <p className="text-xs text-muted-foreground">{MOCK_ACCOUNT.role}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="acc-username" className={LABEL}>Username</label>
-            <input
-              id="acc-username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className={INPUT}
-            />
-          </div>
-          <div>
-            <label htmlFor="acc-email" className={LABEL}>Email</label>
-            <input
-              id="acc-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={INPUT}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground sm:col-span-2">
-            Role:{' '}
-            <span className="font-medium text-foreground">{MOCK_ACCOUNT.role}</span>
-            {' '}— managed by administrator.
-          </p>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Change Password">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="acc-current-pw" className={LABEL}>Current password</label>
-            <input
-              id="acc-current-pw"
-              type="password"
-              value={currentPw}
-              onChange={(e) => setCurrentPw(e.target.value)}
-              placeholder="••••••••"
-              className={INPUT}
-            />
-          </div>
-          <div>
-            <label htmlFor="acc-new-pw" className={LABEL}>New password</label>
-            <input
-              id="acc-new-pw"
-              type="password"
-              value={newPw}
-              onChange={(e) => setNewPw(e.target.value)}
-              placeholder="••••••••"
-              className={INPUT}
-            />
-          </div>
-        </div>
-      </SectionCard>
-
-      <div className="flex items-center gap-3">
-        <Button size="sm" onClick={handleSave}>Save changes</Button>
-        {saved && (
-          <span className="text-xs text-muted-foreground">Mock changes only — not persisted.</span>
-        )}
-      </div>
+      <AccountProfileCard me={me} onUpdate={setMe} />
+      <AccountPasswordCard singleUserMode={me.single_user_mode} />
     </div>
   )
 }
