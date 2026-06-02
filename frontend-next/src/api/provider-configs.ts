@@ -54,3 +54,16 @@ export function updateProviderConfig(
 export function deleteProviderConfig(id: string): Promise<null> {
   return request<null>(`/api/v2/providers/${id}`, { method: 'DELETE' })
 }
+
+export interface ProviderTestResult {
+  ok: boolean
+  provider_config_id: string
+  provider_type: string
+  provider_profile_name: string
+  account_expires_at: string | null
+  provider_user: Record<string, unknown> | null
+}
+
+export function testProviderConfig(id: string): Promise<ProviderTestResult> {
+  return request<ProviderTestResult>(`/api/v2/provider-runtime/test/${id}`)
+}
