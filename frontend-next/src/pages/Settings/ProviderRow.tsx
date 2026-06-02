@@ -21,6 +21,13 @@ const TYPE_LABEL: Record<string, string> = {
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error'
 
+function formatProviderExpiry(value: string | null): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return value
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
+}
+
 interface Props {
   config: ProviderConfig
   acting: boolean
@@ -41,8 +48,9 @@ export default function ProviderRow({
 
   const Icon = TYPE_ICON[config.provider_type] ?? Cloud
   const typeLabel = TYPE_LABEL[config.provider_type] ?? config.provider_type
+  const expiryLabel = formatProviderExpiry(config.account_expires_at)
   const expiresAt = config.account_expires_at ? new Date(config.account_expires_at) : null
-  const isExpired = expiresAt ? expiresAt < new Date() : false
+  const isExpired = expiresAt && !isNaN(expiresAt.getTime()) ? expiresAt < new Date() : false
 
   async function handleTest() {
     setTestStatus('testing')
@@ -87,9 +95,9 @@ export default function ProviderRow({
           )}
         </div>
 
-        {expiresAt && (
+        {expiryLabel && (
           <p className={`mt-0.5 text-xs ${isExpired ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
-            {isExpired ? 'Expired' : 'Expires'}: {expiresAt.toLocaleDateString()}
+            {isExpired ? 'Expired' : 'Expires'}: {expiryLabel}
           </p>
         )}
 
