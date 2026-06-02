@@ -37,6 +37,15 @@ export function updateMe(payload: {
   })
 }
 
+export function requestEmailVerification(): Promise<{
+  ok: boolean
+  message?: string
+  error?: string
+  expires_at?: string
+}> {
+  return request('/api/v2/me/request-email-verification', { method: 'POST' })
+}
+
 export function changePassword(payload: {
   current_password: string
   new_password: string

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
-import { updateMe } from '@/api/me'
+import { updateMe, requestEmailVerification } from '@/api/me'
 import { ApiError } from '@/api/client'
 import type { MeProfile } from '@/api/me'
 
@@ -28,12 +28,15 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [verifySending, setVerifySending] = useState(false)
+  const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   useEffect(() => {
     setDisplayName(me.display_name ?? '')
     setEmail(me.email)
     setLang(me.preferred_language ?? '')
     setReceiveEmails(me.receive_application_emails)
+    setVerifyMsg(null)
   }, [me])
 
   async function handleSave() {
@@ -54,6 +57,19 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
       setError(err instanceof ApiError ? err.message : 'Failed to save profile')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleRequestVerification() {
+    setVerifySending(true)
+    setVerifyMsg(null)
+    try {
+      const res = await requestEmailVerification()
+      setVerifyMsg({ ok: res.ok, text: res.message ?? 'Verification email sent.' })
+    } catch (err) {
+      setVerifyMsg({ ok: false, text: err instanceof ApiError ? err.message : 'Failed to send verification email.' })
+    } finally {
+      setVerifySending(false)
     }
   }
 
@@ -132,6 +148,26 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
           )}
         </p>
       </div>
+
+      {/* Email verification action */}
+      {!me.email_verified && (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            Your email address is not verified. Magic login may be unavailable until verification is complete.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <Button size="sm" variant="outline" onClick={handleRequestVerification} disabled={verifySending}>
+              {verifySending && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+              Send verification email
+            </Button>
+            {verifyMsg && (
+              <span className={`text-xs ${verifyMsg.ok ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+                {verifyMsg.text}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
