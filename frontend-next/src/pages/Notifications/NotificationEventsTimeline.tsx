@@ -100,7 +100,7 @@ interface Props {
 
 export default function NotificationEventsTimeline({ events, configs, loading, error }: Props) {
   return (
-    <SectionCard title="Recent Events" description="Latest notifications sent to you.">
+    <SectionCard title="Recent Events" description="Latest user notification events.">
       {loading && (
         <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
           <Loader2 size={14} className="animate-spin" aria-hidden="true" />

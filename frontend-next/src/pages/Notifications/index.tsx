@@ -33,8 +33,8 @@ export default function Notifications() {
   return (
     <>
       <PageHeader
-        title="Notifications"
-        description="Manage your notification rules, channels, and recent events."
+        title="My Notifications"
+        description="Manage your notification rules, channels, and recent user events."
       />
       <div className="flex flex-col gap-6">
         <NotificationSummaryCards {...summary} loading={state.loading} />

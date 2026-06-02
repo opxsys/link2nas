@@ -21,7 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/jobs', label: 'Jobs', icon: List, end: false },
   { to: '/prowlarr', label: 'Prowlarr', icon: Search, end: false },
-  { to: '/notifications', label: 'Notifications', icon: Bell, end: false },
+  { to: '/notifications', label: 'My Notifications', icon: Bell, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },
   { to: '/admin', label: 'Admin', icon: ShieldCheck, end: false },
   { to: '/maintenance', label: 'Maintenance', icon: Wrench, end: false },
