@@ -43,28 +43,65 @@ def _escape_html(text: str) -> str:
 
 
 _PAGE_CSS = (
-    "body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:0}"
-    ".wrap{max-width:800px;margin:40px auto;padding:0 20px}"
-    ".hd{margin-bottom:24px}"
-    ".hd h1{font-size:1.25rem;font-weight:600;margin:0 0 6px}"
-    ".bc{font-size:0.8rem;color:#64748b;display:flex;gap:4px;align-items:center;flex-wrap:wrap}"
-    ".bc a{color:#2563eb;text-decoration:none}"
+    # Colour tokens — light mode
+    ":root{"
+    "--bg:#f8fafc;--fg:#0f172a;--card:#ffffff;--bd:#e2e8f0;"
+    "--muted:#64748b;--hover:#f1f5f9;--link:#2563eb;"
+    "--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);"
+    "--rad:10px;--brand:#94a3b8;--ic-folder:#f59e0b;--ic-file:#94a3b8"
+    "}"
+    # Dark mode — automatic via OS/browser preference
+    "@media(prefers-color-scheme:dark){"
+    ":root{"
+    "--bg:#020817;--fg:#f1f5f9;--card:#0f172a;--bd:#1e293b;"
+    "--muted:#94a3b8;--hover:#1e293b;--link:#60a5fa;"
+    "--shadow:0 1px 3px rgba(0,0,0,.3);"
+    "--brand:#475569;--ic-folder:#fbbf24;--ic-file:#64748b"
+    "}}"
+    # Reset & base
+    "*{box-sizing:border-box}"
+    "body{font-family:Inter,system-ui,-apple-system,sans-serif;"
+    "background:var(--bg);color:var(--fg);margin:0;padding:0;"
+    "-webkit-font-smoothing:antialiased}"
+    # Layout
+    ".wrap{max-width:700px;margin:0 auto;padding:36px 20px 56px}"
+    # Branding label
+    ".logo{font-size:.65rem;font-weight:700;letter-spacing:.15em;"
+    "text-transform:uppercase;color:var(--brand);margin-bottom:14px}"
+    # Header
+    ".hd{margin-bottom:20px}"
+    ".hd h1{font-size:1.3rem;font-weight:700;margin:0 0 5px;line-height:1.3}"
+    # Breadcrumb
+    ".bc{font-size:.8rem;color:var(--muted);display:flex;gap:4px;"
+    "align-items:center;flex-wrap:wrap}"
+    ".bc a{color:var(--link);text-decoration:none}"
     ".bc a:hover{text-decoration:underline}"
-    ".bc .s{color:#cbd5e1}"
-    ".card{background:#fff;border:1px solid #dbe3ee;border-radius:14px;overflow:hidden;"
-    "box-shadow:0 8px 24px rgba(15,23,42,.08)}"
-    ".row{display:flex;align-items:center;gap:12px;padding:12px 16px;"
-    "border-bottom:1px solid #f1f5f9;text-decoration:none;color:inherit}"
+    ".bc .s{color:var(--bd)}"
+    # Card
+    ".card{background:var(--card);border:1px solid var(--bd);"
+    "border-radius:var(--rad);overflow:hidden;box-shadow:var(--shadow)}"
+    # Rows
+    ".row{display:flex;align-items:center;gap:12px;padding:10px 16px;"
+    "border-bottom:1px solid var(--bd);text-decoration:none;color:inherit;"
+    "transition:background .12s}"
     ".row:last-child{border-bottom:none}"
-    ".row:hover{background:#f1f5f9}"
-    ".ic{width:20px;height:20px;flex-shrink:0;fill:currentColor}"
-    ".if{color:#f59e0b}"
-    ".id{color:#64748b}"
-    ".nm{flex:1;font-size:.9rem;word-break:break-all;color:#0f172a}"
-    ".nl{color:#2563eb}"
-    ".sz{font-size:.8rem;color:#64748b;white-space:nowrap}"
-    ".empty{padding:40px;text-align:center;color:#64748b;font-size:.9rem}"
-    ".stats{font-size:.8rem;color:#94a3b8;margin-top:12px}"
+    ".row:hover{background:var(--hover)}"
+    # Icons
+    ".ic{width:17px;height:17px;flex-shrink:0;fill:currentColor}"
+    ".if{color:var(--ic-folder)}"
+    ".id{color:var(--ic-file)}"
+    # Row text
+    ".nm{flex:1;font-size:.875rem;word-break:break-all}"
+    ".nl{color:var(--link)}"
+    ".sz{font-size:.75rem;color:var(--muted);white-space:nowrap}"
+    # Empty state
+    ".empty{padding:52px 20px;text-align:center;color:var(--muted)}"
+    ".empty svg{display:block;margin:0 auto 14px;opacity:.3}"
+    ".empty p{font-size:.875rem;margin:0}"
+    # Stats + footer
+    ".stats{font-size:.75rem;color:var(--muted);margin-top:10px;padding:0 2px}"
+    ".footer{margin-top:44px;text-align:center;font-size:.7rem;"
+    "color:var(--brand);letter-spacing:.06em}"
 )
 
 _ICON_FOLDER = (
@@ -80,6 +117,13 @@ _ICON_FILE = (
 _ICON_UP = (
     '<svg class="ic id" viewBox="0 0 24 24">'
     '<path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>'
+)
+_ICON_EMPTY = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"'
+    ' fill="none" stroke="currentColor" stroke-width="1.5"'
+    ' stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
+    '</svg>'
 )
 
 
@@ -175,7 +219,7 @@ def _render_listing(slug: str, user, space_path: Path, relative_dir: str = "") -
         card_body = "".join(rows)
     else:
         msg = "Dossier vide." if path_parts else "Aucun fichier disponible."
-        card_body = '<div class="empty">%s</div>' % msg
+        card_body = '<div class="empty">%s<p>%s</p></div>' % (_ICON_EMPTY, msg)
 
     stats = "%d dossier(s), %d fichier(s)" % (len(dirs), len(files_list))
     title = "Espace de %s" % display
@@ -192,12 +236,14 @@ def _render_listing(slug: str, user, space_path: Path, relative_dir: str = "") -
         "</head>\n"
         "<body>\n"
         '  <div class="wrap">\n'
+        '    <div class="logo">Link2NAS</div>\n'
         '    <div class="hd">\n'
         "      <h1>%(title)s</h1>\n"
         '      <div class="bc">%(breadcrumb)s</div>\n'
         "    </div>\n"
         '    <div class="card">%(card_body)s</div>\n'
         '    <div class="stats">%(stats)s</div>\n'
+        '    <div class="footer">Espace public · Link2NAS</div>\n'
         "  </div>\n"
         "</body>\n"
         "</html>"
