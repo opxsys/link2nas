@@ -6,10 +6,6 @@ import type { CreatedApiKey } from '@/api/user-api-keys'
 
 const SCOPES: { value: string; label: string; description: string }[] = [
   { value: 'qbittorrent:write', label: 'qBittorrent / Prowlarr', description: 'Allow Prowlarr to push downloads via the qBittorrent-compatible API.' },
-  { value: 'jobs:create',       label: 'Create jobs',             description: 'Allow creating new download jobs.' },
-  { value: 'jobs:read',         label: 'Read jobs',               description: 'Allow reading job status and history.' },
-  { value: 'extension',         label: 'Browser extension',       description: 'Allow use with the Link2NAS browser extension.' },
-  { value: 'scripts',           label: 'Scripts',                 description: 'Allow use in custom automation scripts.' },
 ]
 
 interface Props {
@@ -21,7 +17,7 @@ const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text
 
 export default function CreateApiKeyModal({ onClose, onCreated }: Props) {
   const [name, setName]     = useState('')
-  const [scopes, setScopes] = useState<string[]>([])
+  const [scopes, setScopes] = useState<string[]>(['qbittorrent:write'])
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState<string | null>(null)
 
