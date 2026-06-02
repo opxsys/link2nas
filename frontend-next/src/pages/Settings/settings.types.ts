@@ -8,16 +8,6 @@ export type SettingsSection =
   | 'accessibility'
   | 'language'
 
-export interface MockDestinationProfile {
-  id: string
-  name: string
-  type: string
-  typeLabel: string
-  path: string
-  isActive: boolean
-  isDefault: boolean
-}
-
 export interface MockProwlarrConfig {
   enabled: boolean
   url: string
