@@ -15,6 +15,7 @@ import {
 } from '@/api/notifications'
 import { getSmtpSettings } from '@/api/admin-smtp'
 import { ApiError } from '@/api/client'
+import { isUserNotificationEvent } from '@/lib/notification-filters'
 
 export interface NotificationsState {
   configs: NotificationConfig[]
@@ -56,7 +57,7 @@ export function useNotificationsState(): NotificationsState {
         if (cancelled) return
         setConfigs(cfgs)
         setRules(rlz)
-        setEvents(evts)
+        setEvents(evts.filter(isUserNotificationEvent))
         if (cfgs.length > 0 && !testConfigId) {
           setTestConfigId(cfgs[0].id)
         }

@@ -48,6 +48,7 @@ export interface NotificationEvent {
   user_id: string
   job_id: string | null
   type: string
+  scope?: string
   severity: NotificationSeverity
   title: string
   message: string

@@ -314,6 +314,7 @@ export interface AdminNotificationEvent {
   user_id: string | null
   job_id: string | null
   type: string
+  scope?: string
   severity: SystemEventSeverity
   title: string
   message: string

@@ -4,6 +4,7 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { listNotificationEvents } from '@/api/admin-notifications'
 import type { AdminNotificationEvent, NotificationEventStatus, SystemEventSeverity } from './admin.types'
+import { isSystemNotificationEvent } from '@/lib/notification-filters'
 
 const SEV: Record<SystemEventSeverity, { icon: React.ReactNode; color: string }> = {
   error:   { icon: <AlertCircle size={13} aria-hidden="true" />,   color: 'text-red-600 dark:text-red-400'    },
@@ -79,10 +80,11 @@ export default function AdminSystemEvents() {
     setLoading(true)
     setError(null)
     try {
-      setEvents(await listNotificationEvents({
+      const all = await listNotificationEvents({
         limit,
         status: statusFilter === 'all' ? undefined : statusFilter,
-      }))
+      })
+      setEvents(all.filter(isSystemNotificationEvent))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load events.')
     } finally {
