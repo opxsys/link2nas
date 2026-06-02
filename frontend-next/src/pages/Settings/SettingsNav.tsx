@@ -7,6 +7,7 @@ import {
   Search,
   Eye,
   Globe,
+  HardDrive,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,16 +33,21 @@ const NAV_ITEMS: NavItem[] = [
 interface SettingsNavProps {
   activeSection: SettingsSection
   onSelect: (section: SettingsSection) => void
+  showSpace?: boolean
 }
 
-export default function SettingsNav({ activeSection, onSelect }: SettingsNavProps) {
+export default function SettingsNav({ activeSection, onSelect, showSpace }: SettingsNavProps) {
+  const visibleItems = showSpace
+    ? [...NAV_ITEMS, { id: 'space' as const, label: 'My Space', icon: HardDrive }]
+    : NAV_ITEMS
+
   return (
     <nav
       aria-label="Settings sections"
       className="rounded-lg border border-border bg-card shadow-sm lg:w-48 lg:shrink-0"
     >
       <ul className="py-1">
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
+        {visibleItems.map(({ id, label, icon: Icon }) => {
           const active = activeSection === id
           return (
             <li key={id}>

@@ -7,6 +7,7 @@ export type SettingsSection =
   | 'prowlarr'
   | 'accessibility'
   | 'language'
+  | 'space'
 
 export interface MockProwlarrConfig {
   enabled: boolean
