@@ -18,6 +18,28 @@ export function listProviderConfigs(): Promise<ProviderConfig[]> {
   return request<ProviderConfig[]>('/api/v2/providers')
 }
 
+export function saveProviderConfig(payload: {
+  provider_config_id?: string  // omit for create
+  provider_type: string
+  name: string
+  api_key?: string             // required for create; omit to preserve existing key on edit
+  is_enabled: boolean
+  is_default: boolean
+}): Promise<ProviderConfig> {
+  const body: Record<string, unknown> = {
+    provider_type: payload.provider_type,
+    name: payload.name,
+    is_enabled: payload.is_enabled,
+    is_default: payload.is_default,
+  }
+  if (payload.provider_config_id) body.provider_config_id = payload.provider_config_id
+  if (payload.api_key)            body.api_key = payload.api_key
+  return request<ProviderConfig>('/api/v2/providers', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
 export function updateProviderConfig(
   id: string,
   providerType: string,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Cloud, Zap, Plus, Loader2, Star, PowerOff, Power, Trash2, KeyRound } from 'lucide-react'
+import { Cloud, Zap, Plus, Loader2, Star, PowerOff, Power, Trash2, KeyRound, Pencil } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import {
 } from '@/api/provider-configs'
 import { ApiError } from '@/api/client'
 import type { ProviderConfig } from '@/api/provider-configs'
+import ProviderModal from './ProviderModal'
 
 const TYPE_ICON: Record<string, LucideIcon> = {
   realdebrid: Zap,
@@ -25,6 +26,7 @@ function ProviderRow({
   config,
   acting,
   isLastActiveDefault,
+  onEdit,
   onToggleEnabled,
   onSetDefault,
   onDelete,
@@ -32,6 +34,7 @@ function ProviderRow({
   config: ProviderConfig
   acting: boolean
   isLastActiveDefault: boolean
+  onEdit: () => void
   onToggleEnabled: () => void
   onSetDefault: () => void
   onDelete: () => void
@@ -76,6 +79,19 @@ function ProviderRow({
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        {/* Edit */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          disabled={acting}
+          aria-label={`Edit ${config.name}`}
+          title="Edit"
+          onClick={onEdit}
+        >
+          <Pencil size={13} aria-hidden="true" />
+        </Button>
+
         {/* Toggle enable */}
         <Button
           variant="ghost"
@@ -137,6 +153,8 @@ export default function ProviderSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actingIds, setActingIds] = useState<Set<string>>(new Set())
+  const [modalTarget, setModalTarget] = useState<ProviderConfig | null | false>(false)
+  // false = closed, null = create mode, ProviderConfig = edit mode
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -202,7 +220,7 @@ export default function ProviderSettings() {
       title="Providers"
       description="Download provider profiles. One default per user."
       actions={
-        <Button variant="outline" size="sm" disabled>
+        <Button variant="outline" size="sm" onClick={() => setModalTarget(null)}>
           <Plus size={13} aria-hidden="true" /> Add provider
         </Button>
       }
@@ -235,16 +253,22 @@ export default function ProviderSettings() {
               config={config}
               acting={actingIds.has(config.id)}
               isLastActiveDefault={isLastActiveDefault}
+              onEdit={() => setModalTarget(config)}
               onToggleEnabled={() => handleToggleEnabled(config)}
               onSetDefault={() => handleSetDefault(config)}
               onDelete={() => handleDelete(config)}
             />
             )
           })}
-          <p className="text-xs text-muted-foreground">
-            Adding and editing providers (API key) is not yet available in this UI.
-          </p>
         </div>
+      )}
+
+      {modalTarget !== false && (
+        <ProviderModal
+          initial={modalTarget}
+          onClose={() => setModalTarget(false)}
+          onSaved={load}
+        />
       )}
     </SectionCard>
   )
