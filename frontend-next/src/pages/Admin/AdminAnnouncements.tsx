@@ -6,6 +6,8 @@ import { listAnnouncements, deleteAnnouncement } from '@/api/admin-announcements
 import type { RealAnnouncement } from './admin.types'
 import AdminAnnouncementForm from './AdminAnnouncementForm'
 import AdminAnnouncementTracking from './AdminAnnouncementTracking'
+import AnnouncementsUserView from './AnnouncementsUserView'
+import { getMe } from '@/api/me'
 
 type View = 'list' | 'form' | 'tracking'
 
@@ -79,6 +81,7 @@ function AnnRow({
 }
 
 export default function AdminAnnouncements() {
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null)
   const [items, setItems] = useState<RealAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -88,6 +91,12 @@ export default function AdminAnnouncements() {
   const [trackingId, setTrackingId] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    getMe()
+      .then(me => setIsSuperAdmin(me.role === 'super_admin'))
+      .catch(() => setIsSuperAdmin(false))
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -124,6 +133,21 @@ export default function AdminAnnouncements() {
       return idx >= 0 ? prev.map((a) => (a.id === saved.id ? saved : a)) : [saved, ...prev]
     })
     setView('list')
+  }
+
+  // Role not yet resolved — show a brief loading state
+  if (isSuperAdmin === null) {
+    return (
+      <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+        <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+        Loading…
+      </div>
+    )
+  }
+
+  // Non-super_admin: show read-only user view
+  if (!isSuperAdmin) {
+    return <AnnouncementsUserView />
   }
 
   if (view === 'form') {
