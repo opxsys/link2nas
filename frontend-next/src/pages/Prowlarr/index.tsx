@@ -1,13 +1,8 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExternalLink, Settings, Loader2 } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
-import ProwlarrConnectionSettings from './ProwlarrConnectionSettings'
-import ProwlarrQbittorrentGuide from './ProwlarrQbittorrentGuide'
-import ProwlarrRecentSubmissions from './ProwlarrRecentSubmissions'
-import type { TestStatus } from './prowlarr.types'
 
 function NotConfiguredState() {
   return (
@@ -31,12 +26,6 @@ function NotConfiguredState() {
 
 export default function Prowlarr() {
   const { settings, loading } = useIntegrationSettings()
-  const [testStatus, setTestStatus] = useState<TestStatus>('idle')
-
-  function runTest() {
-    setTestStatus('testing')
-    setTimeout(() => setTestStatus('ok'), 1500)
-  }
 
   if (loading) {
     return (
@@ -91,9 +80,6 @@ export default function Prowlarr() {
           </>
         )}
 
-        <ProwlarrConnectionSettings testStatus={testStatus} onTest={runTest} />
-        <ProwlarrQbittorrentGuide />
-        <ProwlarrRecentSubmissions />
       </div>
     </>
   )

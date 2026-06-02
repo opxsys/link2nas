@@ -8,7 +8,7 @@ const STEPS = [
   'Set the Port to 5000 (or your configured port).',
   'Set the URL Base to /api/qbt.',
   'Leave Username blank or set any value — it is not checked.',
-  'Set the Password to a Link2NAS API key with the jobs:write scope.',
+  'Set the Password to a Link2NAS API key with the qbittorrent:write scope.',
   'Set Category to prowlarr.',
   'Click Test — Prowlarr should report success.',
   'Save the download client.',
@@ -34,7 +34,7 @@ export default function ProwlarrQbittorrentGuide() {
         <Info size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
         Link2NAS never stores your Prowlarr credentials.
         Each user can configure their own Prowlarr instance independently.
-        The API key must have the <code className="font-mono">jobs:write</code> scope.
+        The API key must have the <code className="font-mono">qbittorrent:write</code> scope.
       </div>
     </SectionCard>
   )

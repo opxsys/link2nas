@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { updateIntegrationSettings } from '@/api/integration-settings'
 import { useIntegrationSettings, invalidateIntegrationSettings } from '@/lib/useIntegrationSettings'
 import type { ProwlarrOpenMode } from '@/api/integration-settings'
+import ProwlarrQbittorrentGuide from '@/pages/Prowlarr/ProwlarrQbittorrentGuide'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
 const SELECT = 'h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
@@ -126,6 +127,8 @@ export default function ProwlarrSettings() {
           </span>
         )}
       </div>
+
+      <ProwlarrQbittorrentGuide />
     </div>
   )
 }
