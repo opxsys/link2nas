@@ -1,68 +1,125 @@
 import {
   CheckCircle2,
   XCircle,
-  Download,
-  Play,
-  AlertTriangle,
+  Clock,
+  RotateCcw,
   Info,
+  AlertTriangle,
   MailX,
+  Loader2,
 } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
-import type { NotificationEvent, EventType } from './notifications.types'
-import { MOCK_EVENTS } from './notifications.mock'
+import type { NotificationEvent, NotificationConfig, NotificationSeverity } from './notifications.types'
 
-const EVENT_CONFIG: Record<EventType, { icon: React.ReactNode; className: string }> = {
-  job_completed: { icon: <CheckCircle2 size={15} aria-hidden="true" />, className: 'text-green-600 dark:text-green-400' },
-  job_failed:    { icon: <XCircle size={15} aria-hidden="true" />,      className: 'text-red-600 dark:text-red-400' },
-  job_started:   { icon: <Play size={15} aria-hidden="true" />,          className: 'text-blue-600 dark:text-blue-400' },
-  download_ready:{ icon: <Download size={15} aria-hidden="true" />,      className: 'text-emerald-600 dark:text-emerald-400' },
-  provider_failed:{ icon: <AlertTriangle size={15} aria-hidden="true" />,className: 'text-orange-600 dark:text-orange-400' },
-  system_warning:{ icon: <Info size={15} aria-hidden="true" />,          className: 'text-muted-foreground' },
+const SEVERITY_CONFIG: Record<
+  NotificationSeverity,
+  { icon: React.ReactNode; className: string }
+> = {
+  info:     { icon: <Info size={15} aria-hidden="true" />,          className: 'text-muted-foreground' },
+  warning:  { icon: <AlertTriangle size={15} aria-hidden="true" />, className: 'text-orange-600 dark:text-orange-400' },
+  error:    { icon: <XCircle size={15} aria-hidden="true" />,       className: 'text-red-600 dark:text-red-400' },
+  critical: { icon: <AlertTriangle size={15} aria-hidden="true" />, className: 'text-red-700 dark:text-red-300' },
 }
 
-const CHANNEL_LABEL: Record<string, string> = {
-  email: 'Email',
-  gotify: 'Gotify',
-  webhook: 'Webhook',
-  'in-app': 'In-app',
+const STATUS_BADGE: Record<string, React.ReactNode> = {
+  failed: (
+    <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+      <MailX size={10} aria-hidden="true" />
+      Failed
+    </span>
+  ),
+  retrying: (
+    <span className="inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-50 px-1.5 py-0.5 text-xs text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-400">
+      <RotateCcw size={10} aria-hidden="true" />
+      Retrying
+    </span>
+  ),
+  pending: (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+      <Clock size={10} aria-hidden="true" />
+      Pending
+    </span>
+  ),
+  sent: (
+    <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-xs text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+      <CheckCircle2 size={10} aria-hidden="true" />
+      Sent
+    </span>
+  ),
 }
 
-function EventRow({ event }: { event: NotificationEvent }) {
-  const cfg = EVENT_CONFIG[event.eventType]
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  })
+}
+
+function EventRow({
+  event,
+  configs,
+}: {
+  event: NotificationEvent
+  configs: NotificationConfig[]
+}) {
+  const cfg = SEVERITY_CONFIG[event.severity] ?? SEVERITY_CONFIG.info
+  const configName = (() => {
+    const cid = event.triggered_by_config_ids[0]
+    if (!cid) return null
+    return configs.find(c => c.id === cid)?.name ?? null
+  })()
+
   return (
-    <li className={`flex items-start gap-3 py-3 ${!event.read ? 'opacity-100' : 'opacity-70'}`}>
+    <li className="flex items-start gap-3 py-3">
       <span className={`mt-0.5 shrink-0 ${cfg.className}`}>{cfg.icon}</span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="text-sm font-medium text-foreground">{event.title}</span>
-          {!event.read && (
-            <span className="h-1.5 w-1.5 shrink-0 self-center rounded-full bg-primary" aria-label="Unread" />
-          )}
-          <span className="text-xs text-muted-foreground">{event.timestamp}</span>
+          <span className="text-xs text-muted-foreground">{formatDate(event.created_at)}</span>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">{event.detail}</p>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">via {CHANNEL_LABEL[event.channel]}</span>
-          {!event.delivered && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-              <MailX size={10} aria-hidden="true" />
-              Undelivered
-            </span>
+        {event.message && (
+          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{event.message}</p>
+        )}
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {configName && (
+            <span className="text-xs text-muted-foreground">via {configName}</span>
           )}
+          {STATUS_BADGE[event.status]}
         </div>
       </div>
     </li>
   )
 }
 
-export default function NotificationEventsTimeline() {
+interface Props {
+  events: NotificationEvent[]
+  configs: NotificationConfig[]
+  loading: boolean
+  error: string | null
+}
+
+export default function NotificationEventsTimeline({ events, configs, loading, error }: Props) {
   return (
     <SectionCard title="Recent Events" description="Latest notifications sent to you.">
-      <ul className="divide-y divide-border">
-        {MOCK_EVENTS.map((event) => (
-          <EventRow key={event.id} event={event} />
-        ))}
-      </ul>
+      {loading && (
+        <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+          Loading events…
+        </div>
+      )}
+      {!loading && error && (
+        <p className="py-4 text-sm text-destructive">{error}</p>
+      )}
+      {!loading && !error && events.length === 0 && (
+        <p className="py-4 text-sm text-muted-foreground italic">No notification events yet.</p>
+      )}
+      {!loading && !error && events.length > 0 && (
+        <ul className="divide-y divide-border">
+          {events.map((event) => (
+            <EventRow key={event.id} event={event} configs={configs} />
+          ))}
+        </ul>
+      )}
     </SectionCard>
   )
 }

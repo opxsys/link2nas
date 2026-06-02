@@ -2,7 +2,6 @@ import type {
   MockAccount,
   MockProviderProfile,
   MockDestinationProfile,
-  MockNotificationRule,
   MockProwlarrConfig,
 } from './settings.types'
 
@@ -50,12 +49,6 @@ export const MOCK_DESTINATIONS: MockDestinationProfile[] = [
     isActive: false,
     isDefault: false,
   },
-]
-
-export const MOCK_NOTIFICATION_RULES: MockNotificationRule[] = [
-  { id: 'r1', event: 'Job completed', channel: 'Email', enabled: true },
-  { id: 'r2', event: 'Job failed', channel: 'Email', enabled: true },
-  { id: 'r3', event: 'Job cancelled', channel: 'Email', enabled: false },
 ]
 
 export const MOCK_PROWLARR: MockProwlarrConfig = {

@@ -33,13 +33,6 @@ export interface MockDestinationProfile {
   isDefault: boolean
 }
 
-export interface MockNotificationRule {
-  id: string
-  event: string
-  channel: string
-  enabled: boolean
-}
-
 export interface MockProwlarrConfig {
   enabled: boolean
   url: string
