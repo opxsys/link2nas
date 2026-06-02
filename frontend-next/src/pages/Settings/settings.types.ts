@@ -33,15 +33,6 @@ export interface MockDestinationProfile {
   isDefault: boolean
 }
 
-export interface MockApiKey {
-  id: string
-  name: string
-  maskedKey: string
-  scopes: string[]
-  createdAt: string
-  lastUsedAt: string | null
-}
-
 export interface MockNotificationRule {
   id: string
   event: string
