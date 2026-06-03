@@ -69,6 +69,7 @@ export interface RealJob {
   destination_message_params: Record<string, unknown> | null
   destination_progress: number
   destination_path: string | null
+  destination_display_path: string | null
   destination_last_attempt: string | null
   sent_to_destination_at: string | null
 

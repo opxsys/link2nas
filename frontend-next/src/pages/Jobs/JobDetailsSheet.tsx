@@ -322,7 +322,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             )}
 
             <Row label="Message"      value={job.destination_message} />
-            <Row label="Path"         value={job.destination_path} />
+            <Row label="Path"         value={job.destination_display_path ?? job.destination_path} />
             <Row label="Last attempt" value={job.destination_last_attempt ? new Date(job.destination_last_attempt).toLocaleString() : null} />
             <Row label="Sent at"      value={job.sent_to_destination_at ? new Date(job.sent_to_destination_at).toLocaleString() : null} />
           </div>

@@ -4,6 +4,7 @@ from flask import current_app
 
 from backend.routes_v2._context import get_user_context
 from backend.routes_v2.jobs_support.helpers import _parse_json_object, _filename_from_path
+from backend.routes_v2.jobs_support.display_path import local_display_path
 
 
 def _parse_output_links(job) -> list[dict]:
@@ -251,6 +252,17 @@ def serialize_job(job):
         or not job.destination_name
         or job.destination_name in active_real_destination_names
     )
+
+    settings = current_app.config.get("SETTINGS")
+    userdata_dir = str(getattr(settings, "USERDATA_DIR", "") or "") if settings else ""
+    destination_display_path = local_display_path(
+        destination_path=job.destination_path,
+        destination_name=job.destination_name,
+        destination_type=destination_type,
+        user_id=ctx.user_id,
+        userdata_dir=userdata_dir,
+    )
+
     return {
         "id": job.id,
         "source_type": job.source_type,
@@ -308,6 +320,7 @@ def serialize_job(job):
         "destination_last_attempt": job.destination_last_attempt,
         "sent_to_destination_at": job.sent_to_destination_at,
         "destination_path": job.destination_path,
+        "destination_display_path": destination_display_path,
         "destination_progress": int(job.destination_progress or 0),
 
         "active_provider_names": active_provider_names,
