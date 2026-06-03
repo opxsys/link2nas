@@ -332,8 +332,11 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         {tab === 'files' && (
           <JobFilesTable
             files={job.files}
-            isPerFile={job.output_mode === 'per_file'}
-            onUnrestrictFile={(fid) => onAction('unrestrict_file', job.id, { file_id: fid })}
+            onUnrestrictFile={
+              job.output_mode === 'per_file'
+                ? (fid) => onAction('unrestrict_file', job.id, { file_id: fid })
+                : undefined
+            }
           />
         )}
 

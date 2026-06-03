@@ -6,7 +6,6 @@ import type { RealJobFile } from '@/api/jobs'
 
 interface JobFilesTableProps {
   files: RealJobFile[]
-  isPerFile?: boolean
   onUnrestrictFile?: (fileId: string | number) => void
 }
 
@@ -36,7 +35,6 @@ function CopyLinkButton({ url, label }: { url: string; label: string }) {
 
 export default function JobFilesTable({
   files,
-  isPerFile = false,
   onUnrestrictFile,
 }: JobFilesTableProps) {
   if (files.length === 0) {
@@ -66,7 +64,7 @@ export default function JobFilesTable({
           {files.map((file, index) => {
             const name = file.filename || file.path || `file_${index + 1}`
             const link = file.download_url || file.debrid_link
-            const canUnlock = isPerFile && onUnrestrictFile && file.debrid_link
+            const canUnlock = !!onUnrestrictFile && !!file.debrid_link
 
             return (
               <tr key={String(file.id)} className="hover:bg-muted/30">
