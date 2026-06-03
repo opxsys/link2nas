@@ -30,6 +30,7 @@ export function updateMe(payload: {
   email?: string
   preferred_language?: string | null
   receive_application_emails?: boolean
+  ui_theme?: string
 }): Promise<MeProfile> {
   return request<MeProfile>('/api/v2/me', {
     method: 'PATCH',

@@ -1,17 +1,18 @@
-import { Sun, Moon, SunMoon, Eye } from 'lucide-react'
+import { Monitor, Sun, Moon, SunMoon, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { type Theme, THEMES } from '@/lib/themes'
+import { type ThemePreference, THEME_PREFERENCES } from '@/lib/themes'
 import { useTheme } from '@/lib/useTheme'
 
-const THEME_ICONS: Record<Theme, typeof Sun> = {
-  light: Sun,
-  dark: Moon,
+const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
+  auto:           Monitor,
+  light:          Sun,
+  dark:           Moon,
   'high-contrast': SunMoon,
-  colorblind: Eye,
+  colorblind:     Eye,
 }
 
 export default function ThemeSelector() {
-  const [current, handleChange] = useTheme()
+  const { preference, setPreference } = useTheme()
 
   return (
     <div
@@ -19,13 +20,13 @@ export default function ThemeSelector() {
       role="group"
       aria-label="Select theme"
     >
-      {THEMES.map(({ value, label }) => {
+      {THEME_PREFERENCES.map(({ value, label }) => {
         const Icon = THEME_ICONS[value]
-        const active = current === value
+        const active = preference === value
         return (
           <button
             key={value}
-            onClick={() => handleChange(value)}
+            onClick={() => setPreference(value)}
             className={cn(
               'flex h-7 items-center gap-1.5 rounded px-2 text-xs transition-colors',
               active

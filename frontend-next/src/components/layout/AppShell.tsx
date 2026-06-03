@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -6,10 +6,14 @@ import MobileNav from './MobileNav'
 import { getStoredSidebarState, storeSidebarState } from '@/lib/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AnnouncementBadgeProvider } from '@/context/AnnouncementBadgeContext'
+import { reloadThemePreference } from '@/lib/useTheme'
 
 export default function AppShell() {
   const [collapsed, setCollapsed] = useState<boolean>(getStoredSidebarState)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  // Sync theme with backend once on mount; localStorage cache applies first (no flash)
+  useEffect(() => { reloadThemePreference() }, [])
 
   function toggleSidebar() {
     setCollapsed((prev) => {
