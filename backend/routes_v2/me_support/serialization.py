@@ -52,5 +52,5 @@ def serialize_integration_settings(settings):
         "prowlarr_enabled": bool(settings.prowlarr_enabled),
         "prowlarr_url": settings.prowlarr_url or "",
         "prowlarr_open_mode": settings.prowlarr_open_mode or "both",
-        "home_page": settings.home_page or "jobs",
+        "home_page": settings.home_page or "dashboard",
     }

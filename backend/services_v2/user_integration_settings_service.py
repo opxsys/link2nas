@@ -27,7 +27,7 @@ class UserIntegrationSettingsService:
             prowlarr_enabled=False,
             prowlarr_url="",
             prowlarr_open_mode="both",
-            home_page="jobs",
+            home_page="dashboard",
             created_at=timestamp,
             updated_at=timestamp,
         )
@@ -43,7 +43,7 @@ class UserIntegrationSettingsService:
         prowlarr_open_mode = str(
             payload.get("prowlarr_open_mode", current.prowlarr_open_mode or "both") or "both"
         ).strip()
-        home_page = str(payload.get("home_page", current.home_page or "jobs") or "jobs").strip()
+        home_page = str(payload.get("home_page", current.home_page or "dashboard") or "dashboard").strip()
 
         if prowlarr_open_mode not in ALLOWED_PROWLARR_OPEN_MODES:
             raise ValueError("Invalid prowlarr_open_mode")
