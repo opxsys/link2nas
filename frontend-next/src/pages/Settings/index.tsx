@@ -9,7 +9,6 @@ import ApiKeysSettings from './ApiKeysSettings'
 import NotificationSettings from './NotificationSettings'
 import ProwlarrSettings from './ProwlarrSettings'
 import AccessibilitySettings from './AccessibilitySettings'
-import LanguageSettings from './LanguageSettings'
 import UserSpaceSettings from './UserSpaceSettings'
 import { getMe } from '@/api/me'
 
@@ -36,7 +35,6 @@ export default function Settings() {
             <ProwlarrSettings onGoToApiKeys={() => setActiveSection('api-keys')} />
           )}
           {activeSection === 'accessibility' && <AccessibilitySettings />}
-          {activeSection === 'language' && <LanguageSettings />}
           {activeSection === 'space' && canUseSpace && <UserSpaceSettings />}
         </div>
       </div>

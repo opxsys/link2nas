@@ -6,7 +6,6 @@ import {
   Bell,
   Search,
   Eye,
-  Globe,
   HardDrive,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -27,7 +26,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'prowlarr', label: 'Prowlarr', icon: Search },
   { id: 'accessibility', label: 'Accessibility', icon: Eye },
-  { id: 'language', label: 'Language', icon: Globe },
 ]
 
 interface SettingsNavProps {

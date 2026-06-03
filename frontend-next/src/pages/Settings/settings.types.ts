@@ -6,7 +6,6 @@ export type SettingsSection =
   | 'notifications'
   | 'prowlarr'
   | 'accessibility'
-  | 'language'
   | 'space'
 
 export interface MockProwlarrConfig {
