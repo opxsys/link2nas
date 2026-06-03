@@ -111,41 +111,43 @@
   }
 
   /* ─── Colorblind-friendly ─────────────────────────────────────────────── */
-  /* Uses the same light palette. Status indicators rely on shape + icon + text,
-     never on color alone. The class is applied so CSS can opt-in to
-     pattern/shape overrides in future components. */
+  /* Warm cream background + orange/amber primary replaces the blue primary.
+     Orange and blue are distinguishable by all common forms of color blindness.
+     Status badges already use icon + label + color triple-coding, so they remain
+     accessible without further overrides. */
   .colorblind {
-    --background: 210 20% 98%;
+    --background: 45 28% 97%;
     --foreground: 222 47% 11%;
 
-    --card: 0 0% 100%;
+    --card: 45 20% 99%;
     --card-foreground: 222 47% 11%;
 
-    --popover: 0 0% 100%;
+    --popover: 45 20% 99%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 50%;
+    /* Orange/amber primary — avoids red–green confusion, clearly ≠ blue light mode */
+    --primary: 28 90% 46%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
+    --secondary: 45 22% 93%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
+    --muted: 45 22% 93%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 93%;
+    --accent: 45 22% 90%;
     --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 50%;
+    --border: 45 18% 87%;
+    --input: 45 18% 87%;
+    --ring: 28 90% 46%;
 
-    --sidebar: 220 20% 97%;
+    --sidebar: 45 22% 95%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
+    --sidebar-border: 45 18% 87%;
   }
 }
 

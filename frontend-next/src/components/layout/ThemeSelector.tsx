@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Sun, Moon, SunMoon, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { type Theme, THEMES, getStoredTheme, applyTheme } from '@/lib/themes'
+import { type Theme, THEMES } from '@/lib/themes'
+import { useTheme } from '@/lib/useTheme'
 
 const THEME_ICONS: Record<Theme, typeof Sun> = {
   light: Sun,
@@ -11,12 +11,7 @@ const THEME_ICONS: Record<Theme, typeof Sun> = {
 }
 
 export default function ThemeSelector() {
-  const [current, setCurrent] = useState<Theme>(getStoredTheme)
-
-  function handleChange(theme: Theme) {
-    applyTheme(theme)
-    setCurrent(theme)
-  }
+  const [current, handleChange] = useTheme()
 
   return (
     <div
