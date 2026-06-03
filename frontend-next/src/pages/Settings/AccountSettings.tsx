@@ -5,6 +5,7 @@ import { ApiError } from '@/api/client'
 import type { MeProfile } from '@/api/me'
 import AccountProfileCard from './AccountProfileCard'
 import AccountPasswordCard from './AccountPasswordCard'
+import AccountHomePageCard from './AccountHomePageCard'
 
 export default function AccountSettings() {
   const [me, setMe] = useState<MeProfile | null>(null)
@@ -45,6 +46,7 @@ export default function AccountSettings() {
     <div className="flex flex-col gap-6">
       <AccountProfileCard me={me} onUpdate={setMe} />
       <AccountPasswordCard singleUserMode={me.single_user_mode} />
+      <AccountHomePageCard />
     </div>
   )
 }

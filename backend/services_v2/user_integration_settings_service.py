@@ -4,7 +4,7 @@ from backend.models.user_integration_settings import UserIntegrationSettings
 
 
 ALLOWED_PROWLARR_OPEN_MODES = {"iframe", "new_tab", "both"}
-ALLOWED_HOME_PAGES = {"jobs", "control-center", "prowlarr"}
+ALLOWED_HOME_PAGES = {"jobs", "dashboard", "prowlarr"}
 
 
 class UserIntegrationSettingsService:
@@ -52,7 +52,7 @@ class UserIntegrationSettingsService:
             raise ValueError("Invalid home_page")
 
         if home_page == "prowlarr" and (not prowlarr_enabled or not prowlarr_url):
-            home_page = "jobs"
+            home_page = "dashboard"
 
         timestamp = self.now()
 

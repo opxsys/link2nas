@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
 import Dashboard from '@/pages/Dashboard'
 import Jobs from '@/pages/Jobs'
@@ -11,12 +12,31 @@ import Settings from '@/pages/Settings'
 import Admin from '@/pages/Admin'
 import Announcements from '@/pages/Announcements'
 import Maintenance from '@/pages/Maintenance'
+import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
+
+function HomeRedirect() {
+  const { settings, loading } = useIntegrationSettings()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (loading || !settings) return
+    const page = settings.home_page || 'dashboard'
+    if (page === 'jobs') {
+      navigate('/jobs', { replace: true })
+    } else if (page === 'prowlarr' && isProwlarrAvailable(settings)) {
+      navigate('/prowlarr', { replace: true })
+    }
+    // dashboard, control-center (legacy), prowlarr-disabled, or unknown → Dashboard
+  }, [settings, loading, navigate])
+
+  return <Dashboard />
+}
 
 export default function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index element={<Dashboard />} />
+        <Route index element={<HomeRedirect />} />
         <Route path="jobs" element={<Jobs />} />
         <Route path="jobs/new" element={<NewJob />} />
         <Route path="providers" element={<Providers />} />
