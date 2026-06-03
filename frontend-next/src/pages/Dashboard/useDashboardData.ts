@@ -4,6 +4,7 @@ import { listJobs } from '@/api/jobs'
 import { getMaintenanceStatus } from '@/api/admin-maintenance'
 import { listProviderConfigs } from '@/api/provider-configs'
 import { listDestinationConfigs } from '@/api/destination-configs'
+import { ApiError } from '@/api/client'
 import type { ControlCenter } from '@/api/system'
 import type { RealJob } from '@/api/jobs'
 import type { MaintenanceStatus } from '@/pages/Admin/admin.types'
@@ -20,7 +21,17 @@ export interface DashboardState {
   destinations: DestinationConfig[] | null
   loading: boolean
   error: string | null
+  canViewStorage: boolean
   refresh: () => void
+}
+
+async function fetchMaintenance(): Promise<{ data: MaintenanceStatus | null; canView: boolean }> {
+  try {
+    return { data: await getMaintenanceStatus(), canView: true }
+  } catch (err) {
+    const forbidden = err instanceof ApiError && (err.status === 401 || err.status === 403)
+    return { data: null, canView: !forbidden }
+  }
 }
 
 export function useDashboardData(): DashboardState {
@@ -31,6 +42,7 @@ export function useDashboardData(): DashboardState {
   const [destinations, setDestinations] = useState<DestinationConfig[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [canViewStorage, setCanViewStorage] = useState(true)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Lightweight poll: only refresh frequently-changing data
@@ -48,16 +60,17 @@ export function useDashboardData(): DashboardState {
     setLoading(true)
     setError(null)
     try {
-      const [cc, js, maint, provs, dests] = await Promise.all([
+      const [cc, js, maintResult, provs, dests] = await Promise.all([
         getControlCenter(),
         listJobs(),
-        getMaintenanceStatus().catch(() => null),
+        fetchMaintenance(),
         listProviderConfigs().catch(() => null),
         listDestinationConfigs().catch(() => null),
       ])
       setControlCenter(cc)
       setJobs(js)
-      setMaintenance(maint)
+      setMaintenance(maintResult.data)
+      setCanViewStorage(maintResult.canView)
       setProviders(provs)
       setDestinations(dests)
     } catch (err) {
@@ -75,5 +88,5 @@ export function useDashboardData(): DashboardState {
     }
   }, [load, fetchPolled])
 
-  return { controlCenter, jobs, maintenance, providers, destinations, loading, error, refresh: load }
+  return { controlCenter, jobs, maintenance, providers, destinations, loading, error, canViewStorage, refresh: load }
 }

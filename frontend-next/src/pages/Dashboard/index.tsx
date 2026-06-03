@@ -34,6 +34,7 @@ export default function Dashboard() {
           destinations={data.destinations}
           disk={data.maintenance?.disk ?? null}
           loading={data.loading}
+          canViewStorage={data.canViewStorage}
         />
         <DashboardRecentJobs jobs={data.jobs} loading={data.loading} />
       </div>
