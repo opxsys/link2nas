@@ -27,6 +27,5 @@ def local_display_path(
         local_root = Path(userdata_dir).resolve() / str(user_id) / "local"
         relative = Path(destination_path).relative_to(local_root)
         return str(relative)
-    except (ValueError, Exception):
-        pass
-    return destination_path
+    except ValueError:
+        return destination_path
