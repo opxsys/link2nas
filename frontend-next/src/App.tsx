@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
 import Dashboard from '@/pages/Dashboard'
 import Jobs from '@/pages/Jobs'
@@ -14,29 +13,27 @@ import Announcements from '@/pages/Announcements'
 import Maintenance from '@/pages/Maintenance'
 import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
 
+// Resolves the user's home_page preference and immediately redirects.
+// Renders null while settings load so Dashboard never flashes before a redirect.
 function HomeRedirect() {
   const { settings, loading } = useIntegrationSettings()
-  const navigate = useNavigate()
 
-  useEffect(() => {
-    if (loading || !settings) return
-    const page = settings.home_page || 'dashboard'
-    if (page === 'jobs') {
-      navigate('/jobs', { replace: true })
-    } else if (page === 'prowlarr' && isProwlarrAvailable(settings)) {
-      navigate('/prowlarr', { replace: true })
-    }
-    // dashboard, control-center (legacy), prowlarr-disabled, or unknown → Dashboard
-  }, [settings, loading, navigate])
+  if (loading) return null
 
-  return <Dashboard />
+  const page = settings?.home_page || 'dashboard'
+  if (page === 'jobs') return <Navigate to="/jobs" replace />
+  if (page === 'prowlarr' && isProwlarrAvailable(settings)) return <Navigate to="/prowlarr" replace />
+  return <Navigate to="/dashboard" replace />
 }
 
 export default function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
+        {/* Index applies the home_page preference then redirects — never stays here */}
         <Route index element={<HomeRedirect />} />
+        {/* Dashboard has its own stable route — always accessible from the sidebar */}
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="jobs" element={<Jobs />} />
         <Route path="jobs/new" element={<NewJob />} />
         <Route path="providers" element={<Providers />} />
