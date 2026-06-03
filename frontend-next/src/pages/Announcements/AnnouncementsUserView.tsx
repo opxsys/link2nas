@@ -9,6 +9,7 @@ import {
 } from '@/api/announcements'
 import { ApiError } from '@/api/client'
 import type { UserAnnouncement } from '@/api/announcements'
+import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 
 const TYPE_CLASS: Record<string, string> = {
   news:        'border-border bg-muted text-muted-foreground',
@@ -19,6 +20,7 @@ const TYPE_CLASS: Record<string, string> = {
 const BADGE = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize'
 
 export default function AnnouncementsUserView() {
+  const { invalidate } = useAnnouncementBadge()
   const [items, setItems] = useState<UserAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +52,7 @@ export default function AnnouncementsUserView() {
     try {
       await markAnnouncementRead(id)
       setItems(prev => prev.map(a => a.id === id ? { ...a, read_at: new Date().toISOString() } : a))
+      invalidate()
     } finally {
       stopActing(id)
     }
@@ -60,6 +63,7 @@ export default function AnnouncementsUserView() {
     try {
       await acknowledgeAnnouncement(id)
       setItems(prev => prev.map(a => a.id === id ? { ...a, acknowledged_at: new Date().toISOString() } : a))
+      invalidate()
     } finally {
       stopActing(id)
     }

@@ -9,6 +9,7 @@ import Prowlarr from '@/pages/Prowlarr'
 import Notifications from '@/pages/Notifications'
 import Settings from '@/pages/Settings'
 import Admin from '@/pages/Admin'
+import Announcements from '@/pages/Announcements'
 import Maintenance from '@/pages/Maintenance'
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="providers" element={<Providers />} />
         <Route path="destinations" element={<Destinations />} />
         <Route path="prowlarr" element={<Prowlarr />} />
+        <Route path="announcements" element={<Announcements />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
         <Route path="admin" element={<Admin />} />

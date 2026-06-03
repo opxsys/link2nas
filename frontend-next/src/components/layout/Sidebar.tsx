@@ -4,6 +4,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { NAV_ITEMS } from '@/lib/nav'
 import SidebarNavItem from './SidebarNavItem'
 import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
+import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 
 interface SidebarProps {
   collapsed: boolean
@@ -12,6 +13,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { settings: integrationSettings } = useIntegrationSettings()
+  const { count: announcementCount } = useAnnouncementBadge()
   const visibleItems = NAV_ITEMS.filter((item) =>
     item.to === '/prowlarr' ? isProwlarrAvailable(integrationSettings) : true,
   )
@@ -48,7 +50,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <ul className={cn('space-y-0.5', collapsed ? 'px-1.5' : 'px-2')}>
             {visibleItems.map((item) => (
               <li key={item.to}>
-                <SidebarNavItem item={item} collapsed={collapsed} />
+                <SidebarNavItem
+                  item={item}
+                  collapsed={collapsed}
+                  badge={item.to === '/announcements' ? announcementCount : undefined}
+                />
               </li>
             ))}
           </ul>

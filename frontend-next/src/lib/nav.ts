@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard,
   List,
+  Megaphone,
   Search,
   Bell,
   Settings,
@@ -20,6 +21,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/jobs', label: 'Jobs', icon: List, end: false },
+  { to: '/announcements', label: 'Announcements', icon: Megaphone, end: false },
   { to: '/prowlarr', label: 'Prowlarr', icon: Search, end: false },
   { to: '/notifications', label: 'My Notifications', icon: Bell, end: false },
   { to: '/settings', label: 'Settings', icon: Settings, end: false },

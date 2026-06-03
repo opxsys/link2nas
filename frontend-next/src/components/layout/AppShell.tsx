@@ -4,6 +4,7 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import { getStoredSidebarState, storeSidebarState } from '@/lib/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AnnouncementBadgeProvider } from '@/context/AnnouncementBadgeContext'
 
 export default function AppShell() {
   const [collapsed, setCollapsed] = useState<boolean>(getStoredSidebarState)
@@ -17,16 +18,18 @@ export default function AppShell() {
   }
 
   return (
-    <TooltipProvider delayDuration={400}>
-      <div className="flex h-screen overflow-hidden bg-background">
-        <Sidebar collapsed={collapsed} onToggle={toggleSidebar} />
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto p-6">
-            <Outlet />
-          </main>
+    <AnnouncementBadgeProvider>
+      <TooltipProvider delayDuration={400}>
+        <div className="flex h-screen overflow-hidden bg-background">
+          <Sidebar collapsed={collapsed} onToggle={toggleSidebar} />
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto p-6">
+              <Outlet />
+            </main>
+          </div>
         </div>
-      </div>
-    </TooltipProvider>
+      </TooltipProvider>
+    </AnnouncementBadgeProvider>
   )
 }
