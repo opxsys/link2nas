@@ -8,7 +8,7 @@ import AdminNav from './AdminNav'
 import AdminOverview from './AdminOverview'
 import AdminUsers from './AdminUsers'
 import AdminAnnouncements from './AdminAnnouncements'
-import AdminSmtp from './AdminSmtp'
+import AdminEmails from './AdminEmails'
 import AdminSecurity from './AdminSecurity'
 import AdminRuntime from './AdminRuntime'
 import AdminCleanup from './AdminCleanup'
@@ -19,7 +19,7 @@ import AdminTimeouts from './AdminTimeouts'
 import type { AdminSection } from './admin.types'
 
 const VALID_SECTIONS: AdminSection[] = [
-  'overview', 'general', 'users', 'announcements', 'smtp',
+  'overview', 'general', 'users', 'announcements', 'emails',
   'security', 'timeouts', 'runtime', 'cleanup', 'system-events', 'maintenance',
 ]
 
@@ -84,7 +84,7 @@ export default function Admin() {
               openCreate={initialSection === 'announcements' && initialAction === 'create'}
             />
           )}
-          {activeSection === 'smtp'          && <AdminSmtp />}
+          {activeSection === 'emails'        && <AdminEmails />}
           {activeSection === 'security'      && <AdminSecurity />}
           {activeSection === 'runtime'       && <AdminRuntime />}
           {activeSection === 'cleanup'       && <AdminCleanup />}

@@ -2,7 +2,7 @@ export type AdminSection =
   | 'overview'
   | 'users'
   | 'announcements'
-  | 'smtp'
+  | 'emails'
   | 'security'
   | 'runtime'
   | 'cleanup'

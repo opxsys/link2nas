@@ -26,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'general',       label: 'General',        icon: Settings2 },
   { id: 'users',         label: 'Users',          icon: Users },
   { id: 'announcements', label: 'Announcements',  icon: Megaphone },
-  { id: 'smtp',          label: 'SMTP',           icon: Mail },
+  { id: 'emails',        label: 'Emails',         icon: Mail },
   { id: 'security',      label: 'Security',       icon: ShieldCheck },
   { id: 'timeouts',      label: 'Timeouts',       icon: Timer },
   { id: 'runtime',       label: 'Runtime',        icon: Cpu },
