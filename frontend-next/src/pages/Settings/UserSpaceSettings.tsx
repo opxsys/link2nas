@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Copy, Check, Trash2, Loader2, AlertCircle, File } from 'lucide-react'
+import { Copy, Check, Trash2, Loader2, AlertCircle, File, ExternalLink } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getPublicSpace } from '@/api/user-space'
@@ -89,6 +89,12 @@ export default function UserSpaceSettings() {
                 {copied
                   ? <Check size={13} className="text-green-600 dark:text-green-400" aria-hidden="true" />
                   : <Copy size={13} aria-hidden="true" />}
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 shrink-0"
+                disabled={!space.url}
+                onClick={() => window.open(space.url, '_blank', 'noopener,noreferrer')}
+                aria-label="Open public URL in new tab">
+                <ExternalLink size={13} aria-hidden="true" />
               </Button>
             </div>
           </div>
