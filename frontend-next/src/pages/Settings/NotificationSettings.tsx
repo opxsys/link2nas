@@ -53,11 +53,9 @@ export default function NotificationSettings() {
 
   useEffect(() => { load() }, [load])
 
-  function handleConfigSaved(cfg: NotificationConfig) {
-    setConfigs(prev => {
-      const idx = prev.findIndex(c => c.id === cfg.id)
-      return idx >= 0 ? prev.map(c => c.id === cfg.id ? cfg : c) : [...prev, cfg]
-    })
+  function handleConfigSaved(_cfg: NotificationConfig) {
+    // Always reload: backend may have cleared is_default on other configs of the same channel type
+    load()
   }
 
   function handleRuleSaved(rule: NotificationRule) {
@@ -70,14 +68,31 @@ export default function NotificationSettings() {
   async function handleDeleteConfirm() {
     if (!deleteTarget.open) return
     if (deleteTarget.kind === 'config') {
+      // Delete linked rules first — backend does not cascade, leaving orphans otherwise
+      const linked = rules.filter(r => r.config_id === deleteTarget.item.id)
+      for (const rule of linked) {
+        await deleteNotificationRule(rule.id)
+      }
       await deleteNotificationConfig(deleteTarget.item.id)
-      // Remove config and any rules referencing it
-      setConfigs(prev => prev.filter(c => c.id !== deleteTarget.item.id))
-      setRules(prev => prev.filter(r => r.config_id !== deleteTarget.item.id))
+      // Reload to get authoritative state (also fixes default display)
+      await load()
     } else {
       await deleteNotificationRule(deleteTarget.item.id)
       setRules(prev => prev.filter(r => r.id !== deleteTarget.item.id))
     }
+  }
+
+  function deleteDescription(): string {
+    if (!deleteTarget.open) return ''
+    if (deleteTarget.kind === 'rule') {
+      return `Delete rule "${deleteTarget.item.name}"? This cannot be undone.`
+    }
+    const linked = rules.filter(r => r.config_id === deleteTarget.item.id)
+    if (linked.length === 0) {
+      return `Delete channel "${deleteTarget.item.name}"? This cannot be undone.`
+    }
+    const names = linked.map(r => r.name).join(', ')
+    return `Delete channel "${deleteTarget.item.name}"? ${linked.length} linked rule${linked.length > 1 ? 's' : ''} will also be deleted: ${names}.`
   }
 
   const smtpDisabled = smtpEnabled === false
@@ -173,11 +188,7 @@ export default function NotificationSettings() {
       {deleteTarget.open && (
         <NotifDeleteModal
           title={deleteTarget.kind === 'config' ? 'Delete channel' : 'Delete rule'}
-          description={
-            deleteTarget.kind === 'config'
-              ? `Delete channel "${deleteTarget.item.name}"? Associated rules will also be removed.`
-              : `Delete rule "${deleteTarget.item.name}"? This cannot be undone.`
-          }
+          description={deleteDescription()}
           onClose={() => setDeleteTarget({ open: false })}
           onConfirm={handleDeleteConfirm}
         />

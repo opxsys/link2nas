@@ -10,7 +10,6 @@ import {
   listNotificationRules,
   listUserNotificationEvents,
   updateNotificationRule,
-  deleteNotificationRule,
   testNotificationConfig,
 } from '@/api/notifications'
 import { getSmtpSettings } from '@/api/admin-smtp'
@@ -28,7 +27,6 @@ export interface NotificationsState {
   testConfigId: string
   setTestConfigId: (id: string) => void
   toggleRule: (id: string, enabled: boolean) => Promise<void>
-  deleteRule: (id: string) => Promise<void>
   runTest: () => Promise<void>
 }
 
@@ -93,15 +91,6 @@ export function useNotificationsState(): NotificationsState {
     }
   }, [])
 
-  const deleteRule = useCallback(async (id: string) => {
-    try {
-      await deleteNotificationRule(id)
-      setRules(prev => prev.filter(r => r.id !== id))
-    } catch {
-      // silently ignore; user can retry
-    }
-  }, [])
-
   const runTest = useCallback(async () => {
     if (!testConfigId) return
     setTestStatus('sending')
@@ -124,7 +113,6 @@ export function useNotificationsState(): NotificationsState {
     testConfigId,
     setTestConfigId,
     toggleRule,
-    deleteRule,
     runTest,
   }
 }

@@ -44,7 +44,6 @@ export default function Notifications() {
           loading={state.loading}
           error={state.error}
           onToggle={state.toggleRule}
-          onDelete={state.deleteRule}
         />
         <div className="grid gap-6 lg:grid-cols-2">
           <NotificationEventsTimeline
