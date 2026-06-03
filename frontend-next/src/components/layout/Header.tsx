@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom'
-import { User, Menu } from 'lucide-react'
-import ThemeSelector from './ThemeSelector'
+import { Menu } from 'lucide-react'
+import AccountMenu from './AccountMenu'
 import { getPageTitle } from '@/lib/nav'
 
 interface HeaderProps {
@@ -23,13 +23,7 @@ export default function Header({ onOpenMobileNav }: HeaderProps) {
 
       <h1 className="flex-1 text-sm font-medium text-foreground">{getPageTitle(pathname)}</h1>
 
-      <ThemeSelector />
-
-      {/* User placeholder — auth not wired in first step */}
-      <div className="flex select-none items-center gap-2 text-sm text-muted-foreground">
-        <User size={16} aria-hidden="true" />
-        <span className="hidden sm:inline">Account</span>
-      </div>
+      <AccountMenu />
     </header>
   )
 }

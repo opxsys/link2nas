@@ -66,7 +66,7 @@ export default function AccessibilitySettings() {
           })}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          The quick-access picker in the header reflects the same setting.
+          The Account menu in the top-right header provides quick access to the same setting.
         </p>
       </SectionCard>
 

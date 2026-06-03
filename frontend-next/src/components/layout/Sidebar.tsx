@@ -1,10 +1,12 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { NAV_ITEMS } from '@/lib/nav'
 import SidebarNavItem from './SidebarNavItem'
 import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
+import { useMe } from '@/lib/useMe'
 
 interface SidebarProps {
   collapsed: boolean
@@ -14,9 +16,18 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { settings: integrationSettings } = useIntegrationSettings()
   const { count: announcementCount } = useAnnouncementBadge()
+  const navigate = useNavigate()
+  const { me } = useMe()
+
   const visibleItems = NAV_ITEMS.filter((item) =>
     item.to === '/prowlarr' ? isProwlarrAvailable(integrationSettings) : true,
   )
+
+  const displayName = me?.display_name || me?.email || 'admin'
+  const roleLabel   = me?.role === 'super_admin' ? 'Super Admin'
+                    : me?.role === 'user'         ? 'User'
+                    : me?.role                   ?? 'Administrator'
+  const initials    = displayName.charAt(0).toUpperCase()
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -60,29 +71,37 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </ul>
         </nav>
 
-        {/* User block */}
+        {/* User block — informational, click goes to Account settings */}
         <div className="shrink-0 border-t border-sidebar-border">
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex cursor-default items-center justify-center p-3">
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="flex w-full items-center justify-center p-3 transition-colors hover:bg-accent/50"
+                  aria-label="Go to account settings"
+                >
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary select-none">
-                    A
+                    {initials}
                   </div>
-                </div>
+                </button>
               </TooltipTrigger>
-              <TooltipContent side="right">admin</TooltipContent>
+              <TooltipContent side="right">{displayName}</TooltipContent>
             </Tooltip>
           ) : (
-            <div className="flex items-center gap-3 px-4 py-3">
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/50"
+              aria-label="Go to account settings"
+            >
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary select-none">
-                A
+                {initials}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-sidebar-foreground">admin</p>
-                <p className="truncate text-xs text-muted-foreground">Administrator</p>
+                <p className="truncate text-xs font-medium text-sidebar-foreground">{displayName}</p>
+                <p className="truncate text-xs text-muted-foreground">{roleLabel}</p>
               </div>
-            </div>
+            </button>
           )}
         </div>
       </aside>
