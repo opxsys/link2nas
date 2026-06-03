@@ -4,7 +4,9 @@ import type { UserAnnouncement } from '@/api/announcements'
 
 function computeCount(items: UserAnnouncement[]): number {
   return items.filter(
-    (a) => a.read_at === null || (a.require_acknowledgement && a.acknowledged_at === null),
+    (a) =>
+      a.user_status.read_at === null ||
+      (a.require_acknowledgement && a.user_status.acknowledged_at === null),
   ).length
 }
 

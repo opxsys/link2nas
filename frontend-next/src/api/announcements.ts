@@ -1,5 +1,11 @@
 import { request } from './client'
 
+export interface UserAnnouncementStatus {
+  opened_at: string | null
+  read_at: string | null
+  acknowledged_at: string | null
+}
+
 export interface UserAnnouncement {
   id: string
   title: string
@@ -13,10 +19,7 @@ export interface UserAnnouncement {
   ends_at: string | null
   created_at: string
   updated_at: string
-  // user read status — null means not yet read/opened/acknowledged
-  opened_at: string | null
-  read_at: string | null
-  acknowledged_at: string | null
+  user_status: UserAnnouncementStatus
 }
 
 export function listUserAnnouncements(): Promise<UserAnnouncement[]> {

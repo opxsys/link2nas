@@ -51,7 +51,9 @@ export default function AnnouncementsUserView() {
     startActing(id)
     try {
       await markAnnouncementRead(id)
-      setItems(prev => prev.map(a => a.id === id ? { ...a, read_at: new Date().toISOString() } : a))
+      setItems(prev => prev.map(a =>
+        a.id === id ? { ...a, user_status: { ...a.user_status, read_at: new Date().toISOString() } } : a,
+      ))
       invalidate()
     } finally {
       stopActing(id)
@@ -62,7 +64,9 @@ export default function AnnouncementsUserView() {
     startActing(id)
     try {
       await acknowledgeAnnouncement(id)
-      setItems(prev => prev.map(a => a.id === id ? { ...a, acknowledged_at: new Date().toISOString() } : a))
+      setItems(prev => prev.map(a =>
+        a.id === id ? { ...a, user_status: { ...a.user_status, acknowledged_at: new Date().toISOString() } } : a,
+      ))
       invalidate()
     } finally {
       stopActing(id)
@@ -91,27 +95,27 @@ export default function AnnouncementsUserView() {
           {items.map((ann) => {
             const busy = acting.has(ann.id)
             return (
-              <li key={ann.id} className={`py-3 ${ann.read_at ? 'opacity-70' : ''}`}>
+              <li key={ann.id} className={`py-3 ${ann.user_status.read_at ? 'opacity-70' : ''}`}>
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium text-foreground">{ann.title}</span>
                   <span className={`${BADGE} ${TYPE_CLASS[ann.type] ?? TYPE_CLASS.news}`}>{ann.type}</span>
-                  {ann.read_at && (
+                  {ann.user_status.read_at && (
                     <span className="text-xs text-muted-foreground">Read</span>
                   )}
-                  {ann.acknowledged_at && (
+                  {ann.user_status.acknowledged_at && (
                     <span className="text-xs text-muted-foreground">Acknowledged</span>
                   )}
                 </div>
                 <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{ann.body}</p>
                 <div className="flex flex-wrap gap-2">
-                  {!ann.read_at && (
+                  {!ann.user_status.read_at && (
                     <Button variant="outline" size="sm" className="h-7 text-xs" disabled={busy}
                       onClick={() => handleRead(ann.id)}>
                       {busy ? <Loader2 size={11} className="animate-spin" aria-hidden="true" /> : <BookOpen size={11} aria-hidden="true" />}
                       Mark as read
                     </Button>
                   )}
-                  {ann.require_acknowledgement && !ann.acknowledged_at && (
+                  {ann.require_acknowledgement && !ann.user_status.acknowledged_at && (
                     <Button variant="outline" size="sm" className="h-7 text-xs" disabled={busy}
                       onClick={() => handleAcknowledge(ann.id)}>
                       {busy ? <Loader2 size={11} className="animate-spin" aria-hidden="true" /> : <CheckSquare size={11} aria-hidden="true" />}
