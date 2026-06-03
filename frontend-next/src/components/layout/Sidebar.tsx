@@ -22,7 +22,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <TooltipProvider delayDuration={150}>
       <aside
         style={{ width: collapsed ? 56 : 240 }}
-        className="flex flex-shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-in-out overflow-hidden"
+        className="hidden md:flex flex-shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-in-out overflow-hidden"
       >
         {/* Brand */}
         <div
