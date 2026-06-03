@@ -30,7 +30,7 @@ export default function NewJob() {
             )}
             {state.activeTab === 'torrent' && (
               <TorrentUploadPanel
-                fileName={state.torrentFileName}
+                fileName={state.torrentFile?.name ?? null}
                 onFile={state.handleTorrentFile}
               />
             )}

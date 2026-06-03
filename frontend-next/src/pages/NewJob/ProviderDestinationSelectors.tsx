@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils'
-import type { MockProvider, MockDestination } from './newJob.types'
+import type { ProviderConfig } from '@/api/provider-configs'
+import type { DestinationConfig } from '@/api/destination-configs'
 
 interface ProviderDestinationSelectorsProps {
-  providers: MockProvider[]
-  destinations: MockDestination[]
+  providers: ProviderConfig[]
+  destinations: DestinationConfig[]
   providerId: string
   destinationId: string
   linksOnly: boolean
@@ -15,6 +16,14 @@ interface ProviderDestinationSelectorsProps {
 const SELECT_CLASS =
   'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
 
+function providerLabel(provider: ProviderConfig): string {
+  return provider.name || provider.provider_type || provider.id
+}
+
+function destinationLabel(destination: DestinationConfig): string {
+  return destination.name || destination.destination_type || destination.id
+}
+
 export default function ProviderDestinationSelectors({
   providers,
   destinations,
@@ -25,6 +34,8 @@ export default function ProviderDestinationSelectors({
   onDestinationChange,
   onLinksOnlyChange,
 }: ProviderDestinationSelectorsProps) {
+  const noDestination = destinations.length === 0
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -37,10 +48,15 @@ export default function ProviderDestinationSelectors({
             value={providerId}
             onChange={(e) => onProviderChange(e.target.value)}
             className={SELECT_CLASS}
+            disabled={providers.length === 0}
           >
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
+            {providers.length === 0 ? (
+              <option value="">No active provider</option>
+            ) : (
+              providers.map((p) => (
+                <option key={p.id} value={p.id}>{providerLabel(p)}</option>
+              ))
+            )}
           </select>
         </div>
 
@@ -56,11 +72,15 @@ export default function ProviderDestinationSelectors({
             value={destinationId}
             onChange={(e) => onDestinationChange(e.target.value)}
             className={SELECT_CLASS}
-            disabled={linksOnly}
+            disabled={linksOnly || noDestination}
           >
-            {destinations.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
+            {noDestination ? (
+              <option value="">No active destination</option>
+            ) : (
+              destinations.map((d) => (
+                <option key={d.id} value={d.id}>{destinationLabel(d)}</option>
+              ))
+            )}
           </select>
         </div>
       </div>
@@ -75,7 +95,7 @@ export default function ProviderDestinationSelectors({
         <span className="text-foreground">Links only — do not transfer to a destination</span>
       </label>
 
-      {linksOnly && (
+      {(linksOnly || noDestination) && (
         <p className="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-700 dark:bg-sky-900/20 dark:text-sky-400">
           Job will complete with download links available only. No file transfer will occur.
         </p>
