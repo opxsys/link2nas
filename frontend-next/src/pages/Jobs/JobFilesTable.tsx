@@ -6,7 +6,8 @@ import type { RealJobFile } from '@/api/jobs'
 
 interface JobFilesTableProps {
   files: RealJobFile[]
-  onUnrestrict?: (fileId: string | number) => void
+  isPerFile?: boolean
+  onUnrestrictFile?: (fileId: string | number) => void
 }
 
 const TH = 'px-4 py-2 text-left text-xs font-medium text-muted-foreground'
@@ -14,18 +15,40 @@ const TD = 'px-4 py-2.5'
 
 function CopyLinkButton({ url, label }: { url: string; label: string }) {
   const [copied, setCopied] = useState(false)
-  function handleCopy() { navigator.clipboard.writeText(url).catch(() => undefined); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(url).catch(() => undefined)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
-    <button onClick={handleCopy} className="rounded text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Copy link for ${label}`} title="Copy download link">
+    <button
+      onClick={handleCopy}
+      className="rounded text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={`Copy link for ${label}`}
+      title="Copy download link"
+    >
       {copied ? <CheckCircle2 size={13} className="text-green-600" /> : <Copy size={13} />}
     </button>
   )
 }
 
-export default function JobFilesTable({ files, onUnrestrict }: JobFilesTableProps) {
+export default function JobFilesTable({
+  files,
+  isPerFile = false,
+  onUnrestrictFile,
+}: JobFilesTableProps) {
   if (files.length === 0) {
-    return <UnavailableState message="No files available" note="File list appears once the job starts processing." className="py-6" />
+    return (
+      <UnavailableState
+        message="No files available"
+        note="File list appears once the job starts processing."
+        className="py-6"
+      />
+    )
   }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -33,24 +56,45 @@ export default function JobFilesTable({ files, onUnrestrict }: JobFilesTableProp
           <tr className="border-b border-border bg-muted/20">
             <th className={TH}>File</th>
             <th className={TH}>Size</th>
-            <th className={TH}><span className="sr-only">Actions</span></th>
+            <th className={`${TH} text-right`}>
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
+
         <tbody className="divide-y divide-border">
-          {files.map((file, i) => {
-            const name = file.filename || file.path || `file_${i + 1}`
+          {files.map((file, index) => {
+            const name = file.filename || file.path || `file_${index + 1}`
             const link = file.download_url || file.debrid_link
+            const canUnlock = isPerFile && onUnrestrictFile && file.debrid_link
+
             return (
               <tr key={String(file.id)} className="hover:bg-muted/30">
                 <td className={TD}>
-                  <span className="block max-w-[220px] truncate text-xs font-medium text-foreground" title={name}>{name}</span>
+                  <span
+                    className="block max-w-[220px] truncate text-xs font-medium text-foreground"
+                    title={name}
+                  >
+                    {name}
+                  </span>
                 </td>
-                <td className={`${TD} text-xs text-muted-foreground`}>{formatBytes(file.filesize ?? file.bytes)}</td>
+
+                <td className={`${TD} text-xs text-muted-foreground`}>
+                  {formatBytes(file.filesize ?? file.bytes)}
+                </td>
+
                 <td className={`${TD} text-right`}>
                   <div className="flex items-center justify-end gap-2">
-                    {onUnrestrict && file.debrid_link && !file.download_url && (
-                      <button onClick={() => onUnrestrict(file.id)} className="text-xs text-muted-foreground hover:text-primary" title="Unrestrict file">Unlock</button>
+                    {canUnlock && (
+                      <button
+                        onClick={() => onUnrestrictFile(file.id)}
+                        className="text-xs text-muted-foreground hover:text-primary"
+                        title={file.download_url ? 'Regenerate link' : 'Unlock file'}
+                      >
+                        {file.download_url ? 'Unlock again' : 'Unlock'}
+                      </button>
                     )}
+
                     {link && <CopyLinkButton url={link} label={name} />}
                   </div>
                 </td>

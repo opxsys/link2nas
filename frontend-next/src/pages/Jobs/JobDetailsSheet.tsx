@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   X, Copy, CheckCircle2, Send, Trash2, Play, RefreshCcw, CircleX,
-  Loader2, AlertCircle, ChevronDown, ChevronUp, Link as LinkIcon,
+  Loader2, AlertCircle, Link as LinkIcon, Unlock, RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -50,7 +50,16 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-// ── Select modals (inline selection pattern) ─────────────────────────────
+function ProgressBar({ percent, colorClass }: { percent: number; colorClass?: string }) {
+  const pct = Math.max(0, Math.min(100, percent))
+  const cls = colorClass ?? (pct >= 100 ? 'bg-emerald-500' : pct === 0 ? 'bg-muted-foreground/30' : 'bg-primary')
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div className={cn('h-full rounded-full transition-all', cls)} style={{ width: `${pct}%` }}
+        role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} />
+    </div>
+  )
+}
 
 interface SelectItemProps<T> { items: T[]; onSelect: (item: T) => void; onCancel: () => void; title: string; labelFn: (item: T) => string }
 function InlineSelector<T extends { id: string }>({ items, onSelect, onCancel, title, labelFn }: SelectItemProps<T>) {
@@ -73,31 +82,33 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
   const [tab, setTab] = useState<Tab>('summary')
   const [showDestSelector, setShowDestSelector] = useState<'send' | 'other' | null>(null)
   const [showProvSelector, setShowProvSelector] = useState(false)
-  const [techOpen, setTechOpen] = useState(false)
 
   const cap = getJobCapabilities(job)
   const busy = actionPending === job.id
 
-  // Build link list
+  // Close all selectors when the selected job changes
+  useEffect(() => {
+    setShowDestSelector(null)
+    setShowProvSelector(false)
+  }, [job.id])
+
   const allLinks: string[] = []
   if (job.download_url) allLinks.push(job.download_url)
   else job.output_links.forEach(l => { if (l.url) allLinks.push(l.url) })
 
-  const progress = job.progress > 0 && job.progress < 100
-    ? { percent: job.progress, downloadedSize: null, speed: null, eta: null, connections: null, provider: job.provider_name }
+  // Sticky progress card: show for actively downloading jobs
+  const activeStatuses = ['started', 'downloading', 'waiting_files_selection', 'downloaded']
+  const stickyProgress = activeStatuses.includes(job.status)
+    ? { percent: job.progress ?? 0, downloadedSize: null, speed: null, eta: null, connections: null, provider: job.provider_name }
     : null
 
-  function destLabel(d: RealJobDestinationConfig) {
-    return d.name || d.destination_type || d.id
-  }
-  function provLabel(p: RealJobProviderConfig) {
-    return p.name || p.provider_type || p.id
-  }
+  function destLabel(d: RealJobDestinationConfig) { return d.name || d.destination_type || d.id }
+  function provLabel(p: RealJobProviderConfig) { return p.name || p.provider_type || p.id }
 
   async function handleSendDirect() {
+    setShowProvSelector(false)
     if (cap.activeDestinations.length > 1) { setShowDestSelector('send'); return }
-    const destId = cap.activeDestinations[0]?.id
-    await onAction('send_to_destination', job.id, { destination_config_id: destId })
+    await onAction('send_to_destination', job.id, { destination_config_id: cap.activeDestinations[0]?.id })
   }
 
   async function handleResend() {
@@ -105,12 +116,14 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
   }
 
   async function handleSendOther() {
+    setShowProvSelector(false)
     const alts = cap.activeDestinations.filter(d => d.id !== job.destination_config_id)
     if (alts.length === 1) { await onAction('send_to_destination', job.id, { destination_config_id: alts[0].id }); return }
     setShowDestSelector('other')
   }
 
   async function handleClone() {
+    setShowDestSelector(null)
     if (cap.otherProviders.length === 1) { await onAction('clone_with_provider', job.id, { provider_config_id: cap.otherProviders[0].id }); return }
     setShowProvSelector(true)
   }
@@ -135,7 +148,21 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             <Copy size={13} />{allLinks.length > 1 ? 'Copy all' : 'Copy link'}
           </Button>
         )}
-        {cap.canSendDirect && !cap.canSendDirect ? null : null /* handled below */}
+        {cap.canUnrestrict && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('unrestrict', job.id)}>
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Unlock size={13} />} Unlock
+          </Button>
+        )}
+        {cap.canRefresh && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('refresh', job.id)}>
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} Refresh
+          </Button>
+        )}
+        {cap.canSelectFiles && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('select_files', job.id)}>
+            Select all files
+          </Button>
+        )}
         {(cap.canSendDirect || cap.canChooseSendDest) && (
           <Button variant="outline" size="sm" disabled={busy} onClick={handleSendDirect}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send
@@ -196,12 +223,14 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         </div>
       )}
 
-      {/* Inline selectors */}
+      {/* Inline selectors — mutually exclusive */}
       {showDestSelector && (
         <div className="border-b border-border p-3">
           <InlineSelector<RealJobDestinationConfig>
             title={showDestSelector === 'other' ? 'Select another destination' : 'Select destination'}
-            items={showDestSelector === 'other' ? cap.activeDestinations.filter(d => d.id !== job.destination_config_id) : cap.activeDestinations}
+            items={showDestSelector === 'other'
+              ? cap.activeDestinations.filter(d => d.id !== job.destination_config_id)
+              : cap.activeDestinations}
             labelFn={destLabel}
             onSelect={async (d) => { setShowDestSelector(null); await onAction('send_to_destination', job.id, { destination_config_id: d.id }) }}
             onCancel={() => setShowDestSelector(null)}
@@ -221,7 +250,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       )}
 
       {/* Tabs */}
-      <nav className="flex shrink-0 border-b border-border overflow-x-auto">
+      <nav className="flex shrink-0 overflow-x-auto border-b border-border">
         {TABS.map(({ id, label }) => (
           <button key={id} onClick={() => setTab(id)}
             className={cn('shrink-0 px-3.5 py-2.5 text-xs transition-colors', tab === id ? 'border-b-2 border-primary font-medium text-primary' : 'text-muted-foreground hover:text-foreground')}
@@ -232,19 +261,32 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       {/* Tab content */}
       <div className="min-h-0 flex-1 overflow-y-auto">
 
-        {/* Summary */}
+        {/* ── Summary ────────────────────────────────────────────── */}
         {tab === 'summary' && (
-          <div className="space-y-2.5 p-4 text-xs">
+          <div className="space-y-3 p-4 text-xs">
             <Row label="Source type" value={job.source_type} />
             <Row label="Provider"    value={jobProvider(job)} />
             <Row label="Destination" value={jobDestination(job) ?? 'Links only'} />
             <Row label="Files"       value={job.files.length || null} />
             <Row label="Size"        value={formatBytes(job.filesize)} />
-            <Row label="Progress"    value={`${job.progress ?? 0}%`} />
-            <Row label="Created"     value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
-            <Row label="Updated"     value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
+
+            {/* Provider download progress — always show */}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-muted-foreground">Download progress</span>
+                <span className="font-medium text-foreground">{job.progress ?? 0}%</span>
+              </div>
+              <ProgressBar percent={job.progress ?? 0} />
+              {job.provider_status && (
+                <p className="mt-1 text-[11px] text-muted-foreground">Provider: {job.provider_status}</p>
+              )}
+            </div>
+
+            <Row label="Created" value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
+            <Row label="Updated" value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
+
             {job.error_message && (
-              <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
                 <p className="mb-1 font-medium">Error</p>
                 <p className="font-mono text-[11px]">{job.error_message}</p>
               </div>
@@ -252,77 +294,102 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
           </div>
         )}
 
-        {/* Destination */}
+        {/* ── Destination ────────────────────────────────────────── */}
         {tab === 'destination' && (
-          <div className="space-y-2.5 p-4 text-xs">
+          <div className="space-y-3 p-4 text-xs">
+            {!cap.hasAnyDestination && !job.send_to_destination && (
+              <p className="italic text-muted-foreground">No destination configured for this job.</p>
+            )}
             <Row label="Send configured" value={job.send_to_destination ? 'Yes' : 'No'} />
             <Row label="Sent"            value={job.sent_to_destination ? 'Yes' : 'No'} />
             <Row label="Status"          value={job.destination_status} />
-            {job.destination_progress > 0 && job.destination_status !== 'sent' && (
-              <Row label="Progress" value={`${job.destination_progress}%`} />
+
+            {/* Destination download progress bar */}
+            {job.destination_progress > 0 && (
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-muted-foreground">Destination progress</span>
+                  <span className="font-medium text-foreground">{job.destination_progress}%</span>
+                </div>
+                <ProgressBar
+                  percent={job.destination_progress}
+                  colorClass={job.destination_status === 'sent' ? 'bg-emerald-500' : job.destination_status === 'failed' ? 'bg-red-500' : 'bg-primary'}
+                />
+              </div>
             )}
+
             <Row label="Message"      value={job.destination_message} />
             <Row label="Path"         value={job.destination_path} />
             <Row label="Last attempt" value={job.destination_last_attempt ? new Date(job.destination_last_attempt).toLocaleString() : null} />
             <Row label="Sent at"      value={job.sent_to_destination_at ? new Date(job.sent_to_destination_at).toLocaleString() : null} />
-            {!cap.hasAnyDestination && (
-              <p className="mt-2 text-muted-foreground italic">No active destination configured.</p>
-            )}
           </div>
         )}
 
-        {/* Files */}
+        {/* ── Files ─────────────────────────────────────────────── */}
         {tab === 'files' && (
           <JobFilesTable
             files={job.files}
-            onUnrestrict={cap.canUnrestrict ? (fid) => onAction('unrestrict_file', job.id, { file_id: fid }) : undefined}
+            isPerFile={job.output_mode === 'per_file'}
+            onUnrestrictFile={(fid) => onAction('unrestrict_file', job.id, { file_id: fid })}
           />
         )}
 
-        {/* Links */}
+        {/* ── Links ─────────────────────────────────────────────── */}
         {tab === 'links' && (
           <div className="p-4">
             {allLinks.length === 0
               ? <p className="text-sm text-muted-foreground">No download links available yet.</p>
-              : <ul className="flex flex-col gap-2">
-                  {allLinks.map((url, i) => (
-                    <li key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
-                      <LinkIcon size={11} className="shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{url}</span>
-                      <CopyBtn text={url} label={`Copy link ${i + 1}`} small />
-                    </li>
-                  ))}
-                </ul>}
+              : (
+                <>
+                  {allLinks.length > 1 && (
+                    <div className="mb-3 flex justify-end">
+                      <Button variant="outline" size="sm"
+                        onClick={() => navigator.clipboard.writeText(allLinks.join('\n')).catch(() => undefined)}>
+                        <Copy size={13} /> Copy all {allLinks.length} links
+                      </Button>
+                    </div>
+                  )}
+                  <ul className="flex flex-col gap-2">
+                    {allLinks.map((url, i) => (
+                      <li key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
+                        <LinkIcon size={11} className="shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{url}</span>
+                        <CopyBtn text={url} label={`Copy link ${i + 1}`} small />
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
           </div>
         )}
 
-        {/* Technical */}
+        {/* ── Technical ─────────────────────────────────────────── */}
         {tab === 'technical' && (
-          <div className="p-4">
-            <button onClick={() => setTechOpen(o => !o)} className="mb-3 flex w-full items-center justify-between text-xs font-medium text-foreground">
-              Technical details {techOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            </button>
-            {techOpen && (
-              <div className="space-y-2 text-xs">
-                <Row label="Job ID"        value={<span className="font-mono">{job.id}</span>} />
-                <Row label="Output mode"   value={job.output_mode} />
-                <Row label="Torrent ID"    value={job.torrent_id ? <span className="font-mono">{job.torrent_id}</span> : null} />
-                <Row label="Torrent status" value={job.torrent_status} />
-                <Row label="Started"       value={job.started_at ? new Date(job.started_at).toLocaleString() : null} />
-                <Row label="Completed"     value={job.completed_at ? new Date(job.completed_at).toLocaleString() : null} />
-                <Row label="Cancelled"     value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
-                {job.error_message && (
-                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-[11px] text-muted-foreground">
-                    {job.error_message}
-                  </div>
-                )}
+          <div className="space-y-2.5 p-4 text-xs">
+            <Row label="Job ID"             value={<span className="font-mono text-[11px]">{job.id}</span>} />
+            <Row label="Source type"        value={job.source_type} />
+            <Row label="Output mode"        value={job.output_mode} />
+            <Row label="Provider resource"  value={job.provider_resource_id ? <span className="font-mono text-[11px]">{job.provider_resource_id}</span> : null} />
+            <Row label="Provider status"    value={job.provider_status} />
+            <Row label="Torrent ID"         value={job.torrent_id ? <span className="font-mono text-[11px]">{job.torrent_id}</span> : null} />
+            <Row label="Torrent status"     value={job.torrent_status} />
+            <Row label="Created"            value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
+            <Row label="Updated"            value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
+            <Row label="Started"            value={job.started_at ? new Date(job.started_at).toLocaleString() : null} />
+            <Row label="Completed"          value={job.completed_at ? new Date(job.completed_at).toLocaleString() : null} />
+            <Row label="Cancelled"          value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
+            {job.error_message && (
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+                <p className="mb-1 font-medium text-foreground">Error</p>
+                <p className="font-mono text-[11px] text-muted-foreground">{job.error_message}</p>
               </div>
             )}
           </div>
         )}
       </div>
 
-      {progress && <JobProgressCard progress={progress} />}
+      {/* Sticky provider progress — only for active downloads */}
+      {stickyProgress && <JobProgressCard progress={stickyProgress} />}
     </div>
   )
 }
