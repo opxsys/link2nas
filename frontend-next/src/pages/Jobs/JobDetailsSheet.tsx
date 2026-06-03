@@ -86,10 +86,11 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
   const cap = getJobCapabilities(job)
   const busy = actionPending === job.id
 
-  // Close all selectors when the selected job changes
+  // Reset tab and close all selectors when the selected job changes
   useEffect(() => {
     setShowDestSelector(null)
     setShowProvSelector(false)
+    setTab('summary')
   }, [job.id])
 
   const allLinks: string[] = []
@@ -108,17 +109,19 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
   async function handleSendDirect() {
     setShowProvSelector(false)
     if (cap.activeDestinations.length > 1) { setShowDestSelector('send'); return }
+    setTab('destination')
     await onAction('send_to_destination', job.id, { destination_config_id: cap.activeDestinations[0]?.id })
   }
 
   async function handleResend() {
+    setTab('destination')
     await onAction('resend', job.id, { destination_config_id: job.destination_config_id ?? undefined })
   }
 
   async function handleSendOther() {
     setShowProvSelector(false)
     const alts = cap.activeDestinations.filter(d => d.id !== job.destination_config_id)
-    if (alts.length === 1) { await onAction('send_to_destination', job.id, { destination_config_id: alts[0].id }); return }
+    if (alts.length === 1) { setTab('destination'); await onAction('send_to_destination', job.id, { destination_config_id: alts[0].id }); return }
     setShowDestSelector('other')
   }
 
@@ -232,7 +235,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
               ? cap.activeDestinations.filter(d => d.id !== job.destination_config_id)
               : cap.activeDestinations}
             labelFn={destLabel}
-            onSelect={async (d) => { setShowDestSelector(null); await onAction('send_to_destination', job.id, { destination_config_id: d.id }) }}
+            onSelect={async (d) => { setShowDestSelector(null); setTab('destination'); await onAction('send_to_destination', job.id, { destination_config_id: d.id }) }}
             onCancel={() => setShowDestSelector(null)}
           />
         </div>
