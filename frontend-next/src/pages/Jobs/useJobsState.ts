@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
-  listJobs, getJob, deleteJob as deleteJobApi,
-  startJob, cancelJob, restartJob,
-  sendToDestination, resendToDestination,
+  listJobs, getJob, deleteJob as apiDeleteJob,
+  startJob, cancelJob, restartJob, refreshJob,
+  selectJobFiles, unrestrictJob, unrestrictJobFile,
+  sendToDestination, resendToDestination, cancelLocalDownload,
+  cloneWithProvider,
 } from '@/api/jobs'
 import { ApiError } from '@/api/client'
 import { filterJobs, getUniqueProviders, getUniqueDestinations } from './jobs.utils'
@@ -38,40 +40,64 @@ export function useJobsState() {
   useEffect(() => { load() }, [load])
 
   const filteredJobs = useMemo(() => filterJobs(jobs, filters), [jobs, filters])
-  const providers = useMemo(() => getUniqueProviders(jobs), [jobs])
+  const providers    = useMemo(() => getUniqueProviders(jobs), [jobs])
   const destinations = useMemo(() => getUniqueDestinations(jobs), [jobs])
+
+  // ── Selection ────────────────────────────────────────────────────────────
 
   async function selectJob(id: string) {
     if (selectedJobId === id) { setSelectedJobId(null); setSelectedJob(null); return }
     setSelectedJobId(id)
     setActionError(null)
-    // Immediate feedback from list
-    setSelectedJob(jobs.find(j => j.id === id) ?? null)
+    setSelectedJob(jobs.find(j => j.id === id) ?? null) // immediate feedback
     try {
       const detail = await getJob(id)
       setSelectedJob(detail)
-    } catch {
-      // keep list version
-    }
+      setJobs(prev => prev.map(j => j.id === id ? detail : j))
+    } catch { /* keep list version */ }
   }
 
   function clearSelection() { setSelectedJobId(null); setSelectedJob(null) }
 
-  async function performAction(action: string, jobId: string) {
+  function updateJob(updated: RealJob) {
+    setJobs(prev => prev.map(j => j.id === updated.id ? updated : j))
+    if (selectedJobId === updated.id) setSelectedJob(updated)
+  }
+
+  // ── Generic action dispatcher ────────────────────────────────────────────
+
+  async function performAction(
+    action: string,
+    jobId: string,
+    payload?: { destination_config_id?: string; provider_config_id?: string; file_id?: string | number },
+  ) {
     setActionPending(jobId)
     setActionError(null)
     try {
       let updated: RealJob
       switch (action) {
-        case 'start':                updated = await startJob(jobId);              break
-        case 'cancel':               updated = await cancelJob(jobId);             break
-        case 'restart':              updated = await restartJob(jobId);            break
-        case 'send_to_destination':  updated = await sendToDestination(jobId);     break
-        case 'resend':               updated = await resendToDestination(jobId);   break
+        case 'start':               updated = await startJob(jobId); break
+        case 'cancel':              updated = await cancelJob(jobId); break
+        case 'restart':             updated = await restartJob(jobId); break
+        case 'refresh':             updated = await refreshJob(jobId); break
+        case 'select_files':        updated = await selectJobFiles(jobId, 'all'); break
+        case 'unrestrict':          updated = await unrestrictJob(jobId); break
+        case 'unrestrict_file':     updated = await unrestrictJobFile(jobId, payload!.file_id!); break
+        case 'send_to_destination': updated = await sendToDestination(jobId, { destination_config_id: payload?.destination_config_id }); break
+        case 'resend':              updated = await resendToDestination(jobId, { destination_config_id: payload?.destination_config_id }); break
+        case 'cancel_local_download': updated = await cancelLocalDownload(jobId); break
+        case 'clone_with_provider': {
+          const res = await cloneWithProvider(jobId, { provider_config_id: payload?.provider_config_id, auto_start: true })
+          updateJob(res.job)
+          // select the cloned job
+          setSelectedJobId(res.job.id)
+          setSelectedJob(res.job)
+          setJobs(prev => [res.job, ...prev.filter(j => j.id !== res.job.id)])
+          return
+        }
         default: throw new Error(`Unsupported action: ${action}`)
       }
-      setJobs(prev => prev.map(j => j.id === jobId ? updated : j))
-      if (selectedJobId === jobId) setSelectedJob(updated)
+      updateJob(updated)
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : `${action} failed.`)
     } finally {
@@ -79,11 +105,13 @@ export function useJobsState() {
     }
   }
 
+  // ── Delete ───────────────────────────────────────────────────────────────
+
   async function confirmDelete(jobId: string) {
     setActionPending(jobId)
     setActionError(null)
     try {
-      await deleteJobApi(jobId)
+      await apiDeleteJob(jobId)
       setJobs(prev => prev.filter(j => j.id !== jobId))
       if (selectedJobId === jobId) { setSelectedJobId(null); setSelectedJob(null) }
     } catch (err) {

@@ -1,16 +1,24 @@
 import { useState } from 'react'
-import { X, Copy, CheckCircle2, Send, Trash2, Play, RefreshCcw, CircleX, Loader2, AlertCircle } from 'lucide-react'
+import {
+  X, Copy, CheckCircle2, Send, Trash2, Play, RefreshCcw, CircleX,
+  Loader2, AlertCircle, ChevronDown, ChevronUp, Link as LinkIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/components/status/StatusBadge'
 import JobFilesTable from './JobFilesTable'
 import JobProgressCard from './JobProgressCard'
 import { jobName, jobProvider, jobDestination, formatBytes } from './jobs.types'
-import type { RealJob } from '@/api/jobs'
+import { getJobCapabilities } from './JobCapabilities'
+import type { RealJob, RealJobDestinationConfig, RealJobProviderConfig } from '@/api/jobs'
 
-type Tab = 'files' | 'links' | 'details'
+type Tab = 'summary' | 'destination' | 'files' | 'links' | 'technical'
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'files', label: 'Files' }, { id: 'links', label: 'Links' }, { id: 'details', label: 'Details' },
+  { id: 'summary',     label: 'Summary'     },
+  { id: 'destination', label: 'Destination' },
+  { id: 'files',       label: 'Files'       },
+  { id: 'links',       label: 'Links'       },
+  { id: 'technical',   label: 'Technical'   },
 ]
 
 interface Props {
@@ -18,74 +26,158 @@ interface Props {
   actionPending: string | null
   actionError: string | null
   onClose: () => void
-  onAction: (action: string, jobId: string) => Promise<void>
+  onAction: (action: string, jobId: string, payload?: { destination_config_id?: string; provider_config_id?: string; file_id?: string | number }) => Promise<void>
   onDeleteRequest: (jobId: string) => void
 }
 
-function CopyBtn({ text, label }: { text: string; label: string }) {
-  const [copied, setCopied] = useState(false)
-  function copy() { navigator.clipboard.writeText(text).catch(() => undefined); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+function CopyBtn({ text, label, small }: { text: string; label: string; small?: boolean }) {
+  const [done, setDone] = useState(false)
+  function copy() { navigator.clipboard.writeText(text).catch(() => undefined); setDone(true); setTimeout(() => setDone(false), 2000) }
   return (
-    <button onClick={copy} className="shrink-0 rounded text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={label} title="Copy">
-      {copied ? <CheckCircle2 size={13} className="text-green-600" /> : <Copy size={13} />}
+    <button onClick={copy} className={cn('shrink-0 rounded text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', small && 'p-0.5')} aria-label={label} title="Copy">
+      {done ? <CheckCircle2 size={small ? 12 : 14} className="text-green-600" /> : <Copy size={small ? 12 : 14} />}
     </button>
   )
 }
 
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  if (!value && value !== 0) return null
+  return (
+    <div className="flex gap-3 text-xs">
+      <span className="w-32 shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 flex-1 font-medium text-foreground">{value}</span>
+    </div>
+  )
+}
+
+// ── Select modals (inline selection pattern) ─────────────────────────────
+
+interface SelectItemProps<T> { items: T[]; onSelect: (item: T) => void; onCancel: () => void; title: string; labelFn: (item: T) => string }
+function InlineSelector<T extends { id: string }>({ items, onSelect, onCancel, title, labelFn }: SelectItemProps<T>) {
+  const [chosen, setChosen] = useState(items[0]?.id ?? '')
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs">
+      <p className="mb-2 font-medium text-foreground">{title}</p>
+      <select value={chosen} onChange={e => setChosen(e.target.value)} className="mb-2 h-8 w-full rounded border border-input bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+        {items.map(item => <option key={item.id} value={item.id}>{labelFn(item)}</option>)}
+      </select>
+      <div className="flex gap-2">
+        <Button size="sm" className="h-7 text-xs" onClick={() => { const item = items.find(i => i.id === chosen); if (item) onSelect(item) }}>Confirm</Button>
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
+      </div>
+    </div>
+  )
+}
+
 export default function JobDetailsSheet({ job, actionPending, actionError, onClose, onAction, onDeleteRequest }: Props) {
-  const [tab, setTab] = useState<Tab>('files')
-  const can = (a: string) => job.allowed_actions.includes(a)
+  const [tab, setTab] = useState<Tab>('summary')
+  const [showDestSelector, setShowDestSelector] = useState<'send' | 'other' | null>(null)
+  const [showProvSelector, setShowProvSelector] = useState(false)
+  const [techOpen, setTechOpen] = useState(false)
+
+  const cap = getJobCapabilities(job)
   const busy = actionPending === job.id
 
+  // Build link list
   const allLinks: string[] = []
   if (job.download_url) allLinks.push(job.download_url)
   else job.output_links.forEach(l => { if (l.url) allLinks.push(l.url) })
 
-  const progress = job.progress > 0 && job.progress < 100 ? {
-    percent: job.progress, downloadedSize: null, speed: null, eta: null, connections: null, provider: job.provider_name,
-  } : null
+  const progress = job.progress > 0 && job.progress < 100
+    ? { percent: job.progress, downloadedSize: null, speed: null, eta: null, connections: null, provider: job.provider_name }
+    : null
+
+  function destLabel(d: RealJobDestinationConfig) {
+    return d.name || d.destination_type || d.id
+  }
+  function provLabel(p: RealJobProviderConfig) {
+    return p.name || p.provider_type || p.id
+  }
+
+  async function handleSendDirect() {
+    if (cap.activeDestinations.length > 1) { setShowDestSelector('send'); return }
+    const destId = cap.activeDestinations[0]?.id
+    await onAction('send_to_destination', job.id, { destination_config_id: destId })
+  }
+
+  async function handleResend() {
+    await onAction('resend', job.id, { destination_config_id: job.destination_config_id ?? undefined })
+  }
+
+  async function handleSendOther() {
+    const alts = cap.activeDestinations.filter(d => d.id !== job.destination_config_id)
+    if (alts.length === 1) { await onAction('send_to_destination', job.id, { destination_config_id: alts[0].id }); return }
+    setShowDestSelector('other')
+  }
+
+  async function handleClone() {
+    if (cap.otherProviders.length === 1) { await onAction('clone_with_provider', job.id, { provider_config_id: cap.otherProviders[0].id }); return }
+    setShowProvSelector(true)
+  }
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-start gap-3 border-b border-border p-5">
+      <div className="flex items-start gap-3 border-b border-border p-4">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground" title={jobName(job)}>{jobName(job)}</p>
           <div className="mt-1.5"><StatusBadge status={job.status} /></div>
         </div>
-        <button onClick={onClose} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
-          <X size={15} aria-hidden="true" />
+        <button onClick={onClose} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+          <X size={15} />
         </button>
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-4 py-3">
-        {allLinks.length > 0 && (
+      {/* Actions bar */}
+      <div className="flex flex-wrap items-center gap-1 border-b border-border px-3 py-2">
+        {(cap.canCopySingle || cap.canCopyAll) && (
           <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(allLinks.join('\n')).catch(() => undefined)}>
-            <Copy size={13} aria-hidden="true" />{allLinks.length > 1 ? 'Copy all links' : 'Copy link'}
+            <Copy size={13} />{allLinks.length > 1 ? 'Copy all' : 'Copy link'}
           </Button>
         )}
-        {(can('send_to_destination') || can('resend')) && (
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction(can('resend') ? 'resend' : 'send_to_destination', job.id)}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-            {can('resend') ? 'Resend' : 'Send'}
+        {cap.canSendDirect && !cap.canSendDirect ? null : null /* handled below */}
+        {(cap.canSendDirect || cap.canChooseSendDest) && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={handleSendDirect}>
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send
           </Button>
         )}
-        {can('start') && (
+        {cap.canResend && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={handleResend}>
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Resend
+          </Button>
+        )}
+        {cap.canSendOtherDest && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={handleSendOther}>
+            <Send size={13} /> Other dest
+          </Button>
+        )}
+        {cap.canStart && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('start', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Start
           </Button>
         )}
-        {can('restart') && (
+        {cap.canRestart && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('restart', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />} Restart
           </Button>
         )}
-        {can('cancel') && (
+        {cap.canCloneWithProvider && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={handleClone}>
+            <Copy size={13} /> Clone
+          </Button>
+        )}
+        {cap.canCancel && (
           <Button variant="outline" size="sm" disabled={busy}
             className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
             onClick={() => onAction('cancel', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <CircleX size={13} />} Cancel
+          </Button>
+        )}
+        {cap.canCancelLocalDownload && (
+          <Button variant="outline" size="sm" disabled={busy}
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => onAction('cancel_local_download', job.id)}>
+            <CircleX size={13} /> Stop download
           </Button>
         )}
         <div className="ml-auto">
@@ -99,44 +191,95 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
 
       {/* Action error */}
       {actionError && (
-        <div className="flex items-start gap-2 border-b border-border bg-red-50 px-4 py-2.5 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
+        <div className="flex items-start gap-2 border-b border-border bg-red-50 px-4 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
           <AlertCircle size={13} className="mt-0.5 shrink-0" />{actionError}
         </div>
       )}
 
-      {/* Metadata */}
-      <div className="space-y-2.5 border-b border-border p-5 text-xs">
-        {([
-          ['Provider',    jobProvider(job)],
-          ['Destination', jobDestination(job) ?? 'Links only'],
-          ['Files',       job.files.length ? String(job.files.length) : '—'],
-          ['Size',        formatBytes(job.filesize)],
-          ['Created',     job.created_at ? new Date(job.created_at).toLocaleString() : '—'],
-        ] as [string, string][]).map(([label, value]) => (
-          <div key={label} className="flex gap-3">
-            <span className="w-24 shrink-0 text-muted-foreground">{label}</span>
-            <span className="min-w-0 truncate font-medium text-foreground">{value}</span>
-          </div>
-        ))}
-        <div className="flex gap-3">
-          <span className="w-24 shrink-0 text-muted-foreground">ID</span>
-          <span className="min-w-0 truncate font-mono text-muted-foreground">{job.id}</span>
+      {/* Inline selectors */}
+      {showDestSelector && (
+        <div className="border-b border-border p-3">
+          <InlineSelector<RealJobDestinationConfig>
+            title={showDestSelector === 'other' ? 'Select another destination' : 'Select destination'}
+            items={showDestSelector === 'other' ? cap.activeDestinations.filter(d => d.id !== job.destination_config_id) : cap.activeDestinations}
+            labelFn={destLabel}
+            onSelect={async (d) => { setShowDestSelector(null); await onAction('send_to_destination', job.id, { destination_config_id: d.id }) }}
+            onCancel={() => setShowDestSelector(null)}
+          />
         </div>
-      </div>
+      )}
+      {showProvSelector && (
+        <div className="border-b border-border p-3">
+          <InlineSelector<RealJobProviderConfig>
+            title="Select provider to clone with"
+            items={cap.otherProviders}
+            labelFn={provLabel}
+            onSelect={async (p) => { setShowProvSelector(false); await onAction('clone_with_provider', job.id, { provider_config_id: p.id }) }}
+            onCancel={() => setShowProvSelector(false)}
+          />
+        </div>
+      )}
 
       {/* Tabs */}
-      <nav className="flex shrink-0 border-b border-border">
+      <nav className="flex shrink-0 border-b border-border overflow-x-auto">
         {TABS.map(({ id, label }) => (
           <button key={id} onClick={() => setTab(id)}
-            className={cn('px-4 py-2.5 text-xs transition-colors', tab === id ? 'border-b-2 border-primary font-medium text-primary' : 'text-muted-foreground hover:text-foreground')}
+            className={cn('shrink-0 px-3.5 py-2.5 text-xs transition-colors', tab === id ? 'border-b-2 border-primary font-medium text-primary' : 'text-muted-foreground hover:text-foreground')}
             aria-selected={tab === id}>{label}</button>
         ))}
       </nav>
 
       {/* Tab content */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {tab === 'files' && <JobFilesTable files={job.files} />}
 
+        {/* Summary */}
+        {tab === 'summary' && (
+          <div className="space-y-2.5 p-4 text-xs">
+            <Row label="Source type" value={job.source_type} />
+            <Row label="Provider"    value={jobProvider(job)} />
+            <Row label="Destination" value={jobDestination(job) ?? 'Links only'} />
+            <Row label="Files"       value={job.files.length || null} />
+            <Row label="Size"        value={formatBytes(job.filesize)} />
+            <Row label="Progress"    value={`${job.progress ?? 0}%`} />
+            <Row label="Created"     value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
+            <Row label="Updated"     value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
+            {job.error_message && (
+              <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+                <p className="mb-1 font-medium">Error</p>
+                <p className="font-mono text-[11px]">{job.error_message}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Destination */}
+        {tab === 'destination' && (
+          <div className="space-y-2.5 p-4 text-xs">
+            <Row label="Send configured" value={job.send_to_destination ? 'Yes' : 'No'} />
+            <Row label="Sent"            value={job.sent_to_destination ? 'Yes' : 'No'} />
+            <Row label="Status"          value={job.destination_status} />
+            {job.destination_progress > 0 && job.destination_status !== 'sent' && (
+              <Row label="Progress" value={`${job.destination_progress}%`} />
+            )}
+            <Row label="Message"      value={job.destination_message} />
+            <Row label="Path"         value={job.destination_path} />
+            <Row label="Last attempt" value={job.destination_last_attempt ? new Date(job.destination_last_attempt).toLocaleString() : null} />
+            <Row label="Sent at"      value={job.sent_to_destination_at ? new Date(job.sent_to_destination_at).toLocaleString() : null} />
+            {!cap.hasAnyDestination && (
+              <p className="mt-2 text-muted-foreground italic">No active destination configured.</p>
+            )}
+          </div>
+        )}
+
+        {/* Files */}
+        {tab === 'files' && (
+          <JobFilesTable
+            files={job.files}
+            onUnrestrict={cap.canUnrestrict ? (fid) => onAction('unrestrict_file', job.id, { file_id: fid }) : undefined}
+          />
+        )}
+
+        {/* Links */}
         {tab === 'links' && (
           <div className="p-4">
             {allLinks.length === 0
@@ -144,36 +287,37 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
               : <ul className="flex flex-col gap-2">
                   {allLinks.map((url, i) => (
                     <li key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
+                      <LinkIcon size={11} className="shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{url}</span>
-                      <CopyBtn text={url} label={`Copy link ${i + 1}`} />
+                      <CopyBtn text={url} label={`Copy link ${i + 1}`} small />
                     </li>
                   ))}
                 </ul>}
           </div>
         )}
 
-        {tab === 'details' && (
-          <div className="space-y-3 p-5 text-xs">
-            {job.error_message && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-                <p className="mb-1 font-medium">Error</p>
-                <p className="font-mono">{job.error_message}</p>
+        {/* Technical */}
+        {tab === 'technical' && (
+          <div className="p-4">
+            <button onClick={() => setTechOpen(o => !o)} className="mb-3 flex w-full items-center justify-between text-xs font-medium text-foreground">
+              Technical details {techOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+            {techOpen && (
+              <div className="space-y-2 text-xs">
+                <Row label="Job ID"        value={<span className="font-mono">{job.id}</span>} />
+                <Row label="Output mode"   value={job.output_mode} />
+                <Row label="Torrent ID"    value={job.torrent_id ? <span className="font-mono">{job.torrent_id}</span> : null} />
+                <Row label="Torrent status" value={job.torrent_status} />
+                <Row label="Started"       value={job.started_at ? new Date(job.started_at).toLocaleString() : null} />
+                <Row label="Completed"     value={job.completed_at ? new Date(job.completed_at).toLocaleString() : null} />
+                <Row label="Cancelled"     value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
+                {job.error_message && (
+                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                    {job.error_message}
+                  </div>
+                )}
               </div>
             )}
-            {([
-              ['Send status',    job.destination_status],
-              ['Destination msg',job.destination_message],
-              ['Saved to',       job.destination_path],
-              ['Started',        job.started_at ? new Date(job.started_at).toLocaleString() : null],
-              ['Completed',      job.completed_at ? new Date(job.completed_at).toLocaleString() : null],
-            ] as [string, string | null][])
-              .filter(([, v]) => !!v)
-              .map(([label, value]) => (
-                <div key={label} className="flex gap-3">
-                  <span className="w-32 shrink-0 text-muted-foreground">{label}</span>
-                  <span className="min-w-0 truncate font-medium text-foreground">{value}</span>
-                </div>
-              ))}
           </div>
         )}
       </div>

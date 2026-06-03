@@ -1,4 +1,6 @@
-export type NewJobTab = 'magnet' | 'torrent' | 'batch'
+// 'magnet' = magnet links + direct URLs (one or more lines)
+// 'torrent' = one or more .torrent files (sequential upload per file)
+export type NewJobTab = 'magnet' | 'torrent'
 
 export interface NewJobResultItem {
   id: string

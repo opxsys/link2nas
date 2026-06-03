@@ -10,8 +10,8 @@ import type { NewJobTab, NewJobResult, NewJobResultItem } from './newJob.types'
 export function useNewJobState() {
   const [activeTab, setActiveTab] = useState<NewJobTab>('magnet')
   const [magnetLinks, setMagnetLinks] = useState('')
-  const [torrentFile, setTorrentFile] = useState<File | null>(null)
-  const [batchText, setBatchText] = useState('')
+  // torrent: multiple files
+  const [torrentFiles, setTorrentFiles] = useState<File[]>([])
 
   const [providers, setProviders] = useState<ProviderConfig[]>([])
   const [destinations, setDestinations] = useState<DestinationConfig[]>([])
@@ -19,7 +19,6 @@ export function useNewJobState() {
   const [destinationId, setDestinationId] = useState('')
   const [linksOnly, setLinksOnly] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
-
   const [configsLoading, setConfigsLoading] = useState(true)
   const [configsError, setConfigsError] = useState<string | null>(null)
 
@@ -28,202 +27,126 @@ export function useNewJobState() {
 
   useEffect(() => {
     let cancelled = false
-
     async function loadConfigs() {
       setConfigsLoading(true)
       setConfigsError(null)
-
       try {
-        const [prov, dest] = await Promise.all([
-          listProviderConfigs(),
-          listDestinationConfigs(),
-        ])
-
+        const [prov, dest] = await Promise.all([listProviderConfigs(), listDestinationConfigs()])
         if (cancelled) return
-
-        const enabledProv = prov.filter((p) => p.is_enabled)
-        const enabledDest = dest.filter((d) => d.is_enabled)
-
-        setProviders(enabledProv)
-        setDestinations(enabledDest)
-
-        const defaultProvider = enabledProv.find((p) => p.is_default) ?? enabledProv[0]
-        const defaultDestination = enabledDest.find((d) => d.is_default)
-
-        if (defaultProvider) {
-          setProviderId(defaultProvider.id)
-        } else {
-          setProviderId('')
-        }
-
-        if (defaultDestination) {
-          setDestinationId(defaultDestination.id)
-          setLinksOnly(false)
-        } else {
-          setDestinationId('')
-          setLinksOnly(true)
-        }
+        const ep = prov.filter(p => p.is_enabled)
+        const ed = dest.filter(d => d.is_enabled)
+        setProviders(ep)
+        setDestinations(ed)
+        const defProv = ep.find(p => p.is_default) ?? ep[0]
+        const defDest = ed.find(d => d.is_default) // never auto-pick if no default
+        if (defProv) setProviderId(defProv.id)
+        if (defDest) { setDestinationId(defDest.id); setLinksOnly(false) }
+        else { setDestinationId(''); setLinksOnly(true) }
       } catch (err) {
-        if (!cancelled) {
-          setConfigsError(
-            err instanceof ApiError
-              ? err.message
-              : 'Failed to load providers/destinations.',
-          )
-        }
+        if (!cancelled) setConfigsError(err instanceof ApiError ? err.message : 'Failed to load providers/destinations.')
       } finally {
-        if (!cancelled) {
-          setConfigsLoading(false)
-        }
+        if (!cancelled) setConfigsLoading(false)
       }
     }
-
     loadConfigs()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
-  const canSubmit =
-    !submitting &&
-    !configsLoading &&
-    !!providerId &&
-    (
-      (activeTab === 'magnet' && magnetLinks.trim().length > 0) ||
-      (activeTab === 'torrent' && torrentFile !== null) ||
-      (activeTab === 'batch' && batchText.trim().length > 0)
-    )
+  // torrent_filename kept for compat with TorrentUploadPanel single-file prop
+  const torrentFileName = torrentFiles.length === 1 ? torrentFiles[0].name : torrentFiles.length > 1 ? `${torrentFiles.length} files` : null
+
+  const canSubmit = !submitting && !configsLoading && !!providerId && (
+    (activeTab === 'magnet'  && magnetLinks.trim().length > 0) ||
+    (activeTab === 'torrent' && torrentFiles.length > 0)
+  )
+
+  const hasSendDestination = !linksOnly && !!destinationId
 
   async function handleSubmit() {
     if (!canSubmit || !providerId) return
-
     setSubmitting(true)
     setResult(null)
-
-    const destinationConfigId = linksOnly ? undefined : (destinationId || undefined)
+    const destId = hasSendDestination ? destinationId : undefined
+    const sendToDest = hasSendDestination
 
     try {
-      if (activeTab === 'torrent' && torrentFile) {
-        const res = await createTorrentJob(torrentFile, {
-          provider_config_id: providerId,
-          destination_config_id: destinationConfigId,
-          auto_start: true,
-        })
-
-        const item: NewJobResultItem = {
-          id: res.job.id,
-          input: torrentFile.name,
-          status: res.error ? 'failed' : res.reused ? 'reused' : 'created',
-          jobId: res.job.id,
-          error: res.error ?? undefined,
+      if (activeTab === 'torrent') {
+        // Multi-torrent batch: one API call per file, sequential (mirrors legacy createTorrentFilesBatch)
+        const items: NewJobResultItem[] = []
+        for (const file of torrentFiles) {
+          try {
+            const res = await createTorrentJob(file, {
+              provider_config_id: providerId,
+              destination_config_id: destId,
+              auto_start: true,
+              send_to_destination: sendToDest,
+            })
+            const itemErr = res.error ?? (res.job?.error_message ?? null)
+            items.push({
+              id: res.job?.id ?? `err-${file.name}`,
+              input: file.name,
+              status: itemErr ? 'failed' : res.reused ? 'reused' : 'created',
+              jobId: res.job?.id,
+              error: itemErr ?? undefined,
+            })
+          } catch (err) {
+            items.push({
+              id: `err-${file.name}`,
+              input: file.name,
+              status: 'failed',
+              error: err instanceof ApiError ? err.message : 'Upload failed.',
+            })
+          }
         }
-
-        setResult({
-          submitted: 1,
-          created: item.status !== 'failed' ? 1 : 0,
-          failed: item.status === 'failed' ? 1 : 0,
-          items: [item],
-        })
-
+        const created = items.filter(i => i.status !== 'failed').length
+        setResult({ submitted: items.length, created, failed: items.length - created, items })
         return
       }
 
-      const raw = activeTab === 'magnet' ? magnetLinks : batchText
-      const lines = raw
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-
+      // Magnet / links bulk
+      const lines = magnetLinks.split('\n').map(l => l.trim()).filter(Boolean)
       const res = await createBulkJobs({
-        source_value: raw,
+        source_value: magnetLinks,
         provider_config_id: providerId,
-        destination_config_id: destinationConfigId,
+        destination_config_id: destId,
         auto_start: true,
+        send_to_destination: sendToDest,
       })
-
-      const items: NewJobResultItem[] = res.jobs.map((entry, index) => ({
-        id: entry.job.id,
-        input: lines[index] ?? entry.job.source_value,
+      const items: NewJobResultItem[] = res.jobs.map((entry, i) => ({
+        id: entry.job?.id ?? `entry-${i}`,
+        input: lines[i] ?? entry.job?.source_value ?? '',
         status: entry.error ? 'failed' : entry.reused ? 'reused' : 'created',
-        jobId: entry.job.id,
+        jobId: entry.job?.id,
         error: entry.error ?? undefined,
       }))
-
-      const created = items.filter((item) => item.status !== 'failed').length
-
-      setResult({
-        submitted: items.length,
-        created,
-        failed: items.length - created,
-        items,
-      })
+      const created = items.filter(i => i.status !== 'failed').length
+      setResult({ submitted: items.length, created, failed: items.length - created, items })
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Submission failed.'
-
-      const input =
-        activeTab === 'torrent'
-          ? torrentFile?.name ?? 'torrent file'
-          : activeTab === 'magnet'
-            ? 'magnet links'
-            : 'batch'
-
-      setResult({
-        submitted: 1,
-        created: 0,
-        failed: 1,
-        items: [
-          {
-            id: 'err',
-            input,
-            status: 'failed',
-            error: message,
-          },
-        ],
-      })
+      const msg = err instanceof ApiError ? err.message : 'Submission failed.'
+      const input = activeTab === 'torrent' ? (torrentFileName ?? 'torrent') : 'submission'
+      setResult({ submitted: 1, created: 0, failed: 1, items: [{ id: 'err', input, status: 'failed', error: msg }] })
     } finally {
       setSubmitting(false)
     }
   }
 
   return {
-    activeTab,
-    setActiveTab,
-
-    magnetLinks,
-    setMagnetLinks,
-
-    torrentFile,
-    torrentFileName: torrentFile?.name ?? null,
-    handleTorrentFile: (file: File | null) => setTorrentFile(file),
-
-    batchText,
-    setBatchText,
-
-    providers,
-    destinations,
-
-    providerId,
-    setProviderId,
-
-    destinationId,
-    setDestinationId,
-
-    linksOnly,
-    setLinksOnly,
-
-    advancedOpen,
-    setAdvancedOpen,
-
-    configsLoading,
-    configsError,
-
-    submitting,
-    canSubmit,
-
-    result,
-    dismissResult: () => setResult(null),
-
+    activeTab, setActiveTab,
+    magnetLinks, setMagnetLinks,
+    // Single-file compat
+    torrentFile: torrentFiles[0] ?? null,
+    torrentFileName,
+    torrentFiles, setTorrentFiles,
+    handleTorrentFile: (f: File | null) => setTorrentFiles(f ? [f] : []),
+    handleTorrentFiles: (files: File[]) => setTorrentFiles(files),
+    providers, destinations,
+    providerId, setProviderId,
+    destinationId, setDestinationId,
+    linksOnly, setLinksOnly,
+    advancedOpen, setAdvancedOpen,
+    configsLoading, configsError,
+    submitting, canSubmit,
+    result, dismissResult: () => setResult(null),
     handleSubmit,
   }
 }

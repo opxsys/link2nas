@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -5,7 +7,6 @@ import { useNewJobState } from './useNewJobState'
 import NewJobTabs from './NewJobTabs'
 import MagnetLinksForm from './MagnetLinksForm'
 import TorrentUploadPanel from './TorrentUploadPanel'
-import BatchUploadPanel from './BatchUploadPanel'
 import ProviderDestinationSelectors from './ProviderDestinationSelectors'
 import AdvancedOptions from './AdvancedOptions'
 import CreationResultPanel from './CreationResultPanel'
@@ -17,7 +18,12 @@ export default function NewJob() {
     <>
       <PageHeader
         title="New Job"
-        description="Submit a magnet link, torrent file, or direct link."
+        description="Submit magnet links, direct URLs, or .torrent files."
+        actions={
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/jobs"><ArrowLeft size={13} className="mr-1.5" />Back to Jobs</Link>
+          </Button>
+        }
       />
 
       <div className="flex max-w-3xl flex-col gap-6">
@@ -30,38 +36,60 @@ export default function NewJob() {
             )}
             {state.activeTab === 'torrent' && (
               <TorrentUploadPanel
-                fileName={state.torrentFile?.name ?? null}
-                onFile={state.handleTorrentFile}
+                files={state.torrentFiles}
+                onFiles={state.handleTorrentFiles}
               />
-            )}
-            {state.activeTab === 'batch' && (
-              <BatchUploadPanel value={state.batchText} onChange={state.setBatchText} />
             )}
           </div>
 
           <div className="border-t border-border p-5">
-            <ProviderDestinationSelectors
-              providers={state.providers}
-              destinations={state.destinations}
-              providerId={state.providerId}
-              destinationId={state.destinationId}
-              linksOnly={state.linksOnly}
-              onProviderChange={state.setProviderId}
-              onDestinationChange={state.setDestinationId}
-              onLinksOnlyChange={state.setLinksOnly}
-            />
+            {state.configsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" /> Loading providers…
+              </div>
+            ) : state.configsError ? (
+              <div className="flex items-start gap-2 text-sm text-destructive">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />{state.configsError}
+              </div>
+            ) : state.providers.length === 0 ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                No active provider configured. Go to <Link to="/settings" className="underline">Settings → Providers</Link> to add one before creating jobs.
+              </div>
+            ) : (
+              <ProviderDestinationSelectors
+                providers={state.providers}
+                destinations={state.destinations}
+                providerId={state.providerId}
+                destinationId={state.destinationId}
+                linksOnly={state.linksOnly}
+                onProviderChange={state.setProviderId}
+                onDestinationChange={state.setDestinationId}
+                onLinksOnlyChange={state.setLinksOnly}
+              />
+            )}
           </div>
 
           <div className="border-t border-border p-5">
             <AdvancedOptions
               open={state.advancedOpen}
-              onToggle={() => state.setAdvancedOpen((p) => !p)}
+              onToggle={() => state.setAdvancedOpen(p => !p)}
             />
           </div>
 
-          <div className="flex justify-end border-t border-border px-5 py-4">
+          <div className="flex items-center justify-between border-t border-border px-5 py-4">
+            {state.submitting && (
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" />
+                {state.activeTab === 'torrent' && state.torrentFiles.length > 1
+                  ? `Uploading ${state.torrentFiles.length} files…`
+                  : 'Creating job…'}
+              </span>
+            )}
+            {!state.submitting && <span />}
             <Button onClick={state.handleSubmit} disabled={!state.canSubmit}>
-              Create Job
+              {state.activeTab === 'torrent' && state.torrentFiles.length > 1
+                ? `Create ${state.torrentFiles.length} Jobs`
+                : 'Create Job'}
             </Button>
           </div>
         </SectionCard>
