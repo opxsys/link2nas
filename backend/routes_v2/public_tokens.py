@@ -149,10 +149,20 @@ def confirm_password_reset():
 
     user_repo.update(user)
 
+    try:
+        token_service.consume_other_unused_tokens_for_user_type(
+            user_id=user.id,
+            token_type="password_reset",
+            exclude_token_id=token.id,
+        )
+    except Exception:
+        pass
+
     return jsonify({
         "ok": True,
         "message": "Password reset confirmed",
     })
+
 
 @public_tokens_v2_bp.post("/email-verification/confirm")
 def confirm_email_verification():

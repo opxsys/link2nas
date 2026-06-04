@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit test: password_reset token is strictly single-use.
+Unit test: password_reset token is strictly single-use and invalidates sibling tokens.
 
 Covers:
   - First confirm succeeds and changes the password.
@@ -8,6 +8,9 @@ Covers:
   - Concurrent confirm (simulated) cannot both succeed.
   - Expired tokens are rejected.
   - Wrong token type is rejected.
+  - After a successful reset, all other unused password_reset tokens for the same
+    user are also invalidated (consume_other_unused_tokens_for_user_type).
+  - Other token types (magic_login) for the same user are NOT invalidated.
 
 Run from project root:
     python scripts/tests/unit/test_password_reset_single_use.py
@@ -175,6 +178,120 @@ class TestPasswordResetSingleUse(unittest.TestCase):
         # Password hash must be unchanged (still the sentinel from the first confirm)
         after_second = self.user_repo.get_by_id(self.user.id)
         self.assertEqual(after_second.password_hash, "hash_after_first_reset")
+
+
+    # ── invalidation of sibling tokens ────────────────────────────────────────
+
+    def _create_reset_token_directly(self, user_id: str) -> str:
+        """Bypass service cleanup to insert a second unused password_reset token."""
+        from backend.models.account_token import AccountToken
+        import uuid
+        from datetime import UTC, datetime, timedelta
+
+        raw = self.svc.generate_raw_token()
+        expires_at = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
+        t = AccountToken(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            token_hash=self.svc.hash_token(raw),
+            token_type="password_reset",
+            expires_at=expires_at,
+            used_at=None,
+            created_at=utc_now_iso(),
+            created_by_user_id=None,
+            metadata_json="{}",
+        )
+        self.token_repo.create(t)
+        return raw
+
+    def _create_magic_login_token_directly(self, user_id: str) -> str:
+        """Insert an unused magic_login token for the same user."""
+        from backend.models.account_token import AccountToken
+        import uuid
+        from datetime import UTC, datetime, timedelta
+
+        raw = self.svc.generate_raw_token()
+        expires_at = (datetime.now(UTC) + timedelta(minutes=15)).isoformat()
+        t = AccountToken(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            token_hash=self.svc.hash_token(raw),
+            token_type="magic_login",
+            expires_at=expires_at,
+            used_at=None,
+            created_at=utc_now_iso(),
+            created_by_user_id=None,
+            metadata_json="{}",
+        )
+        self.token_repo.create(t)
+        return raw
+
+    def test_sibling_reset_tokens_invalidated_after_confirm(self):
+        """A second password_reset token for the same user is invalidated after successful reset."""
+        # Create first token via service (normal path)
+        raw_first = self._create_reset_token()
+
+        # Insert a second token directly (bypassing service cleanup)
+        raw_second = self._create_reset_token_directly(self.user.id)
+
+        # Confirm via first token
+        token = self.svc.get_valid_token(raw_first, expected_type="password_reset")
+        self.assertTrue(self.svc.consume_token_once(token))
+
+        # Simulate successful reset, then invalidate sibling tokens
+        invalidated = self.svc.consume_other_unused_tokens_for_user_type(
+            user_id=self.user.id,
+            token_type="password_reset",
+            exclude_token_id=token.id,
+        )
+        self.assertEqual(invalidated, 1, "One sibling token must have been invalidated")
+
+        # Second token must now be rejected
+        with self.assertRaises(AccountTokenError) as ctx:
+            self.svc.get_valid_token(raw_second, expected_type="password_reset")
+        self.assertIn("already used", str(ctx.exception).lower())
+
+    def test_magic_login_token_not_invalidated_after_reset(self):
+        """A magic_login token for the same user is NOT invalidated by a password reset."""
+        raw_reset = self._create_reset_token()
+        raw_magic = self._create_magic_login_token_directly(self.user.id)
+
+        # Confirm password reset
+        token = self.svc.get_valid_token(raw_reset, expected_type="password_reset")
+        self.assertTrue(self.svc.consume_token_once(token))
+        self.svc.consume_other_unused_tokens_for_user_type(
+            user_id=self.user.id,
+            token_type="password_reset",
+            exclude_token_id=token.id,
+        )
+
+        # magic_login token must still be valid
+        magic_token = self.svc.get_valid_token(raw_magic, expected_type="magic_login")
+        self.assertIsNotNone(magic_token)
+
+    def test_invalidated_count_matches_sibling_count(self):
+        """Return value equals the number of additional tokens that were actually invalidated."""
+        # Create three sibling tokens directly (plus one via service first)
+        raw_via_service = self._create_reset_token()
+        raw_b = self._create_reset_token_directly(self.user.id)
+        raw_c = self._create_reset_token_directly(self.user.id)
+
+        # Consume the service token
+        token = self.svc.get_valid_token(raw_via_service, expected_type="password_reset")
+        self.assertTrue(self.svc.consume_token_once(token))
+
+        # Two siblings (raw_b, raw_c) must be invalidated
+        invalidated = self.svc.consume_other_unused_tokens_for_user_type(
+            user_id=self.user.id,
+            token_type="password_reset",
+            exclude_token_id=token.id,
+        )
+        self.assertEqual(invalidated, 2)
+
+        # Confirm neither raw_b nor raw_c works anymore
+        for raw in (raw_b, raw_c):
+            with self.assertRaises(AccountTokenError):
+                self.svc.get_valid_token(raw, expected_type="password_reset")
 
 
 if __name__ == "__main__":

@@ -120,6 +120,24 @@ class AccountTokenService:
         rows = self.token_repo.mark_used_if_unused(token.id, self.now())
         return rows > 0
 
+    def consume_other_unused_tokens_for_user_type(
+        self,
+        user_id: str,
+        token_type: str,
+        exclude_token_id: str | None = None,
+    ) -> int:
+        """Mark all remaining unused tokens of a type for a user as used, excluding one token.
+
+        Call after a successful password reset to invalidate any other active reset links
+        for the same user. Returns the count of additionally invalidated tokens.
+        """
+        return self.token_repo.mark_unused_for_user_type_as_used(
+            user_id=user_id,
+            token_type=token_type,
+            used_at=self.now(),
+            exclude_token_id=exclude_token_id,
+        )
+
     def build_invitation_url(self, raw_token: str) -> str:
         base = self._get_public_base_url()
         if not base:

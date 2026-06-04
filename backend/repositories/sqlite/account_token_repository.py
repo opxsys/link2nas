@@ -63,6 +63,28 @@ class AccountTokenRepository:
             )
             return int(cursor.rowcount or 0)
 
+    def mark_unused_for_user_type_as_used(
+        self,
+        user_id: str,
+        token_type: str,
+        used_at: str,
+        exclude_token_id: str | None = None,
+    ) -> int:
+        """Mark all unused tokens of a given type for a user as used, optionally excluding one."""
+        with self.db.connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE account_tokens
+                SET used_at = ?
+                WHERE user_id = ?
+                  AND token_type = ?
+                  AND used_at IS NULL
+                  AND (? IS NULL OR id != ?)
+                """,
+                (used_at, user_id, token_type, exclude_token_id, exclude_token_id),
+            )
+            return int(cursor.rowcount or 0)
+
     def delete_unused_for_user_type(self, user_id: str, token_type: str) -> None:
         with self.db.connect() as conn:
             conn.execute(
