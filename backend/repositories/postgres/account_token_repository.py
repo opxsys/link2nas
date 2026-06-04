@@ -49,6 +49,20 @@ class AccountTokenRepository:
                 (used_at, token_id),
             )
 
+    def mark_used_if_unused(self, token_id: str, used_at: str) -> int:
+        """Atomic single-use guard. Returns 1 if consumed, 0 if already used."""
+        with self.db.connect() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE account_tokens
+                SET used_at = %s
+                WHERE id = %s
+                  AND used_at IS NULL
+                """,
+                (used_at, token_id),
+            )
+            return int(cursor.rowcount or 0)
+
     def delete_unused_for_user_type(self, user_id: str, token_type: str) -> None:
         with self.db.connect() as conn:
             conn.execute(

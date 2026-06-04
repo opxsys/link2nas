@@ -92,6 +92,9 @@ def accept_invitation():
     if not user:
         return _token_error("User not found", 404)
 
+    if not token_service.consume_token_once(token):
+        return _token_error("Token already used", 400)
+
     user.password_hash = generate_password_hash(password)
     user.force_password_change = False
     user.email_verified_at = now()
@@ -99,7 +102,6 @@ def accept_invitation():
     user.updated_at = now()
 
     user_repo.update(user)
-    token_service.consume_token(token)
 
     return jsonify({
         "ok": True,
@@ -136,6 +138,9 @@ def confirm_password_reset():
     if not user:
         return _token_error("User not found", 404)
 
+    if not token_service.consume_token_once(token):
+        return _token_error("Token already used", 400)
+
     user.password_hash = generate_password_hash(password)
     user.force_password_change = False
     user.password_reset_token = None
@@ -143,7 +148,6 @@ def confirm_password_reset():
     user.updated_at = now()
 
     user_repo.update(user)
-    token_service.consume_token(token)
 
     return jsonify({
         "ok": True,
@@ -176,12 +180,14 @@ def confirm_email_verification():
     if not user:
         return _token_error("User not found", 404)
 
+    if not token_service.consume_token_once(token):
+        return _token_error("Token already used", 400)
+
     user.email_verified_at = now()
     user.email_verification_token = None
     user.updated_at = now()
 
     user_repo.update(user)
-    token_service.consume_token(token)
 
     return jsonify({
         "ok": True,
@@ -373,12 +379,13 @@ def confirm_magic_login():
     if not user.email_verified_at:
         return _token_error("Email not verified", 401)
 
+    if not token_service.consume_token_once(token):
+        return _token_error("Token already used", 400)
+
     timestamp = now()
     user.last_login_at = timestamp
     user.updated_at = timestamp
     user_repo.update(user)
-
-    token_service.consume_token(token)
 
     login_token = _create_login_token(user)
 

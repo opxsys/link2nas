@@ -115,6 +115,11 @@ class AccountTokenService:
     def consume_token(self, token: AccountToken) -> None:
         self.token_repo.mark_used(token.id, self.now())
 
+    def consume_token_once(self, token: AccountToken) -> bool:
+        """Atomically consume the token. Returns False if already consumed (race condition guard)."""
+        rows = self.token_repo.mark_used_if_unused(token.id, self.now())
+        return rows > 0
+
     def build_invitation_url(self, raw_token: str) -> str:
         base = self._get_public_base_url()
         if not base:
