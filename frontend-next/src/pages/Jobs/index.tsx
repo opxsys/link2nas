@@ -1,4 +1,6 @@
-import { AlertCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
+import { AlertCircle, Info } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import { useJobsState } from './useJobsState'
 import JobsToolbar from './JobsToolbar'
@@ -8,6 +10,17 @@ import JobDeleteModal from './JobDeleteModal'
 
 export default function Jobs() {
   const state = useJobsState()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [notice, setNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    const n = (location.state as { notice?: string } | null)?.notice ?? null
+    if (n) {
+      setNotice(n)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const deletePendingJob = state.deletePendingId
     ? state.jobs.find(j => j.id === state.deletePendingId) ?? null
@@ -16,6 +29,19 @@ export default function Jobs() {
   return (
     <>
       <PageHeader title="Jobs" description="Manage and monitor your download jobs." />
+
+      {notice === 'no-active-provider' && (
+        <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <Info size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span>
+            No active provider configured.{' '}
+            <Link to="/settings" className="font-medium underline underline-offset-2 hover:no-underline">
+              Add and enable a provider
+            </Link>
+            {' '}before creating jobs.
+          </span>
+        </div>
+      )}
 
       {state.error && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">

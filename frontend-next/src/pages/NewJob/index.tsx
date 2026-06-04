@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import SectionCard from '@/components/common/SectionCard'
@@ -13,6 +14,36 @@ import CreationResultPanel from './CreationResultPanel'
 
 export default function NewJob() {
   const state = useNewJobState()
+  const navigate = useNavigate()
+
+  const noActiveProvider = !state.configsLoading && !state.configsError && state.providers.length === 0
+
+  useEffect(() => {
+    if (noActiveProvider) {
+      navigate('/jobs', { replace: true, state: { notice: 'no-active-provider' } })
+    }
+  }, [noActiveProvider, navigate])
+
+  // Show a neutral loader while: configs are loading, or redirect is pending (prevents form flash)
+  if (state.configsLoading || noActiveProvider) {
+    return (
+      <>
+        <PageHeader
+          title="New Job"
+          description="Submit magnet links, direct URLs, or .torrent files."
+          actions={
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/jobs"><ArrowLeft size={13} className="mr-1.5" />Back to Jobs</Link>
+            </Button>
+          }
+        />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+          Loading…
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
