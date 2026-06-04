@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash
 
 from backend.routes_v2.admin_users_support.validation import validate_password as _validate_password
 from backend.routes_v2.public_tokens_support.app_info import _app_settings_service, _get_magic_login_ttl_minutes
+from backend.services_v2.account_token_service import AccountTokenError
 from backend.routes_v2.public_tokens_support.auth import _is_account_expired, _serialize_auth_user, _create_login_token
 from backend.routes_v2.public_tokens_support.responses import _token_error
 from backend.services_v2.rate_limit_service import rate_limit_response
@@ -233,7 +234,7 @@ def validate_password_reset_token():
     try:
         token_service.get_valid_token(raw_token, expected_type="password_reset")
         return jsonify({"ok": True})
-    except Exception:
+    except AccountTokenError:
         return jsonify({"ok": False, "error": _INVALID}), 400
 
 
