@@ -103,8 +103,6 @@ def register_lifecycle_job_routes(jobs_v2_bp):
             job = service.restart_job(ctx, job_id)
         except ValueError as exc:
             return _error(str(exc), 400)
-        except RuntimeError as exc:
-            return _error(str(exc), 500)
         except Exception as exc:
             return _handle_provider_exception(exc)
 
