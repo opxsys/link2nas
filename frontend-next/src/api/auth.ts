@@ -72,6 +72,12 @@ export function confirmMagicLogin(token: string): Promise<LoginResponse> {
   })
 }
 
+export function validatePasswordResetToken(token: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(
+    `/api/v2/public/password-reset/validate?token=${encodeURIComponent(token)}`,
+  )
+}
+
 export function confirmPasswordReset(params: {
   token: string
   password: string

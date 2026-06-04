@@ -211,6 +211,32 @@ def _get_password_reset_ttl_hours() -> int:
     return service.get_password_reset_ttl_hours()
 
 
+@public_tokens_v2_bp.get("/password-reset/validate")
+def validate_password_reset_token():
+    limited = rate_limit_response(
+        "token_status",
+        "public",
+        limit_attr="V2_RATE_LIMIT_TOKEN_STATUS_MAX",
+        window_attr="V2_RATE_LIMIT_TOKEN_STATUS_WINDOW_SECONDS",
+    )
+    if limited:
+        return limited
+
+    token_service = current_app.config["ACCOUNT_TOKEN_SERVICE_V2"]
+    raw_token = request.args.get("token", "")
+
+    _INVALID = "Password reset link is invalid, expired, or already used."
+
+    if not raw_token:
+        return jsonify({"ok": False, "error": _INVALID}), 400
+
+    try:
+        token_service.get_valid_token(raw_token, expected_type="password_reset")
+        return jsonify({"ok": True})
+    except Exception:
+        return jsonify({"ok": False, "error": _INVALID}), 400
+
+
 @public_tokens_v2_bp.post("/password-reset/request")
 def request_password_reset():
     user_repo = current_app.config["USER_REPO_V2"]
