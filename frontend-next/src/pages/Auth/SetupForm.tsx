@@ -26,8 +26,8 @@ export default function SetupForm({ onSuccess }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!email.trim()) { setError(`${t('email')} is required`); return }
-    if (!password) { setError(`${t('password')} is required`); return }
+    if (!email.trim()) { setError(t('emailRequired')); return }
+    if (!password) { setError(t('passwordRequired')); return }
     if (password !== confirmPw) { setError(t('passwordMismatch')); return }
     setLoading(true)
     try {
@@ -91,7 +91,7 @@ export default function SetupForm({ onSuccess }: Props) {
               className={cn(
                 'rounded-md border px-3 py-1.5 text-sm transition-colors',
                 lang === code
-                  ? 'border-primary bg-primary/10 text-primary'
+                  ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
               )}
             >
