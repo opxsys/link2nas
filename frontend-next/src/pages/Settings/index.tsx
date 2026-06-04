@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import PageHeader from '@/components/layout/PageHeader'
 import { useSettingsMockState } from './useSettingsMockState'
+import type { SettingsSection } from './settings.types'
 import SettingsNav from './SettingsNav'
 import AccountSettings from './AccountSettings'
 import ProviderSettings from './ProviderSettings'
@@ -12,8 +14,22 @@ import AccessibilitySettings from './AccessibilitySettings'
 import UserSpaceSettings from './UserSpaceSettings'
 import { getMe } from '@/api/me'
 
+const VALID_SECTIONS: SettingsSection[] = [
+  'account', 'providers', 'destinations', 'api-keys',
+  'notifications', 'prowlarr', 'accessibility', 'space',
+]
+
+function resolveSection(param: string | null): SettingsSection {
+  return VALID_SECTIONS.includes(param as SettingsSection)
+    ? (param as SettingsSection)
+    : 'account'
+}
+
 export default function Settings() {
-  const { activeSection, setActiveSection } = useSettingsMockState()
+  const [searchParams] = useSearchParams()
+  const { activeSection, setActiveSection } = useSettingsMockState(
+    resolveSection(searchParams.get('section')),
+  )
   const [canUseSpace, setCanUseSpace] = useState(false)
 
   useEffect(() => {

@@ -35,7 +35,7 @@ export default function Jobs() {
           <Info size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
           <span>
             No active provider configured.{' '}
-            <Link to="/settings" className="font-medium underline underline-offset-2 hover:no-underline">
+            <Link to="/settings?section=providers" className="font-medium underline underline-offset-2 hover:no-underline">
               Add and enable a provider
             </Link>
             {' '}before creating jobs.

@@ -21,7 +21,7 @@ export function EmptyNoProvider() {
         </p>
       </div>
       <Button asChild size="sm" variant="outline">
-        <Link to="/settings">Configure providers</Link>
+        <Link to="/settings?section=providers">Configure providers</Link>
       </Button>
     </div>
   )
