@@ -39,6 +39,17 @@ export async function request<T = unknown>(path: string, options: RequestInit = 
   }
 
   if (!response.ok) {
+    // If the stored token is rejected as invalid, clear it and notify ProtectedRoute
+    if (response.status === 401) {
+      try {
+        const stored = localStorage.getItem(TOKEN_KEY)
+        if (stored) {
+          localStorage.removeItem(TOKEN_KEY)
+          window.dispatchEvent(new CustomEvent('auth-expired'))
+        }
+      } catch { /* ignore */ }
+    }
+
     const d = data as Record<string, unknown> | null
     let message = (d?.error as string | undefined) ?? (d?.message as string | undefined) ?? `HTTP ${response.status}`
     if (typeof message === 'string' && message.trim().startsWith('<')) {

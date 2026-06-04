@@ -8,7 +8,7 @@ from backend.routes_v2.public_tokens_support.app_info import _app_settings_servi
 from backend.routes_v2.public_tokens_support.auth import _is_account_expired, _serialize_auth_user, _create_login_token
 from backend.routes_v2.public_tokens_support.responses import _token_error
 from backend.services_v2.rate_limit_service import rate_limit_response
-from backend.utils.email_templates import build_magic_login_email
+from backend.utils.email_templates import build_magic_login_email, build_password_reset_email
 
 
 public_tokens_v2_bp = Blueprint("public_tokens_v2", __name__, url_prefix="/api/v2/public")
@@ -187,6 +187,79 @@ def confirm_email_verification():
         "ok": True,
         "message": "Email verified",
     })
+
+def _get_password_reset_ttl_hours() -> int:
+    service = _app_settings_service()
+    if not service:
+        return 2
+    return service.get_password_reset_ttl_hours()
+
+
+@public_tokens_v2_bp.post("/password-reset/request")
+def request_password_reset():
+    user_repo = current_app.config["USER_REPO_V2"]
+    token_service = current_app.config["ACCOUNT_TOKEN_SERVICE_V2"]
+    smtp_service = current_app.config.get("SMTP_SERVICE_V2")
+
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email") or "").strip().lower()
+
+    limited = rate_limit_response(
+        "password_reset_request",
+        email or "missing-email",
+        limit_attr="V2_RATE_LIMIT_EMAIL_REQUEST_MAX",
+        window_attr="V2_RATE_LIMIT_EMAIL_REQUEST_WINDOW_SECONDS",
+    )
+    if limited:
+        return limited
+
+    if not smtp_service or not smtp_service.is_email_sending_available():
+        return jsonify({"error": "Email sending is not configured."}), 503
+
+    generic_response = {
+        "ok": True,
+        "message": "Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé.",
+    }
+
+    if not email:
+        return jsonify(generic_response)
+
+    user = user_repo.get_by_email(email)
+
+    if not user or not user.is_active or _is_account_expired(user):
+        return jsonify(generic_response)
+
+    app_svc = _app_settings_service()
+    app_name = app_svc.get_effective_app_name(
+        env_fallback=getattr(current_app.config.get("SETTINGS"), "APP_NAME", "")
+    ) if app_svc else "Link2NAS"
+
+    try:
+        token, raw_token = token_service.create_token(
+            user_id=user.id,
+            token_type="password_reset",
+            created_by_user_id=None,
+            ttl_hours=_get_password_reset_ttl_hours(),
+        )
+
+        reset_url = token_service.build_password_reset_url(raw_token)
+
+        email_svc = current_app.config.get("EMAIL_TEMPLATE_SERVICE_V2")
+        if email_svc:
+            subject, body = email_svc.render(
+                "password_reset", user.preferred_language,
+                app_name=app_name, url=reset_url, expires_at=token.expires_at,
+            )
+        else:
+            subject, body = build_password_reset_email(
+                user.preferred_language, reset_url, token.expires_at, app_name=app_name
+            )
+        smtp_service.send_email(to_email=user.email, subject=subject, body=body)
+    except Exception:
+        return jsonify(generic_response)
+
+    return jsonify(generic_response)
+
 
 @public_tokens_v2_bp.post("/magic-login/request")
 def request_magic_login():

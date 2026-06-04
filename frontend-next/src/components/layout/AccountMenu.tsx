@@ -57,7 +57,7 @@ export default function AccountMenu() {
 
   function handleLogout() {
     localStorage.removeItem('link2nas_token')
-    window.location.href = '/'
+    navigate('/login')
   }
 
   const initials = me ? (me.display_name || me.email).charAt(0).toUpperCase() : 'U'

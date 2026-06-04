@@ -9,6 +9,7 @@ from backend.routes_v2.admin_users_support.validation import (
     validate_email as _validate_email,
     validate_password as _validate_password,
 )
+from backend.utils.user_language import validate_preferred_language
 
 setup_v2_bp = Blueprint("setup_v2", __name__, url_prefix="/api/v2/setup")
 
@@ -44,6 +45,7 @@ def create_first_admin_v2():
     email = str(data.get("email") or "").strip().lower()
     password = str(data.get("password") or "")
     display_name = str(data.get("display_name") or "").strip() or None
+    preferred_language = validate_preferred_language(data.get("preferred_language"))
 
     try:
         _validate_email(email)
@@ -62,6 +64,7 @@ def create_first_admin_v2():
         is_active=True,
         created_at=timestamp,
         updated_at=timestamp,
+        preferred_language=preferred_language,
     )
 
     user_repo.create(user)

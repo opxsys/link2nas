@@ -1,5 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
+import ProtectedRoute from '@/components/auth/ProtectedRoute'
+import LoginPage from '@/pages/Auth/LoginPage'
+import MagicLoginConfirmPage from '@/pages/Auth/MagicLoginConfirmPage'
+import ResetPasswordPage from '@/pages/Auth/ResetPasswordPage'
 import Dashboard from '@/pages/Dashboard'
 import Jobs from '@/pages/Jobs'
 import NewJob from '@/pages/NewJob'
@@ -29,21 +33,29 @@ function HomeRedirect() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        {/* Index applies the home_page preference then redirects — never stays here */}
-        <Route index element={<HomeRedirect />} />
-        {/* Dashboard has its own stable route — always accessible from the sidebar */}
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="jobs" element={<Jobs />} />
-        <Route path="jobs/new" element={<NewJob />} />
-        <Route path="providers" element={<Providers />} />
-        <Route path="destinations" element={<Destinations />} />
-        <Route path="prowlarr" element={<Prowlarr />} />
-        <Route path="announcements" element={<Announcements />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="admin" element={<Admin />} />
-        <Route path="maintenance" element={<Maintenance />} />
+      {/* Public auth routes — no sidebar */}
+      <Route path="login" element={<LoginPage />} />
+      <Route path="magic-login" element={<MagicLoginConfirmPage />} />
+      <Route path="reset-password" element={<ResetPasswordPage />} />
+
+      {/* Protected app routes — redirect to /login if no token */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />}>
+          {/* Index applies the home_page preference then redirects — never stays here */}
+          <Route index element={<HomeRedirect />} />
+          {/* Dashboard has its own stable route — always accessible from the sidebar */}
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="jobs" element={<Jobs />} />
+          <Route path="jobs/new" element={<NewJob />} />
+          <Route path="providers" element={<Providers />} />
+          <Route path="destinations" element={<Destinations />} />
+          <Route path="prowlarr" element={<Prowlarr />} />
+          <Route path="announcements" element={<Announcements />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="admin" element={<Admin />} />
+          <Route path="maintenance" element={<Maintenance />} />
+        </Route>
       </Route>
     </Routes>
   )
