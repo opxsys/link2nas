@@ -105,6 +105,8 @@ def register_lifecycle_job_routes(jobs_v2_bp):
             return _error(str(exc), 400)
         except RuntimeError as exc:
             return _error(str(exc), 500)
+        except Exception as exc:
+            return _handle_provider_exception(exc)
 
         if not job:
             return _error("Not found", 404)
