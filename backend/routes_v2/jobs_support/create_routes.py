@@ -17,6 +17,7 @@ from backend.routes_v2.jobs_support.errors import (
     _error,
     _handle_provider_exception,
     _handle_destination_exception,
+    safe_provider_error_message,
 )
 
 from backend.routes_v2.jobs_support.helpers import (
@@ -157,7 +158,7 @@ def register_create_job_routes(jobs_v2_bp):
                         )
 
                 except Exception as exc:
-                    item_error = str(exc)
+                    item_error = safe_provider_error_message(exc)
 
                     job.status = "failed"
                     job.error_message = item_error
@@ -243,7 +244,7 @@ def register_create_job_routes(jobs_v2_bp):
                 try:
                     job = service.start_job(ctx, job.id)
                 except Exception as exc:
-                    item_error = str(exc)
+                    item_error = safe_provider_error_message(exc)
 
                     job.status = "failed"
                     job.error_message = item_error
