@@ -29,6 +29,7 @@ export default function Jobs() {
           filters={state.filters}
           providers={state.providers}
           destinations={state.destinations}
+          hasActiveProvider={state.hasActiveProvider}
           onFilter={state.setFilter}
           onRefresh={state.refresh}
         />
@@ -37,8 +38,11 @@ export default function Jobs() {
           <div className="min-w-0 flex-1 overflow-x-auto">
             <JobsTable
               jobs={state.filteredJobs}
+              totalJobs={state.jobs.length}
+              hasActiveProvider={state.hasActiveProvider}
               selectedJobId={state.selectedJobId}
               onSelect={state.selectJob}
+              onClearFilters={state.clearAllFilters}
               loading={state.loading}
             />
           </div>

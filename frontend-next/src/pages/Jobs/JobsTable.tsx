@@ -2,22 +2,36 @@ import { cn } from '@/lib/utils'
 import StatusBadge from '@/components/status/StatusBadge'
 import { displayValue } from './jobs.utils'
 import { jobName, jobProvider, jobDestination, formatBytes } from './jobs.types'
+import { EmptyNoProvider, EmptyNoJobs, EmptyFiltered } from './JobsEmptyState'
 import type { RealJob } from '@/api/jobs'
 
 interface JobsTableProps {
   jobs: RealJob[]
+  totalJobs: number
+  hasActiveProvider: boolean | null
   selectedJobId: string | null
   onSelect: (id: string) => void
+  onClearFilters: () => void
   loading?: boolean
 }
 
 const TH = 'px-4 py-2.5 text-left text-xs font-medium text-muted-foreground'
 const TD = 'px-4 py-3'
 
-export default function JobsTable({ jobs, selectedJobId, onSelect, loading }: JobsTableProps) {
+export default function JobsTable({
+  jobs, totalJobs, hasActiveProvider,
+  selectedJobId, onSelect, onClearFilters, loading,
+}: JobsTableProps) {
   if (loading) {
     return <div className="px-4 py-10 text-center text-sm text-muted-foreground">Loading jobs…</div>
   }
+
+  if (jobs.length === 0) {
+    if (hasActiveProvider === false) return <EmptyNoProvider />
+    if (totalJobs === 0) return <EmptyNoJobs />
+    return <EmptyFiltered onClearFilters={onClearFilters} />
+  }
+
   return (
     <div>
       <table className="w-full text-sm">
@@ -33,14 +47,7 @@ export default function JobsTable({ jobs, selectedJobId, onSelect, loading }: Jo
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {jobs.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                No jobs match the current filters.
-              </td>
-            </tr>
-          ) : (
-            jobs.map((job) => (
+          {jobs.map((job) => (
               <tr
                 key={job.id}
                 onClick={() => onSelect(job.id)}
@@ -70,8 +77,7 @@ export default function JobsTable({ jobs, selectedJobId, onSelect, loading }: Jo
                   {job.created_at ? new Date(job.created_at).toLocaleDateString() : '—'}
                 </td>
               </tr>
-            ))
-          )}
+          ))}
         </tbody>
       </table>
       <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">

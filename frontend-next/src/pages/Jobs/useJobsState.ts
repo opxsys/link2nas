@@ -6,9 +6,11 @@ import {
   sendToDestination, resendToDestination, cancelLocalDownload,
   cloneWithProvider,
 } from '@/api/jobs'
+import { listProviderConfigs } from '@/api/provider-configs'
 import { ApiError } from '@/api/client'
 import { filterJobs, getUniqueProviders, getUniqueDestinations } from './jobs.utils'
 import type { RealJob } from '@/api/jobs'
+import type { ProviderConfig } from '@/api/provider-configs'
 import type { JobsFilters } from './jobs.types'
 
 const INITIAL_FILTERS: JobsFilters = { search: '', status: '', provider: '', destination: '' }
@@ -71,6 +73,7 @@ export function useJobsState() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<JobsFilters>(INITIAL_FILTERS)
+  const [configuredProviders, setConfiguredProviders] = useState<ProviderConfig[] | null>(null)
   const [actionPending, setActionPending] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null)
@@ -127,8 +130,13 @@ export function useJobsState() {
     }
 
     try {
-      const data = await listJobs(filters.status || undefined)
+      // Fetch providers only on non-silent loads (initial + manual refresh, not polling)
+      const [data, provs] = await Promise.all([
+        listJobs(filters.status || undefined),
+        silent ? Promise.resolve(null) : listProviderConfigs().catch((): ProviderConfig[] => []),
+      ])
       setJobs(data)
+      if (!silent && provs !== null) setConfiguredProviders(provs)
       await refreshSelectedFromList(data)
 
       if (!silent) {
@@ -321,10 +329,20 @@ export function useJobsState() {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
+  function clearAllFilters() {
+    setFilters(INITIAL_FILTERS)
+  }
+
+  // null = still loading; true/false = loaded
+  const hasActiveProvider: boolean | null = configuredProviders === null
+    ? null
+    : configuredProviders.some(p => p.is_enabled)
+
   return {
     jobs, filteredJobs, loading, error,
     selectedJobId, selectedJob, selectJob, clearSelection,
-    filters, setFilter, providers, destinations,
+    filters, setFilter, clearAllFilters, providers, destinations,
+    hasActiveProvider,
     actionPending, actionError, clearActionError: () => setActionError(null),
     performAction,
     deletePendingId, setDeletePendingId, confirmDelete,
