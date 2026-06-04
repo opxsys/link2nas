@@ -42,7 +42,7 @@ export function useDashboardData(): DashboardState {
   const [destinations, setDestinations] = useState<DestinationConfig[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [canViewStorage, setCanViewStorage] = useState(true)
+  const [canViewStorage, setCanViewStorage] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Lightweight poll: only refresh frequently-changing data
@@ -74,7 +74,12 @@ export function useDashboardData(): DashboardState {
       setProviders(provs)
       setDestinations(dests)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard')
+      // 401 → client.ts already cleared the token and dispatched auth-expired;
+      // ProtectedRoute will redirect to login, no need to show a banner.
+      const isAuthError = err instanceof ApiError && err.status === 401
+      if (!isAuthError) {
+        setError('Failed to load dashboard. Please try again.')
+      }
     } finally {
       setLoading(false)
     }

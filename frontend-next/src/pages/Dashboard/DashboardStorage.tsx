@@ -30,8 +30,7 @@ export default function DashboardStorage({ disk, loading }: Props) {
         <p className="text-sm italic text-muted-foreground">Loading…</p>
       ) : !disk ? (
         <UnavailableState
-          message="Storage info unavailable"
-          note="Requires admin access to the maintenance endpoint."
+          message="Storage info unavailable."
           className="py-4"
         />
       ) : (
