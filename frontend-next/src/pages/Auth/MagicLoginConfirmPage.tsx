@@ -6,7 +6,6 @@ import { confirmMagicLogin, storeToken } from '@/api/auth'
 import { invalidateMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
 import { useAuthLang } from '@/lib/useAuthLang'
-import { ApiError } from '@/api/client'
 
 export default function MagicLoginConfirmPage() {
   const navigate = useNavigate()
@@ -14,13 +13,11 @@ export default function MagicLoginConfirmPage() {
   const { appInfo } = useAppInfo()
   const { t } = useAuthLang()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     const rawToken = searchParams.get('token') || ''
     if (!rawToken) {
       setStatus('error')
-      setErrorMsg(t('invalidToken'))
       return
     }
     confirmMagicLogin(rawToken)
@@ -30,10 +27,7 @@ export default function MagicLoginConfirmPage() {
         setStatus('success')
         setTimeout(() => navigate('/', { replace: true }), 1200)
       })
-      .catch(err => {
-        setStatus('error')
-        setErrorMsg(err instanceof ApiError ? err.message : t('invalidToken'))
-      })
+      .catch(() => setStatus('error'))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const appName = appInfo.app_name || 'Link2NAS'
@@ -58,7 +52,7 @@ export default function MagicLoginConfirmPage() {
         {status === 'error' && (
           <div className="flex flex-col items-center gap-4 py-6 text-center">
             <XCircle size={24} className="text-destructive" aria-hidden="true" />
-            <p className="text-sm text-destructive">{errorMsg}</p>
+            <p className="text-sm text-destructive">{t('invalidMagicLink')}</p>
             <Link
               to="/login"
               className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
