@@ -10,11 +10,14 @@ interface JobsToolbarProps {
   filters: JobsFilters
   providers: string[]
   destinations: string[]
+  hasActiveProvider: boolean | null
   onFilter: <K extends keyof JobsFilters>(key: K, value: JobsFilters[K]) => void
   onRefresh: () => void
 }
 
-export default function JobsToolbar({ filters, providers, destinations, onFilter, onRefresh }: JobsToolbarProps) {
+export default function JobsToolbar({
+  filters, providers, destinations, hasActiveProvider, onFilter, onRefresh,
+}: JobsToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative min-w-[180px] flex-1">
@@ -48,12 +51,14 @@ export default function JobsToolbar({ filters, providers, destinations, onFilter
         <RefreshCw size={14} aria-hidden="true" />
       </Button>
 
-      <Button asChild size="sm">
-        <Link to="/jobs/new">
-          <PlusCircle size={14} aria-hidden="true" />
-          New Job
-        </Link>
-      </Button>
+      {hasActiveProvider === true && (
+        <Button asChild size="sm">
+          <Link to="/jobs/new">
+            <PlusCircle size={14} aria-hidden="true" />
+            New Job
+          </Link>
+        </Button>
+      )}
     </div>
   )
 }
