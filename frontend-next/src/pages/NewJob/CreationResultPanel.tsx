@@ -85,13 +85,17 @@ export default function CreationResultPanel({ result, onDismiss }: CreationResul
                     </span>
                   </td>
                   <td className={TD}>
-                    {item.status === 'created' ? (
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                        <CircleCheck size={13} aria-hidden="true" /> Created
-                      </span>
-                    ) : (
+                    {item.status === 'failed' ? (
                       <span className="flex items-center gap-1.5 text-xs font-medium text-red-700 dark:text-red-400">
                         <CircleX size={13} aria-hidden="true" /> Failed
+                      </span>
+                    ) : item.status === 'reused' ? (
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                        <CircleCheck size={13} aria-hidden="true" /> Reused
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                        <CircleCheck size={13} aria-hidden="true" /> Created
                       </span>
                     )}
                   </td>
