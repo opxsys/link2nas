@@ -148,7 +148,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       </div>
 
       {/* Actions bar */}
-      <div className="flex flex-wrap items-center gap-1 border-b border-border px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1 border-b border-border px-3 py-2 [&>button]:whitespace-nowrap">
         {(cap.canCopySingle || cap.canCopyAll) && (
           <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(allLinks.join('\n')).catch(() => undefined)}>
             <Copy size={13} />{allLinks.length > 1 ? 'Copy all' : 'Copy link'}
@@ -159,7 +159,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             title={allLinks.length > 0 ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
             onClick={() => onAction('unrestrict', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Unlock size={13} />}
-            {allLinks.length > 0 ? 'Regenerate link' : 'Generate link'}
+            {allLinks.length > 0 ? 'Regenerate' : 'Generate link'}
           </Button>
         )}
         {cap.canRefresh && (
