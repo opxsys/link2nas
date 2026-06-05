@@ -13,6 +13,7 @@ export default function ProviderSettings() {
   const [configs, setConfigs] = useState<ProviderConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [actingIds, setActingIds] = useState<Set<string>>(new Set())
   const [modalTarget, setModalTarget] = useState<ProviderConfig | null | false>(false)
   const [deleteTarget, setDeleteTarget] = useState<ProviderConfig | null>(null)
@@ -37,12 +38,14 @@ export default function ProviderSettings() {
 
   async function handleToggleEnabled(config: ProviderConfig) {
     setActing(config.id, true)
+    setActionError(null)
     setConfigs(prev => prev.map(c => c.id === config.id ? { ...c, is_enabled: !c.is_enabled } : c))
     try {
       const updated = await updateProviderConfig(config.id, config.provider_type, { is_enabled: !config.is_enabled })
       setConfigs(prev => prev.map(c => c.id === config.id ? updated : c))
-    } catch {
+    } catch (err) {
       setConfigs(prev => prev.map(c => c.id === config.id ? config : c))
+      setActionError(err instanceof ApiError ? err.message : 'Could not update provider.')
     } finally {
       setActing(config.id, false)
     }
@@ -50,10 +53,12 @@ export default function ProviderSettings() {
 
   async function handleSetDefault(config: ProviderConfig) {
     setActing(config.id, true)
+    setActionError(null)
     try {
       await updateProviderConfig(config.id, config.provider_type, { is_default: true })
       await load()
-    } catch {
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not set default provider.')
       await load()
     } finally {
       setActing(config.id, false)
@@ -108,6 +113,12 @@ export default function ProviderSettings() {
               />
             )
           })}
+        </div>
+      )}
+
+      {actionError && (
+        <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          {actionError}
         </div>
       )}
 
