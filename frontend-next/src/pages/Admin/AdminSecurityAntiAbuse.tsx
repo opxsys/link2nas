@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { RefreshCw, Loader2, CheckCircle2, XCircle, AlertCircle, RotateCcw, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getAntiAbuse, resetAntiAbuseAll, resetAntiAbuseKind } from '@/api/admin-security'
@@ -31,6 +31,7 @@ export default function AdminSecurityAntiAbuse() {
   const [resettingAll, setResettingAll] = useState(false)
   const [actionStatus, setActionStatus] = useState<ActionStatus>('idle')
   const [actionMessage, setActionMessage] = useState('')
+  const actionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -47,12 +48,14 @@ export default function AdminSecurityAntiAbuse() {
   useEffect(() => { load() }, [load])
 
   async function handleResetKind(kind: string) {
+    if (actionTimer.current) clearTimeout(actionTimer.current)
     setResettingKind(kind)
     setActionStatus('idle')
     try {
       await resetAntiAbuseKind(kind)
       setActionStatus('ok')
       setActionMessage(`Counters for "${kind}" reset.`)
+      actionTimer.current = setTimeout(() => setActionStatus('idle'), 4000)
       await load()
     } catch (err) {
       setActionStatus('error')
@@ -63,12 +66,14 @@ export default function AdminSecurityAntiAbuse() {
   }
 
   async function handleResetAll() {
+    if (actionTimer.current) clearTimeout(actionTimer.current)
     setResettingAll(true)
     setActionStatus('idle')
     try {
       await resetAntiAbuseAll()
       setActionStatus('ok')
       setActionMessage('All anti-abuse counters reset.')
+      actionTimer.current = setTimeout(() => setActionStatus('idle'), 4000)
       await load()
     } catch (err) {
       setActionStatus('error')
@@ -90,11 +95,12 @@ export default function AdminSecurityAntiAbuse() {
         )}
 
         {fetchError && (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-            <AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
             <div>
-              {fetchError}
-              <Button size="sm" variant="outline" className="ml-3" onClick={load}>Retry</Button>
+              <p className="font-medium">Failed to load anti-abuse data</p>
+              <p className="mt-0.5 text-xs">{fetchError}</p>
+              <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
             </div>
           </div>
         )}
@@ -108,8 +114,11 @@ export default function AdminSecurityAntiAbuse() {
               {data.redis_enabled && (
                 <span className="text-xs text-emerald-700 dark:text-emerald-400">Redis</span>
               )}
-              <Button size="sm" variant="outline" disabled={busy} onClick={load}>
-                <RefreshCw size={13} className="mr-1.5" aria-hidden="true" /> Refresh
+              <Button size="sm" variant="outline" disabled={busy || loading} onClick={load}>
+                {loading
+                  ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+                  : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
+                Refresh
               </Button>
             </div>
 
@@ -154,22 +163,34 @@ export default function AdminSecurityAntiAbuse() {
               </table>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <Button size="sm" variant="outline" disabled={busy} onClick={handleResetAll}>
-                {resettingAll
-                  ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
-                  : <XCircle size={13} className="mr-1.5" aria-hidden="true" />}
-                Reset all counters
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div>
+                <Button size="sm" variant="outline" disabled={busy} onClick={handleResetAll}>
+                  {resettingAll
+                    ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+                    : <RotateCcw size={13} className="mr-1.5" aria-hidden="true" />}
+                  Reset all counters
+                </Button>
+              </div>
               {actionStatus === 'ok' && (
-                <span className="flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
-                  <CheckCircle2 size={14} aria-hidden="true" /> {actionMessage}
-                </span>
+                <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+                  <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+                  <span className="flex-1">{actionMessage}</span>
+                  <button type="button" onClick={() => { if (actionTimer.current) clearTimeout(actionTimer.current); setActionStatus('idle') }}
+                    className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                </div>
               )}
               {actionStatus === 'error' && (
-                <span className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
-                  <XCircle size={14} aria-hidden="true" /> {actionMessage}
-                </span>
+                <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+                  <XCircle size={15} className="shrink-0" aria-hidden="true" />
+                  <span className="flex-1">{actionMessage}</span>
+                  <button type="button" onClick={() => setActionStatus('idle')}
+                    className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                </div>
               )}
             </div>
           </>
