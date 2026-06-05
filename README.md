@@ -164,6 +164,7 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model, rate limit
 | [docs/VALIDATION.md](docs/VALIDATION.md) | Pre-deployment validation checklist |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common symptoms and solutions |
 | [docs/PROWLARR.md](docs/PROWLARR.md) | Prowlarr / qBittorrent integration guide |
+| [docs/QBITTORRENT_COMPATIBILITY.md](docs/QBITTORRENT_COMPATIBILITY.md) | qBittorrent Compatibility API — scope, supported endpoints, limitations |
 
 ---
 

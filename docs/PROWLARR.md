@@ -1,5 +1,7 @@
 # Prowlarr Integration
 
+> For the technical scope, supported endpoints, and limitations of the qBittorrent compatibility layer, see [QBITTORRENT_COMPATIBILITY.md](QBITTORRENT_COMPATIBILITY.md).
+
 ## Purpose
 
 Link2NAS exposes a minimal qBittorrent-compatible API endpoint that allows Prowlarr (and other tools that support qBittorrent as a download client) to send magnets and `.torrent` files directly to Link2NAS.
