@@ -15,11 +15,12 @@ export default function Jobs() {
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
-    const n = (location.state as { notice?: string } | null)?.notice ?? null
-    if (n) {
-      setNotice(n)
-      navigate(location.pathname, { replace: true, state: null })
-    }
+    const ls = (location.state as { notice?: string; selectedJobId?: string } | null)
+    const n = ls?.notice ?? null
+    const sid = ls?.selectedJobId ?? null
+    if (n) setNotice(n)
+    if (n || sid) navigate(location.pathname, { replace: true, state: null })
+    if (sid) void state.selectJob(sid)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const deletePendingJob = state.deletePendingId

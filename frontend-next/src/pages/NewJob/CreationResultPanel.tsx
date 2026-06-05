@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { CircleCheck, CircleX, Link as LinkIcon, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SectionCard from '@/components/common/SectionCard'
@@ -14,8 +14,13 @@ const TH = 'px-4 py-2 text-left text-xs font-medium text-muted-foreground'
 const TD = 'px-4 py-3'
 
 export default function CreationResultPanel({ result, onDismiss }: CreationResultPanelProps) {
+  const navigate = useNavigate()
   const allOk = result.failed === 0
   const allFailed = result.created === 0
+
+  const singleJobId = result.created === 1
+    ? (result.items.find(i => i.status !== 'failed')?.jobId ?? null)
+    : null
 
   return (
     <SectionCard
@@ -47,12 +52,13 @@ export default function CreationResultPanel({ result, onDismiss }: CreationResul
             )}
           </span>
           {result.created > 0 && (
-            <Link
-              to="/jobs"
+            <button
+              type="button"
+              onClick={() => navigate('/jobs', singleJobId ? { state: { selectedJobId: singleJobId } } : undefined)}
               className="ml-auto flex items-center gap-1 text-xs underline-offset-2 hover:underline"
             >
-              View jobs <ChevronRight size={12} aria-hidden="true" />
-            </Link>
+              {singleJobId ? 'View job' : 'View jobs'} <ChevronRight size={12} aria-hidden="true" />
+            </button>
           )}
         </div>
 

@@ -57,7 +57,7 @@ export default function NewJob() {
         }
       />
 
-      <div className="flex max-w-3xl flex-col gap-6">
+      <div className="flex max-w-3xl flex-col gap-4">
         <SectionCard title="Submit" bodyClassName="p-0">
           <NewJobTabs activeTab={state.activeTab} onTabChange={state.setActiveTab} />
 
