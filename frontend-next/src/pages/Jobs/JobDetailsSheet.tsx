@@ -401,14 +401,15 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
                                 <p className="truncate font-mono text-[11px] text-muted-foreground" title={url}>{url}</p>
                               </div>
                               {canReunlock && (
-                                <button
-                                  disabled={busy}
-                                  onClick={() => onAction('unrestrict_file', job.id, { file_id: l.file_id })}
-                                  className="shrink-0 text-xs text-muted-foreground hover:text-primary disabled:opacity-50"
-                                  title="Regenerate this file link."
-                                >
-                                  Regenerate
-                                </button>
+                                      <button
+                                        disabled={busy}
+                                        onClick={() => onAction('unrestrict_file', job.id, { file_id: l.file_id })}
+                                        className="shrink-0 rounded text-muted-foreground hover:text-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        title="Regenerate this file link."
+                                        aria-label={`Regenerate link for ${filename}`}
+                                      >
+                                        {busy ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />}
+                                      </button>
                               )}
                               <CopyBtn text={url} label={`Copy direct download link for ${filename}`} small />
                             </li>
