@@ -150,7 +150,7 @@ export default function AdminGeneral() {
         </div>
 
         {saveStatus === 'saved' && (
-          <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+          <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
             <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
             <span className="flex-1">{saveMessage}</span>
             <button
