@@ -15,7 +15,7 @@ function formatBytes(bytes: number): string {
 function CheckItem({ label, ok, detail }: { label: string; ok: boolean; detail: string }) {
   return (
     <div className="flex items-start gap-3 rounded-md border border-border bg-muted/20 p-3">
-      <span className={`mt-0.5 shrink-0 ${ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+      <span className={`mt-0.5 shrink-0 ${ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
         {ok ? <CheckCircle2 size={15} aria-hidden="true" /> : <XCircle size={15} aria-hidden="true" />}
       </span>
       <div className="min-w-0">
@@ -75,14 +75,16 @@ export default function AdminMaintenance() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${status.ok ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'}`}>
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${status.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'}`}>
             {status.ok ? <CheckCircle2 size={12} aria-hidden="true" /> : <XCircle size={12} aria-hidden="true" />}
             {status.ok ? 'All systems OK' : 'Issues detected'}
           </span>
           <span className="text-xs text-muted-foreground">Checked at {checkedAt}</span>
         </div>
-        <Button size="sm" variant="outline" onClick={load}>
-          <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />
+        <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+          {loading
+            ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+            : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
           Refresh
         </Button>
       </div>
