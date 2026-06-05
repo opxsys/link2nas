@@ -6,6 +6,10 @@ from flask import Blueprint, current_app, jsonify, request
 from backend.models.smtp_settings import SmtpSettings
 from backend.routes_v2.admin_users import require_super_admin
 from backend.services_v2.smtp_service import SmtpServiceError
+from backend.services_v2.email_support.email_failure import (
+    safe_email_error_message,
+    EMAIL_ERROR_STATUS,
+)
 
 
 admin_smtp_bp = Blueprint("admin_smtp_v2", __name__, url_prefix="/api/v2/admin/smtp-settings")
@@ -200,7 +204,7 @@ def test_smtp_settings():
                 },
             )
 
-        return jsonify({"ok": False, "error": str(exc)}), 502
+        return jsonify({"ok": False, "error": safe_email_error_message(exc)}), EMAIL_ERROR_STATUS
 
     return jsonify({
         "ok": True,

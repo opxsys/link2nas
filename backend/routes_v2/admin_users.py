@@ -9,6 +9,11 @@ from backend.services_v2.rate_limit_service import rate_limit_response
 from backend.utils.email_templates import build_invitation_email, build_password_reset_email
 from backend.utils.user_language import validate_preferred_language
 from backend.routes_v2.admin_users_support.auth import require_super_admin, require_admin_user_management
+from backend.services_v2.smtp_service import SmtpServiceError
+from backend.services_v2.email_support.email_failure import (
+    safe_email_error_message,
+    EMAIL_ERROR_STATUS,
+)
 from backend.routes_v2.admin_users_support.serialization import serialize_user
 from backend.routes_v2.admin_users_support.validation import (
     parse_optional_datetime,
@@ -425,11 +430,8 @@ def send_user_invitation_email(user_id):
             subject=subject,
             body=body,
         )
-    except Exception as exc:
-        return jsonify({
-            "ok": False,
-            "error": f"Invitation email failed: {exc}",
-        }), 502
+    except SmtpServiceError as exc:
+        return jsonify({"ok": False, "error": safe_email_error_message(exc)}), EMAIL_ERROR_STATUS
 
     return jsonify({
         "ok": True,
@@ -525,11 +527,8 @@ def send_user_password_reset_email(user_id):
             subject=subject,
             body=body,
         )
-    except Exception as exc:
-        return jsonify({
-            "ok": False,
-            "error": f"Password reset email failed: {exc}",
-        }), 502
+    except SmtpServiceError as exc:
+        return jsonify({"ok": False, "error": safe_email_error_message(exc)}), EMAIL_ERROR_STATUS
 
     return jsonify({
         "ok": True,

@@ -1,4 +1,9 @@
 from backend.utils.email_templates import build_email_verification_email
+from backend.services_v2.smtp_service import SmtpServiceError
+from backend.services_v2.email_support.email_failure import (
+    safe_email_error_message,
+    EMAIL_ERROR_STATUS,
+)
 
 
 def request_email_verification_for_user(
@@ -46,8 +51,8 @@ def request_email_verification_for_user(
                 user.preferred_language, verification_url, token.expires_at, app_name=app_name
             )
         smtp_service.send_email(to_email=user.email, subject=subject, body=body)
-    except Exception as exc:
-        return {"ok": False, "error": f"Email verification failed: {exc}"}, 502
+    except SmtpServiceError as exc:
+        return {"ok": False, "error": safe_email_error_message(exc)}, EMAIL_ERROR_STATUS
 
     user.email_verification_token = None
     user.updated_at = now_func()
