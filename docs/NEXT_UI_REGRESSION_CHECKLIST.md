@@ -12,7 +12,7 @@ The goal is not exhaustive QA. The goal is to catch obvious regressions in criti
 
 - [ ] Login works.
 - [ ] Logout works.
-- [ ] Expired or invalid token redirects to `/next/login` without showing protected content.
+- [ ] Expired or invalid token redirects to `/login` without showing protected content.
 - [ ] Fresh install setup creates the first administrator and logs in.
 - [ ] Password reset with a valid link works.
 - [ ] Password reset with an already-used or expired link shows a clear invalid-link message before showing the form.
@@ -21,8 +21,8 @@ The goal is not exhaustive QA. The goal is to catch obvious regressions in criti
 ## 2. Jobs / providers
 
 - [ ] Fresh install with 0 provider does not show the `New Job` button.
-- [ ] Direct access to `/next/jobs/new` with 0 provider redirects to Jobs with a clear provider notice.
-- [ ] Settings provider deep-link `/next/settings?section=providers` opens the Providers section.
+- [ ] Direct access to `/jobs/new` with 0 provider redirects to Jobs with a clear provider notice.
+- [ ] Settings provider deep-link `/settings?section=providers` opens the Providers section.
 - [ ] Bad provider API key shows a clean message, not raw AllDebrid / RealDebrid text.
 - [ ] Bad torrent shows a clean message, not Cloudflare HTML or `HTTP 502`.
 - [ ] Expected provider errors return JSON with HTTP `422`, not `502`.

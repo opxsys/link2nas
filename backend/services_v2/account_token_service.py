@@ -31,15 +31,6 @@ class AccountTokenService:
             )
         return self._env_public_base_url
 
-    def _get_next_base_url(self) -> str:
-        """Return the base URL for Next UI deep-links, ensuring exactly one /next suffix."""
-        base = self._get_public_base_url().rstrip("/")
-        if not base:
-            return "/next"
-        if base.endswith("/next"):
-            return base
-        return f"{base}/next"
-
     def now(self) -> str:
         return datetime.now(UTC).isoformat()
 
@@ -145,11 +136,15 @@ class AccountTokenService:
         return f"{base}/invite?token={raw_token}"
 
     def build_password_reset_url(self, raw_token: str) -> str:
-        base = self._get_next_base_url()
+        base = self._get_public_base_url()
+        if not base:
+            return f"/reset-password?token={raw_token}"
         return f"{base}/reset-password?token={raw_token}"
 
     def build_magic_login_url(self, raw_token: str) -> str:
-        base = self._get_next_base_url()
+        base = self._get_public_base_url()
+        if not base:
+            return f"/magic-login?token={raw_token}"
         return f"{base}/magic-login?token={raw_token}"
 
     def build_email_verification_url(self, raw_token: str) -> str:

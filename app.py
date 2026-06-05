@@ -1,7 +1,7 @@
 
 import os
 
-from flask import Flask, send_from_directory
+from flask import Flask, redirect, send_from_directory
 
 from config import Settings
 from backend.services_v2.job_service import JobService as JobServiceV2
@@ -72,20 +72,17 @@ def create_app() -> Flask:
         return {"ok": True}, 200
 
     _NEXT_DIST = os.path.join(os.path.dirname(__file__), "frontend-next", "dist")
+    _LEGACY_STATIC = os.path.join(os.path.dirname(__file__), "frontend")
 
+    # 301 redirects for any bookmark/link still using the old /next prefix.
     @app.get("/next")
     @app.get("/next/")
+    def redirect_next_root() -> object:
+        return redirect("/", 301)
+
     @app.get("/next/<path:subpath>")
-    def serve_next_frontend(subpath: str = "") -> object:
-        if not os.path.isdir(_NEXT_DIST):
-            return (
-                "Next UI is not built yet. Run: cd frontend-next && npm install && npm run build",
-                503,
-                {"Content-Type": "text/plain"},
-            )
-        if subpath and os.path.isfile(os.path.join(_NEXT_DIST, subpath)):
-            return send_from_directory(_NEXT_DIST, subpath)
-        return send_from_directory(_NEXT_DIST, "index.html")
+    def redirect_next_subpath(subpath: str) -> object:
+        return redirect(f"/{subpath}", 301)
 
     app.config["RATE_LIMIT_SERVICE_V2"] = RateLimitService(
         enabled=settings.V2_RATE_LIMIT_ENABLED,
@@ -94,8 +91,23 @@ def create_app() -> Flask:
     )
 
     @app.get("/")
-    def serve_frontend():
-        return send_from_directory(app.static_folder, "index.html")
+    def serve_root() -> object:
+        if not os.path.isdir(_NEXT_DIST):
+            return (
+                "Next UI is not built yet. Run: cd frontend-next && npm install && npm run build",
+                503,
+                {"Content-Type": "text/plain"},
+            )
+        return send_from_directory(_NEXT_DIST, "index.html")
+
+    # Legacy UI — accessible at /legacy during the transition period.
+    @app.get("/legacy")
+    @app.get("/legacy/")
+    @app.get("/legacy/<path:subpath>")
+    def serve_legacy(subpath: str = "") -> object:
+        if subpath and os.path.isfile(os.path.join(_LEGACY_STATIC, subpath)):
+            return send_from_directory(_LEGACY_STATIC, subpath)
+        return send_from_directory(_LEGACY_STATIC, "index.html")
 
 
     repositories_v2 = build_repositories(settings)
@@ -274,12 +286,25 @@ def create_app() -> Flask:
     if settings.DEBUG and settings.V2_DEV_ROUTES_ENABLED:
         app.register_blueprint(dev_v2_bp)
 
+    # /invite and /verify-email are not yet in the Next UI router — serve legacy temporarily.
     @app.get("/invite")
-    @app.get("/reset-password")
-    @app.get("/magic-login")
     @app.route("/verify-email")
-    def serve_public_account_pages():
-        return send_from_directory(app.static_folder, "index.html")
+    def serve_legacy_token_pages() -> object:
+        return send_from_directory(_LEGACY_STATIC, "index.html")
+
+    # SPA fallback — Next UI assets and all unmatched routes.
+    @app.get("/<path:subpath>")
+    def serve_next_spa(subpath: str) -> object:
+        if not os.path.isdir(_NEXT_DIST):
+            return (
+                "Next UI is not built yet. Run: cd frontend-next && npm install && npm run build",
+                503,
+                {"Content-Type": "text/plain"},
+            )
+        asset_path = os.path.join(_NEXT_DIST, subpath)
+        if os.path.isfile(asset_path):
+            return send_from_directory(_NEXT_DIST, subpath)
+        return send_from_directory(_NEXT_DIST, "index.html")
 
     @app.errorhandler(ApiAuthError)
     def handle_api_auth_error(error):

@@ -10,7 +10,7 @@ applyStoredTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename="/next">
+    <BrowserRouter>
       <App />
     </BrowserRouter>
   </StrictMode>,
