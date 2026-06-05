@@ -154,9 +154,11 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
           </Button>
         )}
         {cap.canUnrestrict && (
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('unrestrict', job.id)}>
+          <Button variant="outline" size="sm" disabled={busy}
+            title={allLinks.length > 0 ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
+            onClick={() => onAction('unrestrict', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Unlock size={13} />}
-            {allLinks.length > 0 ? 'Unlock again' : 'Unlock'}
+            {allLinks.length > 0 ? 'Regenerate link' : 'Generate link'}
           </Button>
         )}
         {cap.canRefresh && (
@@ -388,23 +390,27 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
                     {job.output_mode === 'per_file'
                       ? job.output_links.filter(l => !!l.url).map((l, i) => {
                           const url = l.url as string
+                          const filename = l.filename || `File ${i + 1}`
                           const canReunlock = !!l.file_id &&
                             ['downloaded', 'ready', 'completed', 'partially_ready'].includes(job.status)
                           return (
-                            <li key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
-                              <LinkIcon size={11} className="shrink-0 text-muted-foreground" />
-                              <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{url}</span>
+                            <li key={l.file_id ?? i} className="flex items-center gap-3 rounded-md border border-border bg-muted/20 px-3 py-2">
+                              <LinkIcon size={13} className="shrink-0 text-muted-foreground" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-medium text-foreground" title={filename}>{filename}</p>
+                                <p className="truncate font-mono text-[11px] text-muted-foreground" title={url}>{url}</p>
+                              </div>
                               {canReunlock && (
                                 <button
                                   disabled={busy}
                                   onClick={() => onAction('unrestrict_file', job.id, { file_id: l.file_id })}
                                   className="shrink-0 text-xs text-muted-foreground hover:text-primary disabled:opacity-50"
-                                  title="Regenerate link"
+                                  title="Regenerate this file link."
                                 >
-                                  Unlock again
+                                  Regenerate
                                 </button>
                               )}
-                              <CopyBtn text={url} label={`Copy link ${i + 1}`} small />
+                              <CopyBtn text={url} label={`Copy direct download link for ${filename}`} small />
                             </li>
                           )
                         })
@@ -412,7 +418,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
                           <li key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
                             <LinkIcon size={11} className="shrink-0 text-muted-foreground" />
                             <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{url}</span>
-                            <CopyBtn text={url} label={`Copy link ${i + 1}`} small />
+                            <CopyBtn text={url} label="Copy direct download link" small />
                           </li>
                         ))
                     }

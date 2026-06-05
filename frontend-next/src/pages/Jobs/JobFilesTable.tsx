@@ -87,9 +87,9 @@ export default function JobFilesTable({
                       <button
                         onClick={() => onUnrestrictFile(file.id)}
                         className="text-xs text-muted-foreground hover:text-primary"
-                        title={file.download_url ? 'Regenerate link' : 'Unlock file'}
+                        title={file.download_url ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
                       >
-                        {file.download_url ? 'Unlock again' : 'Unlock'}
+                        {file.download_url ? 'Regenerate' : 'Generate link'}
                       </button>
                     )}
 
