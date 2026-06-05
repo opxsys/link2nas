@@ -103,6 +103,10 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
     ? { percent: job.progress ?? 0, downloadedSize: null, speed: null, eta: null, connections: null, provider: job.provider_name }
     : null
 
+  const showLinksHint =
+    allLinks.length > 0 &&
+    (job.status === 'links_only' || (!job.send_to_destination && !cap.hasAnyDestination))
+
   function destLabel(d: RealJobDestinationConfig) { return d.name || d.destination_type || d.id }
   function provLabel(p: RealJobProviderConfig) { return p.name || p.provider_type || p.id }
 
@@ -268,6 +272,13 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         {/* ── Summary ────────────────────────────────────────────── */}
         {tab === 'summary' && (
           <div className="space-y-3 p-4 text-xs">
+            {/* Hint: file selection required */}
+            {job.status === 'waiting_files_selection' && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+                <p>File selection required. Click <span className="font-medium">Select all files</span> in the action bar to proceed automatically, or open the <span className="font-medium">Files</span> tab to review available files.</p>
+              </div>
+            )}
+
             <Row label="Source type" value={job.source_type} />
             <Row label="Provider"    value={jobProvider(job)} />
             <Row label="Destination" value={jobDestination(job) ?? 'Links only'} />
@@ -275,7 +286,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             <Row label="Size"        value={formatBytes(job.filesize)} />
 
             {/* Provider download progress — hide for statuses where progress has no meaning */}
-            {!['created', 'failed', 'cancelled'].includes(job.status) && (
+            {!['created', 'failed', 'cancelled', 'links_only'].includes(job.status) && (
               <div>
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-muted-foreground">Download progress</span>
@@ -288,14 +299,21 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
               </div>
             )}
 
-            <Row label="Created" value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
-            <Row label="Updated" value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
-
+            {/* Last job error — shown before timestamps so it is not buried */}
             {job.error_message && (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
                 <p className="mb-1 font-medium">Last job error</p>
                 <p className="font-mono text-[11px]">{job.error_message}</p>
               </div>
+            )}
+
+            <Row label="Created"   value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
+            <Row label="Updated"   value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
+            <Row label="Cancelled" value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
+
+            {/* Subtle hint to open the Links tab — no buttons, no state changes */}
+            {showLinksHint && (
+              <p className="text-muted-foreground">Download links are ready — open the <span className="font-medium">Links</span> tab to copy them.</p>
             )}
           </div>
         )}
