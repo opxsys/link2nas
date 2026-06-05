@@ -5,15 +5,19 @@ export type LangCode = 'en' | 'fr'
 const STORAGE_KEY = 'link2nas-lang'
 const listeners = new Set<() => void>()
 
-function getStoredLang(): LangCode {
+function getInitialLang(): LangCode {
   try {
     const v = localStorage.getItem(STORAGE_KEY)
-    if (v === 'en' || v === 'fr') return v as LangCode
+    if (v === 'en' || v === 'fr') return v
   } catch { /* ignore */ }
-  return 'fr'
+  try {
+    return (navigator.language ?? '').startsWith('fr') ? 'fr' : 'en'
+  } catch {
+    return 'fr'
+  }
 }
 
-let _lang: LangCode = getStoredLang()
+let _lang: LangCode = getInitialLang()
 
 function notify(): void {
   listeners.forEach(cb => cb())
@@ -25,121 +29,10 @@ export function setAuthLang(l: LangCode): void {
   notify()
 }
 
-type Strings = Record<string, string>
-
-const EN: Strings = {
-  appTaglineFallback: 'Manage your download jobs',
-  loginTitle: 'Sign in',
-  loginSubtitle: 'Sign in to your account',
-  setupTitle: 'Initial Setup',
-  setupSubtitle: 'Create the first administrator account',
-  email: 'Email',
-  password: 'Password',
-  displayName: 'Display name (optional)',
-  confirmPassword: 'Confirm password',
-  signIn: 'Sign in',
-  createAdmin: 'Create administrator',
-  creatingAdmin: 'Creating…',
-  forgotPassword: 'Forgot password?',
-  magicLogin: 'Receive a login link by email',
-  back: 'Back',
-  backToLogin: 'Back to sign in',
-  sendResetLink: 'Send reset link',
-  sendLoginLink: 'Send login link',
-  sentTitle: 'Email sent',
-  resetEmailSent: 'If an account matches this address, a reset link will be sent.',
-  magicEmailSent: 'If an account matches this address, a login link will be sent.',
-  smtpUnavailable: 'Unavailable: email sending is not configured.',
-  emailRequired: 'Email is required.',
-  passwordRequired: 'Password is required.',
-  passwordMismatch: 'Passwords do not match.',
-  appearance: 'Appearance',
-  language: 'Language',
-  confirmingLogin: 'Signing in…',
-  loginSuccess: 'Login successful, redirecting…',
-  invalidToken: 'This link is invalid or has expired.',
-  invalidResetLink: 'This password reset link is invalid, expired, or already used.',
-  invalidMagicLink: 'This login link is invalid, expired, or already used.',
-  validatingLink: 'Validating link…',
-  newPassword: 'New password',
-  confirmNewPassword: 'Confirm new password',
-  resetPassword: 'Reset password',
-  resettingPassword: 'Resetting…',
-  passwordResetSuccess: 'Password reset successfully.',
-  goToLogin: 'Go to sign in',
-  acceptInviteTitle: 'Accept invitation',
-  activateAccount: 'Activate account',
-  activatingAccount: 'Activating…',
-  inviteAccepted: 'Account activated. You can now sign in.',
-  invalidInviteLink: 'This invitation link is invalid, expired, or already used.',
-  verifyingEmail: 'Verifying email…',
-  emailVerified: 'Email verified. You can now sign in.',
-  invalidVerifyLink: 'This verification link is invalid, expired, or already used.',
-}
-
-const FR: Strings = {
-  appTaglineFallback: 'Piloter vos jobs de débridage',
-  loginTitle: 'Connexion',
-  loginSubtitle: 'Connectez-vous à votre compte',
-  setupTitle: 'Installation initiale',
-  setupSubtitle: 'Créer le premier compte administrateur',
-  email: 'Email',
-  password: 'Mot de passe',
-  displayName: 'Nom affiché (optionnel)',
-  confirmPassword: 'Confirmer le mot de passe',
-  signIn: 'Se connecter',
-  createAdmin: "Créer l'administrateur",
-  creatingAdmin: 'Création en cours…',
-  forgotPassword: 'Mot de passe oublié ?',
-  magicLogin: 'Recevoir un lien de connexion par email',
-  back: 'Retour',
-  backToLogin: 'Retour à la connexion',
-  sendResetLink: 'Envoyer le lien de réinitialisation',
-  sendLoginLink: 'Envoyer le lien de connexion',
-  sentTitle: 'Email envoyé',
-  resetEmailSent: "Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé.",
-  magicEmailSent: "Si un compte correspond à cette adresse, un lien de connexion sera envoyé.",
-  smtpUnavailable: "Indisponible : l'envoi d'emails n'est pas configuré.",
-  emailRequired: "L'email est requis.",
-  passwordRequired: 'Le mot de passe est requis.',
-  passwordMismatch: 'Les mots de passe ne correspondent pas.',
-  appearance: 'Apparence',
-  language: 'Langue',
-  confirmingLogin: 'Connexion en cours…',
-  loginSuccess: 'Connexion réussie, redirection…',
-  invalidToken: 'Ce lien est invalide ou a expiré.',
-  invalidResetLink: 'Ce lien de réinitialisation est invalide, expiré ou déjà utilisé.',
-  invalidMagicLink: 'Ce lien de connexion est invalide, expiré ou déjà utilisé.',
-  validatingLink: 'Vérification du lien…',
-  newPassword: 'Nouveau mot de passe',
-  confirmNewPassword: 'Confirmer le nouveau mot de passe',
-  resetPassword: 'Réinitialiser le mot de passe',
-  resettingPassword: 'Réinitialisation…',
-  passwordResetSuccess: 'Mot de passe réinitialisé avec succès.',
-  goToLogin: 'Aller à la connexion',
-  acceptInviteTitle: "Accepter l'invitation",
-  activateAccount: 'Activer le compte',
-  activatingAccount: 'Activation en cours…',
-  inviteAccepted: 'Compte activé. Vous pouvez maintenant vous connecter.',
-  invalidInviteLink: "Ce lien d'invitation est invalide, expiré ou déjà utilisé.",
-  verifyingEmail: "Vérification de l'adresse email…",
-  emailVerified: 'Email vérifié. Vous pouvez maintenant vous connecter.',
-  invalidVerifyLink: 'Ce lien de vérification est invalide, expiré ou déjà utilisé.',
-}
-
-export function useAuthLang(): {
-  lang: LangCode
-  setLang: (l: LangCode) => void
-  t: (key: string) => string
-} {
-  const lang = useSyncExternalStore(
+export function useStoredLang(): LangCode {
+  return useSyncExternalStore(
     cb => { listeners.add(cb); return () => listeners.delete(cb) },
     () => _lang,
     () => _lang,
   )
-  const t = (key: string): string => {
-    const strings = lang === 'en' ? EN : FR
-    return strings[key] ?? key
-  }
-  return { lang, setLang: setAuthLang, t }
 }

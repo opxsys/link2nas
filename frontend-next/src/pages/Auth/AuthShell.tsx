@@ -4,7 +4,7 @@ import { Monitor, Sun, Moon, SunMoon, Eye, Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { type ThemePreference, THEME_PREFERENCES } from '@/lib/themes'
 import { useTheme } from '@/lib/useTheme'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n, type TranslationKey } from '@/i18n'
 
 const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
   auto:            Monitor,
@@ -14,11 +14,19 @@ const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
   colorblind:      Eye,
 }
 
+const THEME_I18N_KEYS: Record<ThemePreference, TranslationKey> = {
+  auto:            'themeAuto',
+  light:           'themeLight',
+  dark:            'themeDark',
+  'high-contrast': 'themeHighContrast',
+  colorblind:      'themeColorblind',
+}
+
 function AuthSettingsMenu() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const { preference, setPreference } = useTheme()
-  const { lang, setLang, t } = useAuthLang()
+  const { lang, setLang, t } = useAuthI18n()
 
   useEffect(() => {
     if (!open) return
@@ -40,7 +48,7 @@ function AuthSettingsMenu() {
         onClick={() => setOpen(v => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Settings"
+        aria-label={t('ariaAuthSettings')}
         className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Settings2 size={16} aria-hidden="true" />
@@ -56,9 +64,10 @@ function AuthSettingsMenu() {
               {t('appearance')}
             </p>
             <div className="flex flex-wrap gap-1">
-              {THEME_PREFERENCES.map(({ value, label }) => {
+              {THEME_PREFERENCES.map(({ value }) => {
                 const Icon = THEME_ICONS[value]
                 const active = preference === value
+                const label = t(THEME_I18N_KEYS[value])
                 return (
                   <button
                     key={value}

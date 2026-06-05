@@ -3,7 +3,7 @@ import { Loader2, CheckCircle2, MailX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { requestMagicLogin } from '@/api/auth'
 import { ApiError } from '@/api/client'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n } from '@/i18n'
 import type { AuthView } from './auth.types'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function MagicLoginForm({ smtpAvailable, onSetView }: Props) {
-  const { t } = useAuthLang()
+  const { t } = useAuthI18n()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)

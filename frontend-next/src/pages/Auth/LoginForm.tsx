@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { login } from '@/api/auth'
 import { ApiError } from '@/api/client'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n } from '@/i18n'
 import type { LoginUser } from '@/api/auth'
 import type { AuthView } from './auth.types'
 
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export default function LoginForm({ emailAvailable, onSuccess, onSetView }: Props) {
-  const { t } = useAuthLang()
+  const { t } = useAuthI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)

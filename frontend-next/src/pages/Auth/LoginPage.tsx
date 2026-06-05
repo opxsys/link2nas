@@ -9,14 +9,14 @@ import MagicLoginForm from './MagicLoginForm'
 import { getSetupStatus, storeToken, getStoredToken } from '@/api/auth'
 import { invalidateMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n } from '@/i18n'
 import type { LoginUser } from '@/api/auth'
 import type { AuthView } from './auth.types'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const { appInfo } = useAppInfo()
-  const { t } = useAuthLang()
+  const { t } = useAuthI18n()
   const [view, setView] = useState<AuthView>('login')
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null)
   const [setupLoading, setSetupLoading] = useState(true)

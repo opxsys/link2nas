@@ -5,13 +5,13 @@ import AuthShell from './AuthShell'
 import { confirmMagicLogin, storeToken } from '@/api/auth'
 import { invalidateMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n } from '@/i18n'
 
 export default function MagicLoginConfirmPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { appInfo } = useAppInfo()
-  const { t } = useAuthLang()
+  const { t } = useAuthI18n()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
   useEffect(() => {

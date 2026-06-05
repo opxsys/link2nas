@@ -1,28 +1,34 @@
 import { useMe } from '@/lib/useMe'
+import { useStoredLang, setAuthLang, type LangCode } from '@/lib/useAuthLang'
 import { en, type TranslationKey } from './en'
 import { fr } from './fr'
 
-export type { TranslationKey }
-export type LangCode = 'en' | 'fr'
+export type { TranslationKey, LangCode }
+export { setAuthLang }
 
 const translations = { en, fr } as const
 
-function detectBrowserLang(): LangCode {
-  try {
-    return (navigator.language ?? '').startsWith('fr') ? 'fr' : 'en'
-  } catch {
-    return 'en'
-  }
+function makeT(lang: LangCode): (key: TranslationKey) => string {
+  return (key: TranslationKey) => translations[lang][key]
 }
 
-function resolveLang(preferred: string | null | undefined): LangCode {
-  if (preferred === 'en' || preferred === 'fr') return preferred
-  return detectBrowserLang()
+/** For pre-login / public pages — reads localStorage only, never calls useMe. */
+export function useAuthI18n(): {
+  lang: LangCode
+  setLang: (l: LangCode) => void
+  t: (key: TranslationKey) => string
+} {
+  const lang = useStoredLang()
+  return { lang, setLang: setAuthLang, t: makeT(lang) }
 }
 
+/** For app pages (behind ProtectedRoute) — reads me.preferred_language, falls back to stored lang. */
 export function useI18n(): { lang: LangCode; t: (key: TranslationKey) => string } {
   const { me } = useMe()
-  const lang = resolveLang(me?.preferred_language)
-  const t = (key: TranslationKey): string => translations[lang][key]
-  return { lang, t }
+  const storedLang = useStoredLang()
+  const lang: LangCode =
+    me?.preferred_language === 'en' || me?.preferred_language === 'fr'
+      ? me.preferred_language
+      : storedLang
+  return { lang, t: makeT(lang) }
 }

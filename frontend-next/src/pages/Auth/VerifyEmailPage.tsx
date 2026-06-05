@@ -4,14 +4,14 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import AuthShell from './AuthShell'
 import { getTokenStatus, confirmEmailVerification } from '@/api/auth'
 import { useAppInfo } from '@/lib/useAppInfo'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n } from '@/i18n'
 
 type Status = 'loading' | 'success' | 'error'
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams()
   const { appInfo } = useAppInfo()
-  const { t } = useAuthLang()
+  const { t } = useAuthI18n()
   const rawToken = searchParams.get('token') || ''
   const [status, setStatus] = useState<Status>('loading')
 

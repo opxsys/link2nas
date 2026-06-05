@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import AuthShell from './AuthShell'
 import { validatePasswordResetToken, confirmPasswordReset } from '@/api/auth'
 import { useAppInfo } from '@/lib/useAppInfo'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n } from '@/i18n'
 import { ApiError } from '@/api/client'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
@@ -16,7 +16,7 @@ type PageState = 'checking' | 'valid' | 'invalid' | 'done'
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
   const { appInfo } = useAppInfo()
-  const { t } = useAuthLang()
+  const { t } = useAuthI18n()
   const rawToken = searchParams.get('token') || ''
 
   const [pageState, setPageState] = useState<PageState>(() => rawToken ? 'checking' : 'invalid')
@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFieldError(null)
-    if (!password) { setFieldError(`${t('password')} is required`); return }
+    if (!password) { setFieldError(t('passwordRequired')); return }
     if (password !== confirmPw) { setFieldError(t('passwordMismatch')); return }
     setSubmitting(true)
     try {

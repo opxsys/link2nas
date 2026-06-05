@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import AuthShell from './AuthShell'
 import { getTokenStatus, acceptInvitation } from '@/api/auth'
 import { useAppInfo } from '@/lib/useAppInfo'
-import { useAuthLang } from '@/lib/useAuthLang'
+import { useAuthI18n } from '@/i18n'
 import { ApiError } from '@/api/client'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
@@ -16,7 +16,7 @@ type PageState = 'checking' | 'invalid' | 'form' | 'done'
 export default function InvitePage() {
   const [searchParams] = useSearchParams()
   const { appInfo } = useAppInfo()
-  const { t } = useAuthLang()
+  const { t } = useAuthI18n()
   const rawToken = searchParams.get('token') || ''
 
   const [pageState, setPageState] = useState<PageState>(() => rawToken ? 'checking' : 'invalid')
