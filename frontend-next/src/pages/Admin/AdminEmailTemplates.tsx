@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Loader2, AlertCircle, CheckCircle2, XCircle, AlertTriangle, RotateCcw } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Loader2, AlertCircle, CheckCircle2, XCircle, AlertTriangle, RotateCcw, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getEmailTemplate, saveEmailTemplate, resetEmailTemplate } from '@/api/admin-email-templates'
@@ -40,16 +40,18 @@ export default function AdminEmailTemplates() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const loadTemplate = useCallback(async (key: string, lang: string) => {
     setLoading(true)
     setLoadError(null)
-    setSaved(false)
+    setSuccessMsg(null)
     setSaveError(null)
     setConfirmReset(false)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
     try {
       const t = await getEmailTemplate(key, lang)
       setTemplate(t)
@@ -65,11 +67,18 @@ export default function AdminEmailTemplates() {
 
   useEffect(() => { loadTemplate(selectedKey, selectedLang) }, [selectedKey, selectedLang, loadTemplate])
 
+  function clearFeedback() {
+    if (successMsg) setSuccessMsg(null)
+    if (saveError) setSaveError(null)
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    if (saveTimer.current) clearTimeout(saveTimer.current)
     setSaving(true)
     setSaveError(null)
-    setSaved(false)
+    setSuccessMsg(null)
+    setConfirmReset(false)
     try {
       const updated = await saveEmailTemplate(selectedKey, selectedLang, {
         subject_template: subject.trim(),
@@ -78,8 +87,8 @@ export default function AdminEmailTemplates() {
       setTemplate(updated)
       setSubject(updated.subject_template)
       setBody(updated.body_template)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      setSuccessMsg('Template saved.')
+      saveTimer.current = setTimeout(() => setSuccessMsg(null), 4000)
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : 'Save failed.')
     } finally {
@@ -88,15 +97,18 @@ export default function AdminEmailTemplates() {
   }
 
   async function handleReset() {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
     setResetting(true)
     setSaveError(null)
-    setSaved(false)
+    setSuccessMsg(null)
     try {
       const reset = await resetEmailTemplate(selectedKey, selectedLang)
       setTemplate(reset)
       setSubject(reset.subject_template)
       setBody(reset.body_template)
       setConfirmReset(false)
+      setSuccessMsg('Template reset to default.')
+      saveTimer.current = setTimeout(() => setSuccessMsg(null), 4000)
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : 'Reset failed.')
     } finally {
@@ -144,9 +156,14 @@ export default function AdminEmailTemplates() {
       )}
 
       {!loading && loadError && (
-        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-          <AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-          {loadError}
+        <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-medium">Failed to load template</p>
+            <p className="mt-0.5 text-xs">{loadError}</p>
+            <Button size="sm" variant="outline" className="mt-3"
+              onClick={() => loadTemplate(selectedKey, selectedLang)}>Retry</Button>
+          </div>
         </div>
       )}
 
@@ -179,14 +196,14 @@ export default function AdminEmailTemplates() {
           <div>
             <label htmlFor="tpl-subject" className={LABEL}>Subject <span className="text-destructive">*</span></label>
             <input id="tpl-subject" type="text" className={INPUT} value={subject}
-              required onChange={e => setSubject(e.target.value)} disabled={saving || resetting} />
+              required onChange={e => { setSubject(e.target.value); clearFeedback() }} disabled={saving || resetting} />
           </div>
 
           {/* Body */}
           <div>
             <label htmlFor="tpl-body" className={LABEL}>Body <span className="text-destructive">*</span></label>
             <textarea id="tpl-body" className={TEXTAREA} rows={12} value={body}
-              required onChange={e => setBody(e.target.value)} disabled={saving || resetting} />
+              required onChange={e => { setBody(e.target.value); clearFeedback() }} disabled={saving || resetting} />
           </div>
 
           {/* Actions */}
@@ -218,12 +235,22 @@ export default function AdminEmailTemplates() {
 
           {saveError && (
             <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-              <XCircle size={14} className="shrink-0" aria-hidden="true" /> {saveError}
+              <XCircle size={14} className="shrink-0" aria-hidden="true" />
+              <span className="flex-1">{saveError}</span>
+              <button type="button" onClick={() => setSaveError(null)}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+                <X size={13} aria-hidden="true" />
+              </button>
             </div>
           )}
-          {saved && (
-            <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
-              <CheckCircle2 size={14} className="shrink-0" aria-hidden="true" /> Template saved.
+          {successMsg && (
+            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+              <CheckCircle2 size={14} className="shrink-0" aria-hidden="true" />
+              <span className="flex-1">{successMsg}</span>
+              <button type="button" onClick={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSuccessMsg(null) }}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+                <X size={13} aria-hidden="true" />
+              </button>
             </div>
           )}
         </form>
