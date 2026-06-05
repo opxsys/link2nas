@@ -96,15 +96,13 @@ export default function NotificationSettings() {
 
   function deleteDescription(): string {
     if (!deleteTarget.open) return ''
-    if (deleteTarget.kind === 'rule') {
-      return `Delete rule "${deleteTarget.item.name}"? This cannot be undone.`
-    }
-    const linked = rules.filter(r => r.config_id === deleteTarget.item.id)
-    if (linked.length === 0) {
-      return `Delete channel "${deleteTarget.item.name}"? This cannot be undone.`
-    }
-    const names = linked.map(r => r.name).join(', ')
-    return `Delete channel "${deleteTarget.item.name}"? ${linked.length} linked rule${linked.length > 1 ? 's' : ''} will also be deleted: ${names}.`
+    if (deleteTarget.kind === 'rule') return `Delete rule "${deleteTarget.item.name}"? This cannot be undone.`
+    return `Delete channel "${deleteTarget.item.name}"? This cannot be undone.`
+  }
+
+  function deleteLinkedCount(): number {
+    if (!deleteTarget.open || deleteTarget.kind !== 'config') return 0
+    return rules.filter(r => r.config_id === deleteTarget.item.id).length
   }
 
   const smtpDisabled = smtpEnabled === false
@@ -217,6 +215,7 @@ export default function NotificationSettings() {
         <NotifDeleteModal
           title={deleteTarget.kind === 'config' ? 'Delete channel' : 'Delete rule'}
           description={deleteDescription()}
+          linkedCount={deleteLinkedCount()}
           onClose={() => setDeleteTarget({ open: false })}
           onConfirm={handleDeleteConfirm}
         />

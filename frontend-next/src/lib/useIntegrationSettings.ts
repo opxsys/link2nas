@@ -31,6 +31,17 @@ export function isProwlarrAvailable(s: IntegrationSettings | null): boolean {
 }
 
 /**
+ * Resolve the user's configured home_page preference to a routable path.
+ * Falls back to /dashboard when Prowlarr is disabled or the page is unknown.
+ */
+export function resolveHomePath(settings: IntegrationSettings | null): string {
+  const page = settings?.home_page || 'dashboard'
+  if (page === 'jobs') return '/jobs'
+  if (page === 'prowlarr' && isProwlarrAvailable(settings)) return '/prowlarr'
+  return '/dashboard'
+}
+
+/**
  * Fetches integration settings once per session, shared across Sidebar,
  * Prowlarr page, and any other consumer. Refetches when Settings saves.
  */

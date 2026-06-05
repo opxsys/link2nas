@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/nav'
-import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
+import { useIntegrationSettings, isProwlarrAvailable, resolveHomePath } from '@/lib/useIntegrationSettings'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useAppInfo } from '@/lib/useAppInfo'
 import { useMe } from '@/lib/useMe'
@@ -17,6 +17,7 @@ export default function MobileNav({ open, onClose }: Props) {
   const { settings: integrationSettings } = useIntegrationSettings()
   const { count: announcementCount } = useAnnouncementBadge()
   const location = useLocation()
+  const navigate = useNavigate()
   const { appInfo } = useAppInfo()
   const appName = appInfo.app_name || 'Link2NAS'
   const { me } = useMe()
@@ -65,7 +66,13 @@ export default function MobileNav({ open, onClose }: Props) {
       <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
         {/* Brand + close */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
-          <span className="text-sm font-semibold tracking-wide text-sidebar-foreground">{appName}</span>
+          <button
+            onClick={() => { navigate(resolveHomePath(integrationSettings)); onClose() }}
+            className="text-sm font-semibold tracking-wide text-sidebar-foreground transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label="Go to home page"
+          >
+            {appName}
+          </button>
           <button
             onClick={onClose}
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

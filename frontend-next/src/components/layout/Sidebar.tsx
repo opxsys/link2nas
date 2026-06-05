@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { NAV_ITEMS } from '@/lib/nav'
 import SidebarNavItem from './SidebarNavItem'
-import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
+import { useIntegrationSettings, isProwlarrAvailable, resolveHomePath } from '@/lib/useIntegrationSettings'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
@@ -49,9 +49,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         >
           {!collapsed && (
-            <span className="flex-1 truncate text-sm font-semibold tracking-wide text-sidebar-foreground">
+            <button
+              onClick={() => navigate(resolveHomePath(integrationSettings))}
+              className="flex-1 truncate text-left text-sm font-semibold tracking-wide text-sidebar-foreground transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+              aria-label="Go to home page"
+            >
               {appName}
-            </span>
+            </button>
           )}
           <button
             onClick={onToggle}

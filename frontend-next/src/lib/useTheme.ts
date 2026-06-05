@@ -32,15 +32,31 @@ try {
 
 // ── Public write operations ────────────────────────────────────────────────
 
-/** Apply a new preference immediately (DOM + localStorage + backend). */
-export function setThemePreference(pref: ThemePreference): void {
+/** Apply preference to DOM + localStorage + notify. No backend sync. */
+function applyThemeLocally(pref: ThemePreference): void {
   _preference = pref
   _effective = resolvePreference(pref)
   storePreference(pref)
   applyTheme(_effective)
   notify()
-  // Fire-and-forget: errors are expected when unauthenticated
+}
+
+/**
+ * Apply preference immediately + fire-and-forget backend sync.
+ * Errors are silently ignored — suitable for quick switchers (AccountMenu, header).
+ */
+export function setThemePreference(pref: ThemePreference): void {
+  applyThemeLocally(pref)
   updateMe({ ui_theme: toBackendTheme(pref) }).catch(() => {})
+}
+
+/**
+ * Apply preference immediately + await backend sync.
+ * Throws on backend failure — suitable for the Settings page where feedback is shown.
+ */
+export async function setThemePreferenceAsync(pref: ThemePreference): Promise<void> {
+  applyThemeLocally(pref)
+  await updateMe({ ui_theme: toBackendTheme(pref) })
 }
 
 /** Reload preference from the backend and reconcile (call once on app mount). */

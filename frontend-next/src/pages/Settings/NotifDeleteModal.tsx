@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { Trash2, X, Loader2 } from 'lucide-react'
+import { Trash2, X, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface Props {
   title: string
   description: string
+  /** When >0, renders an amber warning that N linked rules will also be deleted. */
+  linkedCount?: number
   onClose: () => void
   onConfirm: () => Promise<void>
 }
 
-export default function NotifDeleteModal({ title, description, onClose, onConfirm }: Props) {
+export default function NotifDeleteModal({ title, description, linkedCount = 0, onClose, onConfirm }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,6 +42,15 @@ export default function NotifDeleteModal({ title, description, onClose, onConfir
         </div>
         <div className="p-5">
           <p className="text-sm text-muted-foreground">{description}</p>
+          {linkedCount > 0 && (
+            <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <span>
+                This channel is linked to <strong>{linkedCount}</strong> notification rule{linkedCount > 1 ? 's' : ''}.
+                {linkedCount > 1 ? ' They' : ' It'} will also be permanently deleted.
+              </span>
+            </div>
+          )}
           {error && (
             <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
               {error}
