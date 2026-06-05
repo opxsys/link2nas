@@ -34,7 +34,6 @@ export default function DestinationRow({ config, onEdit, onDelete, onReload }: P
       const result = await testDestinationConfig(config.id)
       setTestStatus('ok')
       setTestMessage('Destination test successful.')
-      onReload()
     } catch (err) {
       setTestStatus('error')
       setTestMessage(err instanceof ApiError ? err.message : 'Test failed')

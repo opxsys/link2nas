@@ -61,7 +61,6 @@ export default function ProviderRow({
       const username = result.provider_user?.['username'] as string | undefined
       setTestStatus('ok')
       setTestMessage(username ? `Connected — ${username}` : 'Connected')
-      onReload()
     } catch (err) {
       setTestStatus('error')
       setTestMessage(err instanceof ApiError ? err.message : 'Test failed')
