@@ -26,6 +26,7 @@ export default function ThemeSelector() {
         return (
           <button
             key={value}
+            type="button"
             onClick={() => setPreference(value)}
             className={cn(
               'flex h-7 items-center gap-1.5 rounded px-2 text-xs transition-colors',
