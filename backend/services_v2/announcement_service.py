@@ -12,7 +12,10 @@ from backend.services_v2.announcement_support.serialization import (
     serialize_announcement,
     serialize_announcement_with_read,
 )
-from backend.services_v2.announcement_support.validation import validate_announcement_payload
+from backend.services_v2.announcement_support.validation import (
+    validate_announcement_payload,
+    validate_announcement_dates,
+)
 from backend.services_v2.announcement_support.email_delivery import send_announcement_emails
 from backend.services_v2.announcement_support.tracking import (
     get_or_create_read,
@@ -103,6 +106,7 @@ class AnnouncementService:
 
     def create(self, data: dict, created_by_user_id: str) -> dict:
         self._validate(data)
+        validate_announcement_dates(data)
 
         title = str(data.get("title") or "").strip()
         if not title:
@@ -153,6 +157,7 @@ class AnnouncementService:
             return None
 
         self._validate(data)
+        validate_announcement_dates(data, existing=a)
 
         if "title" in data:
             title = str(data["title"] or "").strip()

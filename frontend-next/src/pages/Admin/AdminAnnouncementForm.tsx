@@ -64,6 +64,16 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const startsAt = fields.starts_at || null
+    const endsAt = fields.ends_at || null
+    if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
+      setError('End date must be after start date.')
+      return
+    }
+    if (endsAt && fields.is_active && new Date(endsAt) <= new Date()) {
+      setError('End date must be in the future for an active announcement.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
