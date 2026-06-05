@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { CheckCircle2, XCircle, Loader2, AlertCircle, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getGeneralSettings, saveGeneralSettings } from '@/api/admin-settings'
@@ -20,6 +20,13 @@ export default function AdminGeneral() {
   const [publicBaseUrl, setPublicBaseUrl] = useState('')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveMessage, setSaveMessage] = useState('')
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const busy = saveStatus === 'saving'
+
+  function clearFeedback() {
+    if (saveStatus !== 'idle') { setSaveStatus('idle'); setSaveMessage('') }
+  }
 
   async function load() {
     setLoading(true)
@@ -41,6 +48,7 @@ export default function AdminGeneral() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (successTimer.current) clearTimeout(successTimer.current)
     setSaveStatus('saving')
     setSaveMessage('')
     try {
@@ -55,6 +63,7 @@ export default function AdminGeneral() {
       setPublicBaseUrl(updated.public_base_url)
       setSaveStatus('saved')
       setSaveMessage('Settings saved.')
+      successTimer.current = setTimeout(() => { setSaveStatus('idle'); setSaveMessage('') }, 4000)
     } catch (err) {
       setSaveStatus('error')
       setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
@@ -92,8 +101,9 @@ export default function AdminGeneral() {
             id="general-app-name"
             type="text"
             value={appName}
-            onChange={(e) => setAppName(e.target.value)}
+            onChange={(e) => { clearFeedback(); setAppName(e.target.value) }}
             placeholder="Link2NAS"
+            disabled={busy}
             className={INPUT}
           />
         </div>
@@ -104,8 +114,9 @@ export default function AdminGeneral() {
             id="general-app-tagline"
             type="text"
             value={appTagline}
-            onChange={(e) => setAppTagline(e.target.value)}
+            onChange={(e) => { clearFeedback(); setAppTagline(e.target.value) }}
             placeholder="Self-hosted download manager"
+            disabled={busy}
             className={INPUT}
           />
         </div>
@@ -116,8 +127,9 @@ export default function AdminGeneral() {
             id="general-public-url"
             type="url"
             value={publicBaseUrl}
-            onChange={(e) => setPublicBaseUrl(e.target.value)}
+            onChange={(e) => { clearFeedback(); setPublicBaseUrl(e.target.value) }}
             placeholder="https://link2nas.example.com"
+            disabled={busy}
             className={INPUT}
           />
           <p className="mt-1 text-xs text-muted-foreground">
@@ -130,25 +142,41 @@ export default function AdminGeneral() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={saveStatus === 'saving'}>
-            {saveStatus === 'saving' && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+        <div>
+          <Button type="submit" size="sm" disabled={busy}>
+            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
             Save changes
           </Button>
-
-          {saveStatus === 'saved' && (
-            <span className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
-              <CheckCircle2 size={14} aria-hidden="true" />
-              {saveMessage}
-            </span>
-          )}
-          {saveStatus === 'error' && (
-            <span className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
-              <XCircle size={14} aria-hidden="true" />
-              {saveMessage}
-            </span>
-          )}
         </div>
+
+        {saveStatus === 'saved' && (
+          <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+            <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+            <span className="flex-1">{saveMessage}</span>
+            <button
+              type="button"
+              onClick={() => { if (successTimer.current) clearTimeout(successTimer.current); setSaveStatus('idle'); setSaveMessage('') }}
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Dismiss"
+            >
+              <X size={13} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        {saveStatus === 'error' && (
+          <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <XCircle size={15} className="shrink-0" aria-hidden="true" />
+            <span className="flex-1">{saveMessage}</span>
+            <button
+              type="button"
+              onClick={() => { setSaveStatus('idle'); setSaveMessage('') }}
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Dismiss"
+            >
+              <X size={13} aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </form>
     </SectionCard>
   )
