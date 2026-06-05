@@ -38,15 +38,6 @@ export async function request<T = unknown>(path: string, options: RequestInit = 
     }
   }
 
-  if (!response.ok) {
-    console.warn('[API ERROR DEBUG]', {
-      path,
-      status: response.status,
-      contentType,
-      text,
-      data,
-    })
-
     // If the stored token is rejected as invalid, clear it and notify ProtectedRoute
     if (response.status === 401) {
       try {
