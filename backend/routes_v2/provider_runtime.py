@@ -1,6 +1,10 @@
 from flask import Blueprint, jsonify, current_app
 
 from backend.routes_v2._context import get_user_context
+from backend.routes_v2.jobs_support.errors import (
+    safe_provider_error_message,
+    PROVIDER_ERROR_STATUS,
+)
 from backend.services_v2.provider_factory import (
     ProviderConfigDisabledError,
     ProviderConfigNotFoundError,
@@ -20,6 +24,13 @@ provider_runtime_v2_bp = Blueprint(
     "provider_runtime_v2",
     __name__,
     url_prefix="/api/v2/provider-runtime",
+)
+
+_PROVIDER_CLIENT_ERRORS = (
+    RealDebridApiError,
+    RealDebridClientError,
+    AllDebridApiError,
+    AllDebridClientError,
 )
 
 
@@ -100,13 +111,8 @@ def get_current_provider_runtime_v2():
         return jsonify({"error": str(exc)}), 400
     except UnknownProviderError as exc:
         return jsonify({"error": str(exc)}), 400
-    except (
-        RealDebridApiError,
-        RealDebridClientError,
-        AllDebridApiError,
-        AllDebridClientError,
-    ) as exc:
-        return jsonify({"error": str(exc)}), 502
+    except _PROVIDER_CLIENT_ERRORS as exc:
+        return jsonify({"error": safe_provider_error_message(exc)}), PROVIDER_ERROR_STATUS
     except Exception:
         return jsonify({"error": "Provider test failed"}), 502
 
@@ -132,13 +138,8 @@ def test_provider_by_name_v2(config_ref):
             return jsonify({"error": str(exc)}), 400
         except UnknownProviderError as exc:
             return jsonify({"error": str(exc)}), 400
-        except (
-            RealDebridApiError,
-            RealDebridClientError,
-            AllDebridApiError,
-            AllDebridClientError,
-        ) as exc:
-            return jsonify({"error": str(exc)}), 502
+        except _PROVIDER_CLIENT_ERRORS as exc:
+            return jsonify({"error": safe_provider_error_message(exc)}), PROVIDER_ERROR_STATUS
         except Exception:
             return jsonify({"error": "Provider test failed"}), 502
 
@@ -146,12 +147,7 @@ def test_provider_by_name_v2(config_ref):
         return jsonify({"error": str(exc)}), 400
     except UnknownProviderError as exc:
         return jsonify({"error": str(exc)}), 400
-    except (
-        RealDebridApiError,
-        RealDebridClientError,
-        AllDebridApiError,
-        AllDebridClientError,
-    ) as exc:
-        return jsonify({"error": str(exc)}), 502
+    except _PROVIDER_CLIENT_ERRORS as exc:
+        return jsonify({"error": safe_provider_error_message(exc)}), PROVIDER_ERROR_STATUS
     except Exception:
         return jsonify({"error": "Provider test failed"}), 502

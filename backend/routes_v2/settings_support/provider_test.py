@@ -5,7 +5,11 @@ from backend.services_v2.provider_factory import (
     ProviderConfigNotFoundError,
     UnknownProviderError,
 )
-
+from backend.services_v2.job_support.provider_failure import (
+    safe_provider_error_message,
+    is_provider_client_error,
+)
+from backend.routes_v2.jobs_support.errors import PROVIDER_ERROR_STATUS
 from backend.routes_v2.settings_support.responses import _error
 
 
@@ -41,7 +45,9 @@ def test_provider(ctx, data):
     except UnknownProviderError as exc:
         return _error(str(exc), 400)
     except Exception as exc:
-        return _error(f"Provider test failed: {exc}", 502)
+        if is_provider_client_error(exc):
+            return _error(safe_provider_error_message(exc), PROVIDER_ERROR_STATUS)
+        return _error("Provider test failed", 502)
 
     return jsonify({
         "ok": True,
