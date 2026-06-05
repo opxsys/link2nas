@@ -8,6 +8,7 @@ import {
   invalidateIntegrationSettings,
   isProwlarrAvailable,
 } from '@/lib/useIntegrationSettings'
+import { useAppInfo } from '@/lib/useAppInfo'
 
 const SELECT = 'h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
@@ -18,6 +19,8 @@ const KNOWN_PAGES = new Set(['dashboard', 'jobs', 'prowlarr'])
 
 export default function AccountHomePageCard() {
   const { settings, loading } = useIntegrationSettings()
+  const { appInfo } = useAppInfo()
+  const appName = appInfo.app_name || 'Link2NAS'
   const [homePage, setHomePage] = useState('dashboard')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveMessage, setSaveMessage] = useState('')
@@ -72,7 +75,7 @@ export default function AccountHomePageCard() {
             {prowlarrEnabled && <option value="prowlarr">Prowlarr</option>}
           </select>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Page shown when you open Link2NAS.
+            Page shown when you open {appName}.
             {!prowlarrEnabled && homePage === 'prowlarr' && (
               <span className="ml-1 text-amber-600 dark:text-amber-400">
                 Prowlarr is disabled — will fall back to Dashboard.

@@ -5,6 +5,7 @@ import { saveDestinationConfig } from '@/api/destination-configs'
 import { ApiError } from '@/api/client'
 import type { DestinationConfig } from '@/api/destination-configs'
 import { getMe } from '@/api/me'
+import { useAppInfo } from '@/lib/useAppInfo'
 
 const ALL_DEST_TYPES = [
   { value: 'synology', label: 'Synology NAS' },
@@ -23,6 +24,8 @@ interface Props {
 
 export default function DestinationModal({ initial, onClose, onSaved }: Props) {
   const isEdit = initial !== null
+  const { appInfo } = useAppInfo()
+  const appName = appInfo.app_name || 'Link2NAS'
 
   const [name,            setName]            = useState(initial?.name                          ?? '')
   const [destType,        setDestType]        = useState(initial?.destination_type              ?? 'synology')
@@ -179,7 +182,7 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
                   onChange={(e) => setDestinationBase(e.target.value)}
                   placeholder="downloads" className={INPUT} />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Logical destination folder managed by Link2NAS — e.g. <code>downloads</code>, <code>movies</code>.
+                  Logical destination folder managed by {appName} — e.g. <code>downloads</code>, <code>movies</code>.
                 </p>
               </div>
               <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">

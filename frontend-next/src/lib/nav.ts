@@ -43,7 +43,7 @@ const NON_NAV_TITLES: Record<string, string> = {
  * Derives a page title from the current pathname.
  * Priority: exact sidebar match → non-nav exact match → longest prefix match.
  */
-export function getPageTitle(pathname: string): string {
+export function getPageTitle(pathname: string, appName = 'Link2NAS'): string {
   const exact = NAV_ITEMS.find((item) => pathname === item.to)
   if (exact) return exact.label
 
@@ -53,5 +53,5 @@ export function getPageTitle(pathname: string): string {
     (item) => !item.end && pathname.startsWith(item.to + '/'),
   ).sort((a, b) => b.to.length - a.to.length)[0]
 
-  return prefix?.label ?? 'Link2NAS'
+  return prefix?.label ?? appName
 }

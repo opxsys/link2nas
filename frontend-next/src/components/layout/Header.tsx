@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import AccountMenu from './AccountMenu'
 import { getPageTitle } from '@/lib/nav'
+import { useAppInfo } from '@/lib/useAppInfo'
 
 interface HeaderProps {
   onOpenMobileNav: () => void
@@ -9,6 +11,13 @@ interface HeaderProps {
 
 export default function Header({ onOpenMobileNav }: HeaderProps) {
   const { pathname } = useLocation()
+  const { appInfo } = useAppInfo()
+  const appName = appInfo.app_name || 'Link2NAS'
+  const pageTitle = getPageTitle(pathname, appName)
+
+  useEffect(() => {
+    document.title = pageTitle === appName ? appName : `${pageTitle} · ${appName}`
+  }, [pageTitle, appName])
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
@@ -21,7 +30,7 @@ export default function Header({ onOpenMobileNav }: HeaderProps) {
         <Menu size={18} aria-hidden="true" />
       </button>
 
-      <h1 className="flex-1 text-sm font-medium text-foreground">{getPageTitle(pathname)}</h1>
+      <h1 className="flex-1 text-sm font-medium text-foreground">{pageTitle}</h1>
 
       <AccountMenu />
     </header>

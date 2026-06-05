@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/nav'
 import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
+import { useAppInfo } from '@/lib/useAppInfo'
 
 interface Props {
   open: boolean
@@ -15,6 +16,8 @@ export default function MobileNav({ open, onClose }: Props) {
   const { settings: integrationSettings } = useIntegrationSettings()
   const { count: announcementCount } = useAnnouncementBadge()
   const location = useLocation()
+  const { appInfo } = useAppInfo()
+  const appName = appInfo.app_name || 'Link2NAS'
 
   const visibleItems = NAV_ITEMS.filter((item) =>
     item.to === '/prowlarr' ? isProwlarrAvailable(integrationSettings) : true,
@@ -57,7 +60,7 @@ export default function MobileNav({ open, onClose }: Props) {
       <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
         {/* Brand + close */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
-          <span className="text-sm font-semibold tracking-wide text-sidebar-foreground">Link2NAS</span>
+          <span className="text-sm font-semibold tracking-wide text-sidebar-foreground">{appName}</span>
           <button
             onClick={onClose}
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

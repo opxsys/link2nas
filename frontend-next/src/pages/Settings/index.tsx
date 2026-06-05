@@ -13,6 +13,7 @@ import ProwlarrSettings from './ProwlarrSettings'
 import AccessibilitySettings from './AccessibilitySettings'
 import UserSpaceSettings from './UserSpaceSettings'
 import { getMe } from '@/api/me'
+import { useAppInfo } from '@/lib/useAppInfo'
 
 const VALID_SECTIONS: SettingsSection[] = [
   'account', 'providers', 'destinations', 'api-keys',
@@ -31,6 +32,8 @@ export default function Settings() {
     resolveSection(searchParams.get('section')),
   )
   const [canUseSpace, setCanUseSpace] = useState(false)
+  const { appInfo } = useAppInfo()
+  const appName = appInfo.app_name || 'Link2NAS'
 
   useEffect(() => {
     getMe().then(me => setCanUseSpace(me.can_use_local_space)).catch(() => {})
@@ -38,7 +41,7 @@ export default function Settings() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Configure your Link2NAS instance." />
+      <PageHeader title="Settings" description={`Configure your ${appName} instance.`} />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <SettingsNav activeSection={activeSection} onSelect={setActiveSection} showSpace={canUseSpace} />
         <div className="min-w-0 flex-1">

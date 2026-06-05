@@ -7,6 +7,7 @@ import SidebarNavItem from './SidebarNavItem'
 import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useMe } from '@/lib/useMe'
+import { useAppInfo } from '@/lib/useAppInfo'
 
 interface SidebarProps {
   collapsed: boolean
@@ -18,6 +19,8 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { count: announcementCount } = useAnnouncementBadge()
   const navigate = useNavigate()
   const { me } = useMe()
+  const { appInfo } = useAppInfo()
+  const appName = appInfo.app_name || 'Link2NAS'
 
   const visibleItems = NAV_ITEMS.filter((item) =>
     item.to === '/prowlarr' ? isProwlarrAvailable(integrationSettings) : true,
@@ -44,7 +47,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         >
           {!collapsed && (
             <span className="flex-1 truncate text-sm font-semibold tracking-wide text-sidebar-foreground">
-              Link2NAS
+              {appName}
             </span>
           )}
           <button

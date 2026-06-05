@@ -8,6 +8,7 @@ import { useIntegrationSettings, invalidateIntegrationSettings } from '@/lib/use
 import { useQbtWriteKeyStatus, invalidateQbtWriteKeyStatus } from '@/lib/useQbtWriteKeyStatus'
 import type { ProwlarrOpenMode } from '@/api/integration-settings'
 import ProwlarrQbittorrentGuide from '@/pages/Prowlarr/ProwlarrQbittorrentGuide'
+import { useAppInfo } from '@/lib/useAppInfo'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
 const SELECT = 'h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
@@ -22,6 +23,8 @@ interface Props {
 export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
   const { settings, loading } = useIntegrationSettings()
   const keyStatus = useQbtWriteKeyStatus()
+  const { appInfo } = useAppInfo()
+  const appName = appInfo.app_name || 'Link2NAS'
 
   const [enabled, setEnabled]   = useState(false)
   const [url, setUrl]           = useState('')
@@ -148,7 +151,7 @@ export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
 
           <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
             <Info size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-            No Prowlarr login or password is stored by Link2NAS.
+            No Prowlarr login or password is stored by {appName}.
             The iframe or tab will use your existing browser session.
           </div>
         </div>
