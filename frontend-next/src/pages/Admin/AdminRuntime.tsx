@@ -126,18 +126,6 @@ export default function AdminRuntime() {
       />
 
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={busy}>
-            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            Save settings
-          </Button>
-          <Button type="button" size="sm" variant="outline" disabled={busy || loading} onClick={load}>
-            {loading
-              ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
-              : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
-            Refresh
-          </Button>
-        </div>
         {saveStatus === 'saved' && (
           <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
             <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
@@ -158,6 +146,18 @@ export default function AdminRuntime() {
             </button>
           </div>
         )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" size="sm" disabled={busy}>
+            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+            Save settings
+          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={busy || loading} onClick={load}>
+            {loading
+              ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+              : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
+            Refresh
+          </Button>
+        </div>
       </div>
     </form>
   )

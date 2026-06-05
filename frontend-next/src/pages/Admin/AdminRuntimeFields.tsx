@@ -24,7 +24,8 @@ export default function AdminRuntimeFields({
   onDispatcher, onOrchestrator, onLocalWorker,
 }: Props) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="grid gap-4 xl:grid-cols-2">
+      {/* Row 1 col 1 — Dispatcher */}
       <SectionCard title="Notification Dispatcher" description="Delivers queued notifications to configured channels.">
         <div className="flex flex-col gap-4">
           <div className={CHECK_ROW}>
@@ -66,50 +67,7 @@ export default function AdminRuntimeFields({
         </div>
       </SectionCard>
 
-      <SectionCard title="Jobs Orchestrator" description="Drives job state transitions: refresh, unrestrict, and send-to-destination.">
-        <div className="flex flex-col gap-4">
-          <div className={CHECK_ROW}>
-            <input id="rt-orch-enabled" type="checkbox" className={CHECK} checked={orchestrator.enabled}
-              disabled={disabled} onChange={(e) => onOrchestrator('enabled', e.target.checked)} />
-            <label htmlFor="rt-orch-enabled" className={LABEL}>Enabled</label>
-          </div>
-          <div className={ROW}>
-            <label htmlFor="rt-orch-interval" className={LABEL}>
-              Interval<span className={HINT}>(1–3600 s)</span>
-            </label>
-            <div className="flex shrink-0 items-center gap-2">
-              <input id="rt-orch-interval" type="number" className={NUM} value={orchestrator.interval_seconds}
-                disabled={disabled} min={1} max={3600}
-                onChange={(e) => onOrchestrator('interval_seconds', Number(e.target.value))} />
-              <span className="text-xs text-muted-foreground">sec</span>
-            </div>
-          </div>
-          <div className={ROW}>
-            <label htmlFor="rt-orch-max" className={LABEL}>
-              Max jobs / run<span className={HINT}>(1–500)</span>
-            </label>
-            <input id="rt-orch-max" type="number" className={NUM} value={orchestrator.max_jobs_per_run}
-              disabled={disabled} min={1} max={500}
-              onChange={(e) => onOrchestrator('max_jobs_per_run', Number(e.target.value))} />
-          </div>
-          <div className="flex flex-col gap-2.5">
-            {([
-              ['auto_refresh_enabled',           'Auto-refresh links'],
-              ['auto_unrestrict_enabled',         'Auto-unrestrict links'],
-              ['auto_send_destination_enabled',   'Auto-send to destination'],
-            ] as [keyof OrchestratorSettings, string][]).map(([key, label]) => (
-              <div key={key} className={CHECK_ROW}>
-                <input id={`rt-orch-${key}`} type="checkbox" className={CHECK}
-                  checked={orchestrator[key] as boolean}
-                  disabled={disabled}
-                  onChange={(e) => onOrchestrator(key, e.target.checked)} />
-                <label htmlFor={`rt-orch-${key}`} className={LABEL}>{label}</label>
-              </div>
-            ))}
-          </div>
-        </div>
-      </SectionCard>
-
+      {/* Row 1 col 2 — Local Worker */}
       <SectionCard title="Local Download Worker" description="Downloads files directly to the server filesystem.">
         <div className="flex flex-col gap-4">
           <div className={CHECK_ROW}>
@@ -135,6 +93,53 @@ export default function AdminRuntimeFields({
             <input id="rt-lw-max" type="number" className={NUM} value={localWorker.max_concurrent_downloads}
               disabled={disabled} min={1} max={20}
               onChange={(e) => onLocalWorker('max_concurrent_downloads', Number(e.target.value))} />
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Row 2 — Orchestrator full width */}
+      <SectionCard className="xl:col-span-2" title="Jobs Orchestrator" description="Drives job state transitions: refresh, unrestrict, and send-to-destination.">
+        <div className="flex flex-col gap-4">
+          <div className={CHECK_ROW}>
+            <input id="rt-orch-enabled" type="checkbox" className={CHECK} checked={orchestrator.enabled}
+              disabled={disabled} onChange={(e) => onOrchestrator('enabled', e.target.checked)} />
+            <label htmlFor="rt-orch-enabled" className={LABEL}>Enabled</label>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className={ROW}>
+              <label htmlFor="rt-orch-interval" className={LABEL}>
+                Interval<span className={HINT}>(1–3600 s)</span>
+              </label>
+              <div className="flex shrink-0 items-center gap-2">
+                <input id="rt-orch-interval" type="number" className={NUM} value={orchestrator.interval_seconds}
+                  disabled={disabled} min={1} max={3600}
+                  onChange={(e) => onOrchestrator('interval_seconds', Number(e.target.value))} />
+                <span className="text-xs text-muted-foreground">sec</span>
+              </div>
+            </div>
+            <div className={ROW}>
+              <label htmlFor="rt-orch-max" className={LABEL}>
+                Max jobs / run<span className={HINT}>(1–500)</span>
+              </label>
+              <input id="rt-orch-max" type="number" className={NUM} value={orchestrator.max_jobs_per_run}
+                disabled={disabled} min={1} max={500}
+                onChange={(e) => onOrchestrator('max_jobs_per_run', Number(e.target.value))} />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-8 gap-y-2.5">
+            {([
+              ['auto_refresh_enabled',           'Auto-refresh links'],
+              ['auto_unrestrict_enabled',         'Auto-unrestrict links'],
+              ['auto_send_destination_enabled',   'Auto-send to destination'],
+            ] as [keyof OrchestratorSettings, string][]).map(([key, label]) => (
+              <div key={key} className={CHECK_ROW}>
+                <input id={`rt-orch-${key}`} type="checkbox" className={CHECK}
+                  checked={orchestrator[key] as boolean}
+                  disabled={disabled}
+                  onChange={(e) => onOrchestrator(key, e.target.checked)} />
+                <label htmlFor={`rt-orch-${key}`} className={LABEL}>{label}</label>
+              </div>
+            ))}
           </div>
         </div>
       </SectionCard>
