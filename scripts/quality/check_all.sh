@@ -8,10 +8,6 @@ echo "[check_all] Running Python checks..."
 scripts/quality/check_python.sh
 
 echo
-echo "[check_all] Running frontend JS checks..."
-scripts/quality/check_frontend_js.sh
-
-echo
 echo "[check_all] Running secret checks..."
 scripts/quality/check_secrets.sh
 

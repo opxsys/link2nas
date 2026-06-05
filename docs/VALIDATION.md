@@ -49,14 +49,10 @@ python3 -m compileall config.py app.py backend -q
 
 No output means no syntax errors.
 
-### JavaScript syntax
-Requires `node` to be installed.
-
+### Next UI
 ```bash
-find frontend/js -name "*.js" -print0 | xargs -0 -n1 node --check
+cd frontend-next && npm run type-check && npm run build
 ```
-
-No output means no parse errors in any JS file.
 
 ### Unit tests
 ```bash

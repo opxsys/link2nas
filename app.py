@@ -60,8 +60,7 @@ def create_app() -> Flask:
 
     app = Flask(
         __name__,
-        static_folder="frontend",
-        static_url_path="/frontend",
+        static_folder=None,
     )
 
     app.config["SETTINGS"] = settings
@@ -72,7 +71,6 @@ def create_app() -> Flask:
         return {"ok": True}, 200
 
     _NEXT_DIST = os.path.join(os.path.dirname(__file__), "frontend-next", "dist")
-    _LEGACY_STATIC = os.path.join(os.path.dirname(__file__), "frontend")
 
     # 301 redirects for any bookmark/link still using the old /next prefix.
     @app.get("/next")
@@ -99,16 +97,6 @@ def create_app() -> Flask:
                 {"Content-Type": "text/plain"},
             )
         return send_from_directory(_NEXT_DIST, "index.html")
-
-    # Legacy UI — accessible at /legacy during the transition period.
-    @app.get("/legacy")
-    @app.get("/legacy/")
-    @app.get("/legacy/<path:subpath>")
-    def serve_legacy(subpath: str = "") -> object:
-        if subpath and os.path.isfile(os.path.join(_LEGACY_STATIC, subpath)):
-            return send_from_directory(_LEGACY_STATIC, subpath)
-        return send_from_directory(_LEGACY_STATIC, "index.html")
-
 
     repositories_v2 = build_repositories(settings)
 

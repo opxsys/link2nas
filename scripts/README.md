@@ -6,9 +6,8 @@ Test runners and quality scripts for Link2NAS. Full documentation: [docs/testing
 
 | Script | Description |
 |---|---|
-| `quality/check_all.sh` | Run all quality checks (Python, JS, secrets, unit tests) |
+| `quality/check_all.sh` | Run all quality checks (Python, secrets, unit tests) |
 | `quality/check_python.sh` | Python compilation and lint |
-| `quality/check_frontend_js.sh` | JavaScript syntax check |
 | `quality/check_secrets.sh` | Secret detection (gitleaks + grep) |
 | `quality/check_unit_tests.sh` | Python unit tests (`tests/unit/`) |
 
