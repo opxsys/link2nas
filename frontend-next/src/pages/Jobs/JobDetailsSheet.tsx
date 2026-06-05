@@ -273,17 +273,19 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             <Row label="Files"       value={job.files.length || null} />
             <Row label="Size"        value={formatBytes(job.filesize)} />
 
-            {/* Provider download progress — always show */}
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-muted-foreground">Download progress</span>
-                <span className="font-medium text-foreground">{job.progress ?? 0}%</span>
+            {/* Provider download progress — hide for statuses where progress has no meaning */}
+            {!['created', 'failed', 'cancelled'].includes(job.status) && (
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-muted-foreground">Download progress</span>
+                  <span className="font-medium text-foreground">{job.progress ?? 0}%</span>
+                </div>
+                <ProgressBar percent={job.progress ?? 0} />
+                {job.provider_status && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">Provider: {job.provider_status}</p>
+                )}
               </div>
-              <ProgressBar percent={job.progress ?? 0} />
-              {job.provider_status && (
-                <p className="mt-1 text-[11px] text-muted-foreground">Provider: {job.provider_status}</p>
-              )}
-            </div>
+            )}
 
             <Row label="Created" value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
             <Row label="Updated" value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
@@ -377,8 +379,6 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             <Row label="Output mode"        value={job.output_mode} />
             <Row label="Provider resource"  value={job.provider_resource_id ? <span className="font-mono text-[11px]">{job.provider_resource_id}</span> : null} />
             <Row label="Provider status"    value={job.provider_status} />
-            <Row label="Torrent ID"         value={job.torrent_id ? <span className="font-mono text-[11px]">{job.torrent_id}</span> : null} />
-            <Row label="Torrent status"     value={job.torrent_status} />
             <Row label="Created"            value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
             <Row label="Updated"            value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
             <Row label="Started"            value={job.started_at ? new Date(job.started_at).toLocaleString() : null} />

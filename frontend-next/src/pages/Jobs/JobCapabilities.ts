@@ -69,8 +69,8 @@ export function getJobCapabilities(job: RealJob): JobCapabilities {
   // No current destination, multiple available → choose
   const canChooseSendDest = isReady && hasAnyDestination && !job.sent_to_destination && !hasCurrentDest && hasMultiDest
 
-  // Resend to same destination: already sent, destination still available
-  const canResend = isReady && hasAnyDestination && job.sent_to_destination && !!currentDestId && destAvail
+  // Resend: delegate entirely to backend allowed_actions (only granted for 'completed')
+  const canResend = can('resend')
 
   // Send to a different destination (already sent or has current, and alternatives exist)
   const canSendOtherDest = isReady && (job.sent_to_destination || hasCurrentDest) &&
