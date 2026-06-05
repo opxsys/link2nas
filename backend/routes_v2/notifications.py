@@ -5,6 +5,11 @@ from backend.services_v2.notification_service import (
     NotificationNotFoundError,
     NotificationValidationError,
 )
+from backend.services_v2.notification_support.channel_failure import (
+    is_notification_channel_error,
+    safe_notification_channel_error,
+    NOTIFICATION_CHANNEL_ERROR_STATUS,
+)
 
 
 notifications_v2_bp = Blueprint(
@@ -95,9 +100,13 @@ def test_notification_config(config_id: str):
     try:
         result = _service().test_config(ctx.user_id, config_id)
     except NotificationValidationError as exc:
-        return _handle_validation_error(exc)
+        return jsonify({"error": str(exc)}), NOTIFICATION_CHANNEL_ERROR_STATUS
     except NotificationNotFoundError as exc:
         return _handle_not_found_error(exc)
+    except Exception as exc:
+        if is_notification_channel_error(exc):
+            return jsonify({"error": safe_notification_channel_error(exc)}), NOTIFICATION_CHANNEL_ERROR_STATUS
+        raise
 
     return jsonify(result)
 

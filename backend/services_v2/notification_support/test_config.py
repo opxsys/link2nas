@@ -97,9 +97,14 @@ def test_config_gotify(config, decoded) -> dict:
         timeout=8,
     )
 
+    if response.status_code in (401, 403):
+        raise NotificationValidationError(
+            "Notification authentication failed. Please check the channel token."
+        )
+
     if response.status_code < 200 or response.status_code >= 300:
         raise NotificationValidationError(
-            f"Gotify HTTP {response.status_code}: {response.text[:300]}"
+            "Notification endpoint returned an error. Please check the channel configuration."
         )
 
     return {
@@ -145,9 +150,14 @@ def test_config_webhook(config, decoded) -> dict:
         timeout=8,
     )
 
+    if response.status_code in (401, 403):
+        raise NotificationValidationError(
+            "Notification authentication failed. Please check the channel token or credentials."
+        )
+
     if response.status_code < 200 or response.status_code >= 300:
         raise NotificationValidationError(
-            f"Webhook HTTP {response.status_code}: {response.text[:300]}"
+            "Notification endpoint returned an error. Please check the channel configuration."
         )
 
     return {
