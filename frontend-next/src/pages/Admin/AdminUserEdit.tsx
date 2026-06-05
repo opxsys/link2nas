@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Loader2, XCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Loader2, XCircle, CheckCircle2, ArrowLeft, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import DateTimeField from '@/components/common/DateTimeField'
@@ -34,6 +34,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
   const [resetPw, setResetPw] = useState('')
   const [resetSaving, setResetSaving] = useState(false)
   const [resetMsg, setResetMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const resetSuccessTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setEmail(user.email)
@@ -46,6 +47,8 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
     setEmailVerified(user.email_verified)
     setCanUseLocalSpace(user.can_use_local_space)
     setSaveError('')
+    setResetMsg(null)
+    if (resetSuccessTimer.current) clearTimeout(resetSuccessTimer.current)
   }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function buildPatch(): EditUserPayload {
@@ -84,6 +87,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
       await resetUserPassword(user.id, resetPw)
       setResetPw('')
       setResetMsg({ ok: true, text: 'Password reset. User must change it at next login.' })
+      resetSuccessTimer.current = setTimeout(() => setResetMsg(null), 4000)
     } catch (err) {
       setResetMsg({ ok: false, text: err instanceof Error ? err.message : 'Reset failed.' })
     } finally { setResetSaving(false) }
@@ -149,12 +153,21 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
               {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
               Save changes
             </Button>
-            {saveError && (
-              <span className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
-                <XCircle size={14} aria-hidden="true" /> {saveError}
-              </span>
-            )}
           </div>
+          {saveError && (
+            <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <XCircle size={15} className="shrink-0" aria-hidden="true" />
+              <span className="flex-1">{saveError}</span>
+              <button
+                type="button"
+                onClick={() => setSaveError('')}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Dismiss"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            </div>
+          )}
         </form>
       </SectionCard>
 
@@ -170,13 +183,27 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
               {resetSaving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
               Reset password
             </Button>
-            {resetMsg && (
-              <span className={`flex items-center gap-1.5 text-sm ${resetMsg.ok ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                {resetMsg.ok ? <CheckCircle2 size={14} aria-hidden="true" /> : <XCircle size={14} aria-hidden="true" />}
-                {resetMsg.text}
-              </span>
-            )}
           </div>
+          {resetMsg && (
+            <div className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm ${
+              resetMsg.ok
+                ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400'
+                : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'
+            }`}>
+              {resetMsg.ok
+                ? <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+                : <XCircle size={15} className="shrink-0" aria-hidden="true" />}
+              <span className="flex-1">{resetMsg.text}</span>
+              <button
+                type="button"
+                onClick={() => { if (resetSuccessTimer.current) clearTimeout(resetSuccessTimer.current); setResetMsg(null) }}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Dismiss"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            </div>
+          )}
         </form>
       </SectionCard>
     </div>

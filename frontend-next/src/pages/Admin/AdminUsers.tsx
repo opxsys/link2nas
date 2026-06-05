@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Loader2, AlertCircle, RefreshCw, CheckCircle2, XCircle, Copy, Plus } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, CheckCircle2, XCircle, Copy, Plus, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { useSmtpStatus } from '@/lib/useSmtpStatus'
 import {
-  listUsers, enableUser, disableUser, deleteUser,
+  listUsers, enableUser, disableUser,
   verifyUserEmail, createInvitationLink, sendInvitationEmail,
   createResetLink, sendResetEmail,
 } from '@/api/admin-users'
@@ -12,6 +12,7 @@ import type { RealUser, CreateUserResponse } from './admin.types'
 import AdminUserRow from './AdminUserRow'
 import AdminUserCreate from './AdminUserCreate'
 import AdminUserEdit from './AdminUserEdit'
+import AdminUserDeleteModal from './AdminUserDeleteModal'
 import AdminUsersFilter, { type FilterChip } from './AdminUsersFilter'
 
 type View = 'list' | 'create' | 'edit'
@@ -26,6 +27,7 @@ export default function AdminUsers() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
+  const [deletePendingUser, setDeletePendingUser] = useState<RealUser | null>(null)
   const [search, setSearch] = useState('')
   const [filterChip, setFilterChip] = useState<FilterChip>('all')
 
@@ -74,13 +76,7 @@ export default function AdminUsers() {
       onEnable: () => act(user.id, 'Enable', async () => updateUser(await enableUser(user.id))),
       onDisable: () => act(user.id, 'Disable', async () => updateUser(await disableUser(user.id))),
       onVerifyEmail: () => act(user.id, 'Verify email', async () => updateUser(await verifyUserEmail(user.id))),
-      onDelete: async () => {
-        if (!window.confirm(`Delete ${user.email}? This cannot be undone.`)) return
-        await act(user.id, 'Delete', async () => {
-          await deleteUser(user.id)
-          setUsers((prev) => prev.filter((u) => u.id !== user.id))
-        })
-      },
+      onDelete: () => { setBanner(null); setDeletePendingUser(user) },
       onGetInvitationLink: () => act(user.id, 'Invitation link', async () => {
         const r = await createInvitationLink(user.id)
         navigator.clipboard.writeText(r.invitation_url).catch(() => undefined)
@@ -120,17 +116,27 @@ export default function AdminUsers() {
     setBanner({ ok: true, message: `User ${updated.email} updated.` })
   }
 
+  function handleDeleted(userId: string) {
+    setUsers((prev) => prev.filter((u) => u.id !== userId))
+    setDeletePendingUser(null)
+    setBanner({ ok: true, message: 'User deleted.' })
+  }
+
   if (view === 'create') return <AdminUserCreate onSave={handleCreateSave} onCancel={() => setView('list')} />
   if (view === 'edit' && editingUser) return <AdminUserEdit user={editingUser} onSave={handleEditSave} onCancel={() => { setView('list'); setEditingUser(null) }} />
 
   return (
+    <>
     <SectionCard
       title="Users"
       description="All user accounts on this instance."
       actions={
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw size={13} className="mr-1.5" aria-hidden="true" /> Refresh
+            {loading
+              ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+              : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
+            Refresh
           </Button>
           <Button size="sm" variant="outline" onClick={() => { setBanner(null); setView('create') }}>
             <Plus size={13} className="mr-1.5" aria-hidden="true" /> Create user
@@ -155,7 +161,13 @@ export default function AdminUsers() {
               </div>
             )}
           </div>
-          <button className="text-xs underline opacity-70 hover:opacity-100" onClick={() => setBanner(null)}>Dismiss</button>
+          <button
+            className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={() => setBanner(null)}
+            aria-label="Dismiss"
+          >
+            <X size={13} aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -208,5 +220,14 @@ export default function AdminUsers() {
         </p>
       )}
     </SectionCard>
+
+    {deletePendingUser && (
+      <AdminUserDeleteModal
+        user={deletePendingUser}
+        onDeleted={handleDeleted}
+        onClose={() => setDeletePendingUser(null)}
+      />
+    )}
+    </>
   )
 }
