@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Info, CheckCircle2, XCircle, Loader2, AlertCircle, KeyRound } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Info, CheckCircle2, XCircle, Loader2, AlertCircle, KeyRound, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,7 @@ export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
   const [openMode, setOpenMode] = useState<ProwlarrOpenMode>('both')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveMessage, setSaveMessage] = useState('')
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!settings) return
@@ -35,6 +36,8 @@ export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
     setUrl(settings.prowlarr_url)
     setOpenMode(settings.prowlarr_open_mode)
   }, [settings])
+
+  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current) }, [])
 
   const canEnable = keyStatus === 'ok'
 
@@ -50,6 +53,8 @@ export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
       invalidateIntegrationSettings()
       setSaveStatus('saved')
       setSaveMessage('Prowlarr settings saved.')
+      if (successTimer.current) clearTimeout(successTimer.current)
+      successTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Save failed.'
       setSaveStatus('error')
@@ -149,20 +154,34 @@ export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
         </div>
       </SectionCard>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button size="sm" onClick={handleSave} disabled={busy}>
-          {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-          Save changes
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div>
+          <Button size="sm" onClick={handleSave} disabled={busy}>
+            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+            Save changes
+          </Button>
+        </div>
         {saveStatus === 'saved' && (
-          <span className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
-            <CheckCircle2 size={14} aria-hidden="true" /> {saveMessage}
-          </span>
+          <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={14} aria-hidden="true" />
+              {saveMessage}
+            </span>
+            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
         )}
         {saveStatus === 'error' && (
-          <span className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
-            <XCircle size={14} aria-hidden="true" /> {saveMessage}
-          </span>
+          <div className="flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <span className="flex items-center gap-2">
+              <XCircle size={14} aria-hidden="true" />
+              {saveMessage}
+            </span>
+            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
         )}
       </div>
 
