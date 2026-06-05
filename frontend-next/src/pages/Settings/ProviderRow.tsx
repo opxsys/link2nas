@@ -30,7 +30,7 @@ function formatProviderExpiry(value: string | null): string | null {
 
 interface Props {
   config: ProviderConfig
-  acting: boolean
+  actingAction: 'toggle' | 'default' | null
   isLastActiveDefault: boolean
   onEdit: () => void
   onToggleEnabled: () => void
@@ -40,9 +40,10 @@ interface Props {
 }
 
 export default function ProviderRow({
-  config, acting, isLastActiveDefault,
+  config, actingAction, isLastActiveDefault,
   onEdit, onToggleEnabled, onSetDefault, onDelete, onReload,
 }: Props) {
+  const acting = actingAction !== null
   const [testStatus, setTestStatus] = useState<TestStatus>('idle')
   const [testMessage, setTestMessage] = useState('')
 
@@ -138,7 +139,7 @@ export default function ProviderRow({
           }
           aria-label={config.is_enabled ? `Disable ${config.name}` : `Enable ${config.name}`}
           onClick={onToggleEnabled}>
-          {acting
+          {acting && actingAction === 'toggle'
             ? <Loader2 size={13} className="animate-spin" aria-hidden="true" />
             : config.is_enabled ? <PowerOff size={13} aria-hidden="true" /> : <Power size={13} aria-hidden="true" />}
         </Button>
@@ -147,7 +148,9 @@ export default function ProviderRow({
           disabled={acting || config.is_default || !config.is_enabled}
           title={!config.is_enabled ? 'Enable provider first' : config.is_default ? 'Already default' : 'Set as default'}
           aria-label={`Set ${config.name} as default`} onClick={onSetDefault}>
-          <Star size={13} className={config.is_default ? 'fill-primary text-primary' : ''} aria-hidden="true" />
+          {acting && actingAction === 'default'
+            ? <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+            : <Star size={13} className={config.is_default ? 'fill-primary text-primary' : ''} aria-hidden="true" />}
         </Button>
 
         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, Loader2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, Loader2, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { listProviderConfigs, updateProviderConfig } from '@/api/provider-configs'
@@ -14,9 +14,11 @@ export default function ProviderSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [actingIds, setActingIds] = useState<Set<string>>(new Set())
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [actingActions, setActingActions] = useState<Map<string, 'toggle' | 'default'>>(new Map())
   const [modalTarget, setModalTarget] = useState<ProviderConfig | null | false>(false)
   const [deleteTarget, setDeleteTarget] = useState<ProviderConfig | null>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -32,12 +34,23 @@ export default function ProviderSettings() {
 
   useEffect(() => { load() }, [load])
 
-  function setActing(id: string, on: boolean) {
-    setActingIds(prev => { const s = new Set(prev); on ? s.add(id) : s.delete(id); return s })
+  useEffect(() => {
+    return () => {
+      if (successTimer.current) clearTimeout(successTimer.current)
+    }
+  }, [])
+
+  function setActing(id: string, action: 'toggle' | 'default' | null) {
+    setActingActions(prev => {
+      const m = new Map(prev)
+      if (action === null) m.delete(id)
+      else m.set(id, action)
+      return m
+    })
   }
 
   async function handleToggleEnabled(config: ProviderConfig) {
-    setActing(config.id, true)
+    setActing(config.id, 'toggle')
     setActionError(null)
     setConfigs(prev => prev.map(c => c.id === config.id ? { ...c, is_enabled: !c.is_enabled } : c))
     try {
@@ -47,12 +60,12 @@ export default function ProviderSettings() {
       setConfigs(prev => prev.map(c => c.id === config.id ? config : c))
       setActionError(err instanceof ApiError ? err.message : 'Could not update provider.')
     } finally {
-      setActing(config.id, false)
+      setActing(config.id, null)
     }
   }
 
   async function handleSetDefault(config: ProviderConfig) {
-    setActing(config.id, true)
+    setActing(config.id, 'default')
     setActionError(null)
     try {
       await updateProviderConfig(config.id, config.provider_type, { is_default: true })
@@ -61,8 +74,16 @@ export default function ProviderSettings() {
       setActionError(err instanceof ApiError ? err.message : 'Could not set default provider.')
       await load()
     } finally {
-      setActing(config.id, false)
+      setActing(config.id, null)
     }
+  }
+
+  function handleSaved() {
+    load()
+    if (successTimer.current) clearTimeout(successTimer.current)
+    setSuccessMessage('Provider saved.')
+    setActionError(null)
+    successTimer.current = setTimeout(() => setSuccessMessage(null), 4000)
   }
 
   const activeProviders = configs.filter(c => c.is_enabled)
@@ -85,7 +106,9 @@ export default function ProviderSettings() {
       )}
 
       {!loading && error && (
-        <p className="py-4 text-sm text-destructive">{error}</p>
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          {error}
+        </div>
       )}
 
       {!loading && !error && configs.length === 0 && (
@@ -103,7 +126,7 @@ export default function ProviderSettings() {
               <ProviderRow
                 key={config.id}
                 config={config}
-                acting={actingIds.has(config.id)}
+                actingAction={actingActions.get(config.id) ?? null}
                 isLastActiveDefault={isLastActiveDefault}
                 onEdit={() => setModalTarget(config)}
                 onToggleEnabled={() => handleToggleEnabled(config)}
@@ -116,9 +139,21 @@ export default function ProviderSettings() {
         </div>
       )}
 
+      {successMessage && (
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+          <span>{successMessage}</span>
+          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <X size={13} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       {actionError && (
-        <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-          {actionError}
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <X size={13} aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -126,7 +161,7 @@ export default function ProviderSettings() {
         <ProviderModal
           initial={modalTarget}
           onClose={() => setModalTarget(false)}
-          onSaved={load}
+          onSaved={handleSaved}
         />
       )}
 
