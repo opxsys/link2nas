@@ -116,8 +116,11 @@ export default function AdminOverview() {
         ) : (
           <span className="text-sm text-muted-foreground">System status unavailable</span>
         )}
-        <Button size="sm" variant="outline" onClick={load}>
-          <RefreshCw size={13} className="mr-1.5" aria-hidden="true" /> Refresh
+        <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+          {loading
+            ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+            : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
+          Refresh
         </Button>
       </div>
 
@@ -138,14 +141,14 @@ export default function AdminOverview() {
         />
         <MetricCard
           label="SMTP"
-          value={smtpReady === null ? '—' : smtpReady ? 'Ready' : 'Not set'}
+          value={smtpReady === null ? '—' : smtpReady ? 'Ready' : (smtp && smtp.host.trim() !== '') ? 'Disabled' : 'Not configured'}
           icon={Mail}
           description={smtpReady && smtp?.host ? smtp.host : undefined}
           iconClassName={smtpReady === false ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : undefined}
         />
         <MetricCard
           label="Disk free"
-          value={maintenance ? `${maintenance.disk.percent_free}%` : '—'}
+          value={maintenance ? `${maintenance.disk.percent_free.toFixed(1)}%` : '—'}
           icon={HardDrive}
           description={maintenance ? `${fmtBytes(maintenance.disk.free_bytes)} available` : undefined}
           iconClassName={maintenance && !maintenance.disk.ok ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : undefined}
@@ -179,6 +182,9 @@ export default function AdminOverview() {
         </SectionCard>
 
         <SectionCard title="Configuration">
+          {!general && !maintenance && !smtp && runtimeEnabled === null && announcements === null ? (
+            <p className="text-sm text-muted-foreground">Configuration data unavailable.</p>
+          ) : (
           <dl className="divide-y divide-border">
             {general && (
               <ConfigRow
@@ -217,6 +223,7 @@ export default function AdminOverview() {
               />
             )}
           </dl>
+          )}
         </SectionCard>
       </div>
     </div>
