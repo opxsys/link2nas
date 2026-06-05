@@ -5,8 +5,11 @@ from backend.services_v2.destination_factory import (
     DestinationConfigNotFoundError,
     UnknownDestinationError,
 )
-from backend.services_v2.destinations.synology_destination import SynologyDestinationError
-
+from backend.services_v2.job_support.destination_failure import (
+    safe_destination_error_message,
+    is_destination_client_error,
+    DESTINATION_ERROR_STATUS,
+)
 from backend.routes_v2.settings_support.responses import _error
 
 
@@ -39,30 +42,17 @@ def test_destination(ctx, data):
             "message": "links-only mode does not require connectivity test",
         })
 
-    if resolved.name == "local":
+    try:
         result = resolved.destination.test_connection()
-        status_code = 200 if result.get("ok") else 502
+    except Exception as exc:
+        if is_destination_client_error(exc):
+            return _error(safe_destination_error_message(exc), DESTINATION_ERROR_STATUS)
+        return _error("Destination test failed", 502)
 
-        result.setdefault("destination_config_id", resolved.destination_config_id)
-        result.setdefault("destination_name", resolved.destination_type)
-        result.setdefault("destination_type", resolved.destination_type)
-        result.setdefault("destination_profile_name", resolved.destination_profile_name)
+    result.setdefault("destination_config_id", resolved.destination_config_id)
+    result.setdefault("destination_name", resolved.destination_type)
+    result.setdefault("destination_type", resolved.destination_type)
+    result.setdefault("destination_profile_name", resolved.destination_profile_name)
 
-        return jsonify(result), status_code
-
-    if resolved.name == "synology":
-        try:
-            result = resolved.destination.test_connection()
-        except SynologyDestinationError as exc:
-            return _error(str(exc), 502)
-        except Exception as exc:
-            return _error(f"NAS test failed: {exc}", 502)
-
-        result.setdefault("destination_config_id", resolved.destination_config_id)
-        result.setdefault("destination_name", resolved.destination_type)
-        result.setdefault("destination_type", resolved.destination_type)
-        result.setdefault("destination_profile_name", resolved.destination_profile_name)
-
-        return jsonify(result)
-
-    return _error(f"Unsupported destination test: {resolved.name}", 400)
+    status_code = 200 if result.get("ok") else 400
+    return jsonify(result), status_code

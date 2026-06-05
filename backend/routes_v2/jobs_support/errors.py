@@ -22,6 +22,12 @@ from backend.services_v2.job_support.provider_failure import (  # noqa: F401
     is_persistable_provider_error,
     is_provider_client_error,
 )
+from backend.services_v2.job_support.destination_failure import (  # noqa: F401
+    safe_destination_error_message,
+    is_destination_client_error,
+    is_persistable_destination_error,
+    DESTINATION_ERROR_STATUS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +75,7 @@ def _handle_destination_exception(exc):
     )):
         return _error(str(exc), 400)
 
-    if isinstance(exc, SynologyDestinationError):
-        return _error(str(exc), 502)
+    if is_destination_client_error(exc):
+        return _error(safe_destination_error_message(exc), DESTINATION_ERROR_STATUS)
 
     raise exc

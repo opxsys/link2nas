@@ -18,7 +18,11 @@ from backend.services_v2.destination_factory import (
     DestinationConfigNotFoundError,
     UnknownDestinationError,
 )
-from backend.services_v2.destinations.synology_destination import SynologyDestinationError
+from backend.services_v2.job_support.destination_failure import (
+    safe_destination_error_message,
+    is_destination_client_error,
+    DESTINATION_ERROR_STATUS,
+)
 
 
 destinations_v2_bp = Blueprint("destinations_v2", __name__, url_prefix="/api/v2/destinations")
@@ -119,7 +123,6 @@ def test_destination_config_v2(config_ref):
             user_id=ctx.user_id,
             destination_config_id=config_ref,
         )
-
     except DestinationConfigNotFoundError:
         # Temporary V2 compatibility: allow /synology, /nas, /local.
         try:
@@ -133,19 +136,10 @@ def test_destination_config_v2(config_ref):
             return _error(str(exc), 400)
         except UnknownDestinationError as exc:
             return _error(str(exc), 400)
-        except SynologyDestinationError as exc:
-            return _error(str(exc), 502)
-        except Exception:
-            return _error("Destination test failed", 502)
-
     except DestinationConfigDisabledError as exc:
         return _error(str(exc), 400)
     except UnknownDestinationError as exc:
         return _error(str(exc), 400)
-    except SynologyDestinationError as exc:
-        return _error(str(exc), 502)
-    except Exception:
-        return _error("Destination test failed", 502)
 
     destination = resolved.destination
 
@@ -158,7 +152,13 @@ def test_destination_config_v2(config_ref):
             "message": "Destination has no test but is configured",
         })
 
-    result = destination.test_connection()
+    try:
+        result = destination.test_connection()
+    except Exception as exc:
+        if is_destination_client_error(exc):
+            return _error(safe_destination_error_message(exc), DESTINATION_ERROR_STATUS)
+        return _error("Destination test failed", 502)
+
     return jsonify(result), 200 if result.get("ok") else 400
 
 
