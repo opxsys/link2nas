@@ -437,11 +437,12 @@ export interface AnnouncementPayload {
 }
 
 export interface AnnouncementTrackingStats {
-  sent_count: number
-  opened_count: number
-  read_count: number
-  acknowledged_count: number
-  failed_count: number
+  total_reads: number
+  opened: number
+  read: number
+  acknowledged: number
+  email_sent: number
+  email_failed: number
   targeted_email_recipients: number
 }
 
