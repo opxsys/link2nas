@@ -31,6 +31,11 @@ from backend.services_v2.destinations.synology_destination import SynologyDestin
 
 logger = logging.getLogger(__name__)
 
+# Provider/API errors that are expected application-level failures must not use
+# 5xx so that reverse proxies (Cloudflare, nginx) pass the JSON body through
+# instead of substituting their own error page.
+PROVIDER_ERROR_STATUS = 422
+
 # ── Rejection signals: invalid or unsupported content submitted to the provider ──
 _REJECTION_SIGNALS = frozenset({
     "invalid_uri", "invalid_file", "file_upload_failed", "upload_failed",
@@ -103,7 +108,7 @@ def _handle_provider_exception(exc):
         AllDebridApiError,
         AllDebridClientError,
     )):
-        return _error(safe_provider_error_message(exc), 502)
+        return _error(safe_provider_error_message(exc), PROVIDER_ERROR_STATUS)
 
     if isinstance(exc, RuntimeError):
         return _error(str(exc), 500)
