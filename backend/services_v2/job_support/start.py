@@ -36,6 +36,7 @@ def start_job_impl(
             result = provider.add_magnet(job.source_value)
         except Exception as exc:
             service._emit_provider_failed(job, exc)
+            service._mark_job_failed_if_provider_error(job, exc)
             raise
 
         return service._set_started_provider_job(job, result)
@@ -51,6 +52,7 @@ def start_job_impl(
             result = provider.add_torrent_file(str(torrent_path))
         except Exception as exc:
             service._emit_provider_failed(job, exc)
+            service._mark_job_failed_if_provider_error(job, exc)
             raise
 
         return service._set_started_provider_job(job, result)

@@ -1,10 +1,16 @@
 import json
+import logging
+
 from backend.utils.time import utc_now_iso
 
 from flask import current_app
 
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
+from backend.services_v2.job_support.provider_failure import (
+    classify_provider_error_message,
+    is_persistable_provider_error,
+)
 
 from backend.services_v2.job_support.notifications import (
     emit_notification_event,
@@ -56,6 +62,8 @@ from backend.services_v2.job_support.start import start_job_impl
 
 now = utc_now_iso
 
+logger = logging.getLogger(__name__)
+
 
 class JobService:
     def __init__(
@@ -100,6 +108,23 @@ class JobService:
 
     def _emit_provider_failed(self, job: Job, exc: Exception) -> None:
         emit_provider_failed(self.notification_service, job, exc)
+
+    def _mark_job_failed_if_provider_error(self, job: Job, exc: Exception) -> None:
+        """Persist job as failed if exc is an expected provider content/API error.
+
+        Uses classify_provider_error_message (no logging) so the single WARNING
+        log entry happens later when the route formats the HTTP response.
+        """
+        if not is_persistable_provider_error(exc):
+            return
+        safe_msg = classify_provider_error_message(exc)
+        job.status = "failed"
+        job.error_message = safe_msg
+        job.updated_at = now()
+        try:
+            self.job_repository.update_status_state(job)
+        except Exception:
+            logger.exception("Failed to persist failed state for job %s", job.id)
 
     def _resolve_provider_config(
         self,
