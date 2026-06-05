@@ -10,14 +10,17 @@ interface Props {
 
 export default function NewKeyReveal({ keyName, rawKey, onDismiss }: Props) {
   const [copied, setCopied] = useState(false)
+  const [copyFailed, setCopyFailed] = useState(false)
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(rawKey)
       setCopied(true)
+      setCopyFailed(false)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // clipboard API unavailable — user can select manually
+      setCopyFailed(true)
+      setTimeout(() => setCopyFailed(false), 4000)
     }
   }
 
@@ -61,6 +64,12 @@ export default function NewKeyReveal({ keyName, rawKey, onDismiss }: Props) {
           }
         </Button>
       </div>
+
+      {copyFailed && (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+          Copy failed — please select the key and copy it manually.
+        </p>
+      )}
     </div>
   )
 }

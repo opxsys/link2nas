@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Ban, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, Trash2, Ban, Loader2, AlertCircle, RefreshCw, CheckCircle2, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { listMyApiKeys, revokeApiKey, deleteApiKey } from '@/api/user-api-keys'
@@ -28,6 +28,8 @@ export default function ApiKeysSettings() {
   const [confirm, setConfirm]     = useState<ConfirmState>(null)
   const [acting, setActing]       = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchKeys = useCallback(async () => {
     setLoading(true)
@@ -43,6 +45,14 @@ export default function ApiKeysSettings() {
 
   useEffect(() => { fetchKeys() }, [fetchKeys])
 
+  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current) }, [])
+
+  function showSuccess(msg: string) {
+    if (successTimer.current) clearTimeout(successTimer.current)
+    setActionSuccess(msg)
+    successTimer.current = setTimeout(() => setActionSuccess(null), 4000)
+  }
+
   function handleCreated(created: CreatedApiKey) {
     setCreateOpen(false)
     setNewKey(created)
@@ -52,17 +62,20 @@ export default function ApiKeysSettings() {
 
   async function handleConfirmedAction() {
     if (!confirm) return
-    setActing(confirm.keyId)
+    const { keyId, action } = confirm
+    setActing(keyId)
     setActionError(null)
+    setActionSuccess(null)
     setConfirm(null)
     try {
-      if (confirm.action === 'revoke') {
-        await revokeApiKey(confirm.keyId)
+      if (action === 'revoke') {
+        await revokeApiKey(keyId)
       } else {
-        await deleteApiKey(confirm.keyId)
+        await deleteApiKey(keyId)
       }
       fetchKeys()
       invalidateQbtWriteKeyStatus()
+      showSuccess(action === 'revoke' ? 'API key revoked.' : 'API key deleted.')
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Action failed.')
     } finally {
@@ -92,10 +105,27 @@ export default function ApiKeysSettings() {
           </div>
         )}
 
+        {actionSuccess && (
+          <div className="flex items-center justify-between gap-2 border-b border-border bg-emerald-50 px-4 py-3 text-xs text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={13} aria-hidden="true" />
+              {actionSuccess}
+            </span>
+            <button onClick={() => setActionSuccess(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <X size={13} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
         {actionError && (
-          <div className="flex items-center gap-2 border-b border-border bg-red-50 px-4 py-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
-            <AlertCircle size={13} aria-hidden="true" />
-            {actionError}
+          <div className="flex items-center justify-between gap-2 border-b border-border bg-red-50 px-4 py-3 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
+            <span className="flex items-center gap-2">
+              <AlertCircle size={13} aria-hidden="true" />
+              {actionError}
+            </span>
+            <button onClick={() => setActionError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <X size={13} aria-hidden="true" />
+            </button>
           </div>
         )}
 
