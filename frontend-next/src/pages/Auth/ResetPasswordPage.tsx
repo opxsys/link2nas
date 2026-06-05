@@ -43,12 +43,12 @@ export default function ResetPasswordPage() {
       await confirmPasswordReset({ token: rawToken, password })
       setPageState('done')
     } catch (err) {
-      // Token errors (already used, expired) → show the same invalid card
-      const status = err instanceof ApiError ? err.status : 0
-      if (status === 400 || status === 401) {
-        setPageState('invalid')
+      const msg = err instanceof ApiError ? err.message : ''
+      // Password policy errors contain "password"; token errors (used, expired) do not.
+      if (msg.toLowerCase().includes('password')) {
+        setFieldError(msg)
       } else {
-        setFieldError(err instanceof ApiError ? err.message : t('invalidResetLink'))
+        setPageState('invalid')
       }
     } finally {
       setSubmitting(false)
