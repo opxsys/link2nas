@@ -90,9 +90,6 @@ def _handle_provider_exception(exc):
     if isinstance(exc, ValueError):
         return _error(str(exc), 400)
 
-    if isinstance(exc, RuntimeError):
-        return _error(str(exc), 500)
-
     if isinstance(exc, (
         ProviderConfigNotFoundError,
         ProviderConfigDisabledError,
@@ -107,6 +104,9 @@ def _handle_provider_exception(exc):
         AllDebridClientError,
     )):
         return _error(safe_provider_error_message(exc), 502)
+
+    if isinstance(exc, RuntimeError):
+        return _error(str(exc), 500)
 
     raise exc
 
