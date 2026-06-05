@@ -21,11 +21,15 @@ from backend.services_v2.job_support.destination_failure import (
     is_destination_client_error,
     DESTINATION_ERROR_STATUS,
 )
-from backend.services_v2.destinations.synology_destination import SynologyDestinationError
+from backend.services_v2.destinations.synology_destination import (
+    SynologyDestinationError,
+    SynologyDestination,
+)
 
 import requests.exceptions
 
 AUTH_MSG       = "Destination authentication failed. Please check the destination credentials."
+ROOT_MSG       = "Destination folder does not exist or is not accessible. Please check the destination folder."
 FOLDER_MSG     = "Destination write access failed. Please check folder permissions and destination path."
 TEMP_MSG       = "Destination temporarily unavailable. Please retry later."
 GENERIC_MSG    = "Destination error. Please check the destination configuration."
@@ -142,6 +146,64 @@ class TestClassifyDestinationErrorMessage(unittest.TestCase):
         result = safe_destination_error_message(exc)
         self.assertNotIn("/downloads", result)
         self.assertNotIn("code=414", result)
+
+    # ── Destination root not accessible ────────────────────────────────────────
+
+    def test_root_not_accessible_code(self):
+        exc = SynologyDestinationError("NAS destination root not accessible root=rfrfrfef code=408")
+        self.assertEqual(classify_destination_error_message(exc), ROOT_MSG)
+
+    def test_root_not_accessible_invalid_json(self):
+        exc = SynologyDestinationError("NAS destination root not accessible root=rfrfrfef invalid JSON")
+        self.assertEqual(classify_destination_error_message(exc), ROOT_MSG)
+
+    def test_root_not_accessible_http_error(self):
+        exc = SynologyDestinationError("NAS destination root not accessible root=downloads http error: Connection refused")
+        self.assertEqual(classify_destination_error_message(exc), ROOT_MSG)
+
+    def test_root_error_does_not_leak_path(self):
+        exc = SynologyDestinationError("NAS destination root not accessible root=secret_share code=408")
+        result = safe_destination_error_message(exc)
+        self.assertNotIn("secret_share", result)
+        self.assertNotIn("code=408", result)
+        self.assertEqual(result, ROOT_MSG)
+
+    # ── _extract_destination_root parsing ──────────────────────────────────────
+
+    def _make_dest(self, base: str | None) -> SynologyDestination:
+        return SynologyDestination(
+            synology_url="http://nas.local:5000",
+            username="admin",
+            password="pw",
+            destination_base=base or "",
+        )
+
+    def test_extract_root_simple(self):
+        self.assertEqual(self._make_dest("downloads")._extract_destination_root(), "downloads")
+
+    def test_extract_root_with_subfolder(self):
+        self.assertEqual(self._make_dest("downloads/XXXXXXX")._extract_destination_root(), "downloads")
+
+    def test_extract_root_with_leading_slash(self):
+        self.assertEqual(self._make_dest("/downloads/series")._extract_destination_root(), "downloads")
+
+    def test_extract_root_trailing_slash(self):
+        self.assertEqual(self._make_dest("downloads/")._extract_destination_root(), "downloads")
+
+    def test_extract_root_empty(self):
+        self.assertIsNone(self._make_dest("")._extract_destination_root())
+
+    def test_extract_root_only_slashes(self):
+        self.assertIsNone(self._make_dest("///")._extract_destination_root())
+
+    def test_extract_root_none_equivalent(self):
+        dest = SynologyDestination(
+            synology_url="http://nas.local:5000",
+            username="admin",
+            password="pw",
+            destination_base=None,
+        )
+        self.assertIsNone(dest._extract_destination_root())
 
     # ── DESTINATION_ERROR_STATUS ────────────────────────────────────────────────
 

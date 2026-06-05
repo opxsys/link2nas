@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 DESTINATION_ERROR_STATUS = 422
 
 _AUTH_SIGNALS    = frozenset({"login failed"})
+_ROOT_SIGNALS    = frozenset({"destination root not accessible"})
 _FOLDER_SIGNALS  = frozenset({"folder creation"})
 _NETWORK_SIGNALS = frozenset({"http error", "timeout", "timed out", "connection"})
 
@@ -33,6 +34,8 @@ def classify_destination_error_message(exc: Exception) -> str:
         msg = str(exc).lower()
         if any(s in msg for s in _AUTH_SIGNALS):
             return "Destination authentication failed. Please check the destination credentials."
+        if any(s in msg for s in _ROOT_SIGNALS):
+            return "Destination folder does not exist or is not accessible. Please check the destination folder."
         if any(s in msg for s in _FOLDER_SIGNALS):
             return "Destination write access failed. Please check folder permissions and destination path."
         if any(s in msg for s in _NETWORK_SIGNALS):

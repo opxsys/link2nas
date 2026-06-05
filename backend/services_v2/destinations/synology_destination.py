@@ -90,10 +90,11 @@ class SynologyDestination(Destination):
 
     def test_connection(self) -> dict[str, Any]:
         http = requests.Session()
-        sid = None
+        ds_sid = None
+        fs_sid = None
 
         try:
-            sid = self._login(http, "DownloadStation")
+            ds_sid = self._login(http, "DownloadStation")
 
             resp = http.post(
                 f"{self.synology_url}/webapi/DownloadStation/task.cgi",
@@ -103,7 +104,7 @@ class SynologyDestination(Destination):
                     "method": "list",
                     "offset": 0,
                     "limit": 1,
-                    "_sid": sid,
+                    "_sid": ds_sid,
                 },
                 timeout=15,
                 verify=self.verify_ssl,
@@ -115,6 +116,11 @@ class SynologyDestination(Destination):
                 code = (result.get("error") or {}).get("code")
                 raise SynologyDestinationError(f"NAS Download Station test failed (code={code})")
 
+            root = self._extract_destination_root()
+            if root:
+                fs_sid = self._login(http, "FileStation")
+                self._check_destination_root(http, fs_sid, root)
+
             return {
                 "ok": True,
                 "destination_name": "synology",
@@ -122,9 +128,53 @@ class SynologyDestination(Destination):
             }
 
         finally:
-            if sid:
-                self._logout(http, sid, "DownloadStation")
+            if fs_sid:
+                self._logout(http, fs_sid, "FileStation")
+            if ds_sid:
+                self._logout(http, ds_sid, "DownloadStation")
             http.close()
+
+    def _extract_destination_root(self) -> str | None:
+        """Return the first non-empty segment of destination_base, or None."""
+        if not self.destination_base:
+            return None
+        parts = [p for p in str(self.destination_base).strip("/").split("/") if p]
+        return parts[0] if parts else None
+
+    def _check_destination_root(self, http: requests.Session, fs_sid: str, root: str) -> None:
+        """Raise SynologyDestinationError if the root shared folder is not accessible."""
+        try:
+            resp = http.post(
+                f"{self.synology_url}/webapi/entry.cgi",
+                data={
+                    "api": "SYNO.FileStation.List",
+                    "version": "2",
+                    "method": "list",
+                    "folder_path": f"/{root}",
+                    "limit": 1,
+                    "_sid": fs_sid,
+                },
+                timeout=15,
+                verify=self.verify_ssl,
+            )
+            resp.raise_for_status()
+        except requests.exceptions.RequestException as exc:
+            raise SynologyDestinationError(
+                f"NAS destination root not accessible root={root} http error: {exc}"
+            ) from exc
+
+        try:
+            data = resp.json()
+        except ValueError:
+            raise SynologyDestinationError(
+                f"NAS destination root not accessible root={root} invalid JSON"
+            )
+
+        if not data.get("success"):
+            code = (data.get("error") or {}).get("code")
+            raise SynologyDestinationError(
+                f"NAS destination root not accessible root={root} code={code}"
+            )
 
     def _login(self, http: requests.Session, session: str) -> str:
         resp = http.post(
