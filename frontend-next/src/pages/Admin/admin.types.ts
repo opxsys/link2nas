@@ -15,7 +15,7 @@ export type UserRole = 'admin' | 'user' | 'viewer'
 export type UserStatus = 'active' | 'disabled' | 'pending'
 export type AnnouncementStatus = 'draft' | 'published'
 export type RuntimeStatus = 'running' | 'stopped' | 'error'
-export type SystemEventSeverity = 'error' | 'warning' | 'info'
+export type SystemEventSeverity = 'critical' | 'error' | 'warning' | 'info'
 export type TestStatus = 'idle' | 'sending' | 'sent' | 'failed'
 export type CleanupStatus = 'idle' | 'running' | 'done' | 'failed'
 
