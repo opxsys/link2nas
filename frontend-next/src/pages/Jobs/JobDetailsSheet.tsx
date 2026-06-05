@@ -361,7 +361,8 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
           <JobFilesTable
             files={job.files}
             onUnrestrictFile={
-              job.output_mode === 'per_file'
+              job.output_mode === 'per_file' &&
+              ['downloaded', 'ready', 'completed', 'partially_ready'].includes(job.status)
                 ? (fid) => onAction('unrestrict_file', job.id, { file_id: fid })
                 : undefined
             }

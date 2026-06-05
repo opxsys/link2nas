@@ -64,7 +64,7 @@ export default function JobFilesTable({
           {files.map((file, index) => {
             const name = file.filename || file.path || `file_${index + 1}`
             const link = file.download_url || file.debrid_link
-            const canUnlock = !!onUnrestrictFile && !!file.debrid_link
+            const canUnlock = !!onUnrestrictFile && (!!file.debrid_link || !!file.download_url)
 
             return (
               <tr key={String(file.id)} className="hover:bg-muted/30">
