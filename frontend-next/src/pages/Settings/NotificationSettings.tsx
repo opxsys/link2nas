@@ -6,7 +6,6 @@ import {
   listNotificationConfigs, listNotificationRules,
   deleteNotificationConfig, deleteNotificationRule,
 } from '@/api/notifications'
-import { getSmtpSettings } from '@/api/admin-smtp'
 import { ApiError } from '@/api/client'
 import type { NotificationConfig, NotificationRule } from '@/pages/Notifications/notifications.types'
 import NotifChannelRow from './NotifChannelRow'
@@ -14,6 +13,7 @@ import NotifRuleRow from './NotifRuleRow'
 import NotifChannelModal from './NotifChannelModal'
 import NotifRuleModal from './NotifRuleModal'
 import NotifDeleteModal from './NotifDeleteModal'
+import { useMe } from '@/lib/useMe'
 
 type ChannelModal = { open: false } | { open: true; editing: NotificationConfig | null }
 type RuleModal    = { open: false } | { open: true; editing: NotificationRule | null }
@@ -25,7 +25,6 @@ type DeleteTarget =
 export default function NotificationSettings() {
   const [configs, setConfigs] = useState<NotificationConfig[]>([])
   const [rules, setRules] = useState<NotificationRule[]>([])
-  const [smtpEnabled, setSmtpEnabled] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,6 +33,10 @@ export default function NotificationSettings() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>({ open: false })
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const { me } = useMe()
+  // Derived from /api/v2/me (non-admin endpoint) — reliable for all user roles.
+  const smtpEnabled: boolean | null = me !== null ? (me.email_sending_available ?? null) : null
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -47,10 +50,6 @@ export default function NotificationSettings() {
     } finally {
       setLoading(false)
     }
-    try {
-      const smtp = await getSmtpSettings()
-      setSmtpEnabled(smtp.enabled && !!smtp.host)
-    } catch { /* non-admin: stays null (unknown) */ }
   }, [])
 
   useEffect(() => { load() }, [load])

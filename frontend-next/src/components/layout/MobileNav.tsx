@@ -6,6 +6,7 @@ import { NAV_ITEMS } from '@/lib/nav'
 import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useAppInfo } from '@/lib/useAppInfo'
+import { useMe } from '@/lib/useMe'
 
 interface Props {
   open: boolean
@@ -18,10 +19,14 @@ export default function MobileNav({ open, onClose }: Props) {
   const location = useLocation()
   const { appInfo } = useAppInfo()
   const appName = appInfo.app_name || 'Link2NAS'
+  const { me } = useMe()
+  const isSuperAdmin = me?.role === 'super_admin'
 
-  const visibleItems = NAV_ITEMS.filter((item) =>
-    item.to === '/prowlarr' ? isProwlarrAvailable(integrationSettings) : true,
-  )
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
+    if (item.superAdminOnly && !isSuperAdmin) return false
+    return true
+  })
 
   // Close on ESC
   useEffect(() => {

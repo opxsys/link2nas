@@ -21,10 +21,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { me } = useMe()
   const { appInfo } = useAppInfo()
   const appName = appInfo.app_name || 'Link2NAS'
+  const isSuperAdmin = me?.role === 'super_admin'
 
-  const visibleItems = NAV_ITEMS.filter((item) =>
-    item.to === '/prowlarr' ? isProwlarrAvailable(integrationSettings) : true,
-  )
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
+    if (item.superAdminOnly && !isSuperAdmin) return false
+    return true
+  })
 
   const displayName = me?.display_name || me?.email || 'admin'
   const roleLabel   = me?.role === 'super_admin' ? 'Super Admin'

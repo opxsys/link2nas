@@ -16,17 +16,19 @@ export interface NavItem {
   icon: LucideIcon
   /** If true, only marks active on an exact path match (mirrors NavLink `end`). */
   end: boolean
+  /** If true, only shown to super_admin users. */
+  superAdminOnly?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: false },
-  { to: '/jobs', label: 'Jobs', icon: List, end: false },
-  { to: '/announcements', label: 'Announcements', icon: Megaphone, end: false },
-  { to: '/prowlarr', label: 'Prowlarr', icon: Search, end: false },
-  { to: '/notifications', label: 'My Notifications', icon: Bell, end: false },
-  { to: '/settings', label: 'Settings', icon: Settings, end: false },
-  { to: '/admin', label: 'Admin', icon: ShieldCheck, end: false },
-  { to: '/maintenance', label: 'System Status', icon: Wrench, end: false },
+  { to: '/dashboard',     label: 'Dashboard',        icon: LayoutDashboard, end: false },
+  { to: '/jobs',          label: 'Jobs',              icon: List,            end: false },
+  { to: '/announcements', label: 'Announcements',     icon: Megaphone,       end: false },
+  { to: '/prowlarr',      label: 'Prowlarr',          icon: Search,          end: false },
+  { to: '/notifications', label: 'My Notifications',  icon: Bell,            end: false },
+  { to: '/settings',      label: 'Settings',          icon: Settings,        end: false },
+  { to: '/admin',         label: 'Admin',             icon: ShieldCheck,     end: false, superAdminOnly: true },
+  { to: '/maintenance',   label: 'System Status',     icon: Wrench,          end: false, superAdminOnly: true },
 ]
 
 /**
