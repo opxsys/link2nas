@@ -30,7 +30,7 @@ export default function AppShell() {
           <Sidebar collapsed={collapsed} onToggle={toggleSidebar} />
           <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <Header onOpenMobileNav={() => setMobileNavOpen(true)} />
+            <Header onOpenMobileNav={() => setMobileNavOpen(true)} mobileNavOpen={mobileNavOpen} />
             <main className="flex-1 overflow-y-auto p-6">
               <Outlet />
             </main>

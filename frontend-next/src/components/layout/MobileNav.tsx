@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,12 +22,18 @@ export default function MobileNav({ open, onClose }: Props) {
   const appName = appInfo.app_name || 'Link2NAS'
   const { me } = useMe()
   const isSuperAdmin = me?.role === 'super_admin'
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
     if (item.superAdminOnly && !isSuperAdmin) return false
     return true
   })
+
+  // Move focus into the drawer when it opens (dialog accessibility pattern)
+  useEffect(() => {
+    if (open) closeButtonRef.current?.focus()
+  }, [open])
 
   // Close on ESC
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function MobileNav({ open, onClose }: Props) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden" aria-modal="true" role="dialog" aria-label="Navigation">
+    <div id="mobile-nav" className="fixed inset-0 z-50 md:hidden" aria-modal="true" role="dialog" aria-label="Navigation">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
@@ -63,19 +69,20 @@ export default function MobileNav({ open, onClose }: Props) {
       />
 
       {/* Panel */}
-      <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
+      <aside className="absolute inset-y-0 left-0 flex w-64 flex-col overflow-x-hidden border-r border-sidebar-border bg-sidebar">
         {/* Brand + close */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
           <button
             onClick={() => { navigate(resolveHomePath(integrationSettings)); onClose() }}
-            className="text-sm font-semibold tracking-wide text-sidebar-foreground transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="flex-1 min-w-0 truncate text-left text-sm font-semibold tracking-wide text-sidebar-foreground transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             aria-label="Go to home page"
           >
             {appName}
           </button>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Close navigation"
           >
             <X size={15} aria-hidden="true" />
