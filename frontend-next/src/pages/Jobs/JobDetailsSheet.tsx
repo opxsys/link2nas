@@ -222,7 +222,8 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       {/* Action error */}
       {actionError && (
         <div className="flex items-start gap-2 border-b border-border bg-red-50 px-4 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
-          <AlertCircle size={13} className="mt-0.5 shrink-0" />{actionError}
+          <AlertCircle size={13} className="mt-0.5 shrink-0" />
+          <span><span className="font-medium">Action failed:</span> {actionError}</span>
         </div>
       )}
 
@@ -292,7 +293,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
 
             {job.error_message && (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-                <p className="mb-1 font-medium">Error</p>
+                <p className="mb-1 font-medium">Last job error</p>
                 <p className="font-mono text-[11px]">{job.error_message}</p>
               </div>
             )}
@@ -384,12 +385,6 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             <Row label="Started"            value={job.started_at ? new Date(job.started_at).toLocaleString() : null} />
             <Row label="Completed"          value={job.completed_at ? new Date(job.completed_at).toLocaleString() : null} />
             <Row label="Cancelled"          value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
-            {job.error_message && (
-              <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-                <p className="mb-1 font-medium text-foreground">Error</p>
-                <p className="font-mono text-[11px] text-muted-foreground">{job.error_message}</p>
-              </div>
-            )}
           </div>
         )}
       </div>
