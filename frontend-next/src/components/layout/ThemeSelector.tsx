@@ -2,27 +2,38 @@ import { Monitor, Sun, Moon, SunMoon, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { type ThemePreference, THEME_PREFERENCES } from '@/lib/themes'
 import { useTheme } from '@/lib/useTheme'
+import { useI18n, type TranslationKey } from '@/i18n'
 
 const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
-  auto:           Monitor,
-  light:          Sun,
-  dark:           Moon,
+  auto:            Monitor,
+  light:           Sun,
+  dark:            Moon,
   'high-contrast': SunMoon,
-  colorblind:     Eye,
+  colorblind:      Eye,
+}
+
+const THEME_I18N_KEYS: Record<ThemePreference, TranslationKey> = {
+  auto:            'themeAuto',
+  light:           'themeLight',
+  dark:            'themeDark',
+  'high-contrast': 'themeHighContrast',
+  colorblind:      'themeColorblind',
 }
 
 export default function ThemeSelector() {
   const { preference, setPreference } = useTheme()
+  const { t } = useI18n()
 
   return (
     <div
       className="flex items-center rounded-md border border-border bg-background p-0.5 gap-0.5"
       role="group"
-      aria-label="Select theme"
+      aria-label={t('ariaSelectTheme')}
     >
-      {THEME_PREFERENCES.map(({ value, label }) => {
+      {THEME_PREFERENCES.map(({ value }) => {
         const Icon = THEME_ICONS[value]
         const active = preference === value
+        const label = t(THEME_I18N_KEYS[value])
         return (
           <button
             key={value}
@@ -34,7 +45,7 @@ export default function ThemeSelector() {
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:text-foreground hover:bg-accent',
             )}
-            aria-label={`${label} theme`}
+            aria-label={label}
             aria-pressed={active}
             title={label}
           >

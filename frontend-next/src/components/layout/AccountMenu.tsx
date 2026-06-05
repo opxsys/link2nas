@@ -6,6 +6,7 @@ import { type ThemePreference, THEME_PREFERENCES } from '@/lib/themes'
 import { useTheme } from '@/lib/useTheme'
 import { updateMe } from '@/api/me'
 import { useMe, invalidateMe } from '@/lib/useMe'
+import { useI18n, type TranslationKey } from '@/i18n'
 
 const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
   auto:            Monitor,
@@ -15,10 +16,18 @@ const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
   colorblind:      Eye,
 }
 
-const LANGUAGES = [
-  { value: '',   label: 'System' },
-  { value: 'en', label: 'English' },
-  { value: 'fr', label: 'Français' },
+const THEME_I18N_KEYS: Record<ThemePreference, TranslationKey> = {
+  auto:            'themeAuto',
+  light:           'themeLight',
+  dark:            'themeDark',
+  'high-contrast': 'themeHighContrast',
+  colorblind:      'themeColorblind',
+}
+
+const LANGUAGE_OPTIONS: { value: string; labelKey: TranslationKey }[] = [
+  { value: '',   labelKey: 'langSystem'  },
+  { value: 'en', labelKey: 'langEnglish' },
+  { value: 'fr', labelKey: 'langFrench'  },
 ]
 
 export default function AccountMenu() {
@@ -27,6 +36,7 @@ export default function AccountMenu() {
   const navigate = useNavigate()
   const { preference, setPreference } = useTheme()
   const { me } = useMe()
+  const { t } = useI18n()
   const [lang, setLang] = useState(me?.preferred_language ?? '')
 
   useEffect(() => {
@@ -91,19 +101,20 @@ export default function AccountMenu() {
               onClick={() => { setOpen(false); navigate('/settings') }}
             >
               <User size={14} aria-hidden="true" />
-              My Account
+              {t('myAccount')}
             </button>
           </div>
 
           {/* Appearance */}
           <div className="border-t border-border px-3 py-2.5">
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Appearance
+              {t('appearance')}
             </p>
             <div className="flex flex-wrap gap-1">
-              {THEME_PREFERENCES.map(({ value, label }) => {
+              {THEME_PREFERENCES.map(({ value }) => {
                 const Icon = THEME_ICONS[value]
                 const active = preference === value
+                const label = t(THEME_I18N_KEYS[value])
                 return (
                   <button
                     key={value}
@@ -128,10 +139,10 @@ export default function AccountMenu() {
           {/* Language */}
           <div className="border-t border-border px-3 py-2.5">
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Language
+              {t('language')}
             </p>
             <div className="flex gap-1">
-              {LANGUAGES.map(({ value, label }) => (
+              {LANGUAGE_OPTIONS.map(({ value, labelKey }) => (
                 <button
                   key={value}
                   onClick={() => handleLangChange(value)}
@@ -143,7 +154,7 @@ export default function AccountMenu() {
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                   )}
                 >
-                  {label}
+                  {t(labelKey)}
                 </button>
               ))}
             </div>
@@ -157,7 +168,7 @@ export default function AccountMenu() {
               onClick={handleLogout}
             >
               <LogOut size={14} aria-hidden="true" />
-              Sign out
+              {t('signOut')}
             </button>
           </div>
         </div>

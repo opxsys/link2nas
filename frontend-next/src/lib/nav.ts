@@ -9,10 +9,11 @@ import {
   ShieldCheck,
   Wrench,
 } from 'lucide-react'
+import type { TranslationKey } from '@/i18n'
 
 export interface NavItem {
   to: string
-  label: string
+  i18nKey: TranslationKey
   icon: LucideIcon
   /** If true, only marks active on an exact path match (mirrors NavLink `end`). */
   end: boolean
@@ -23,39 +24,39 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard',     label: 'Dashboard',        icon: LayoutDashboard, end: false },
-  { to: '/jobs',          label: 'Jobs',              icon: List,            end: false },
-  { to: '/announcements', label: 'Announcements',     icon: Megaphone,       end: false, hideWhenAnnouncementsDisabled: true },
-  { to: '/prowlarr',      label: 'Prowlarr',          icon: Search,          end: false },
-  { to: '/notifications', label: 'My Notifications',  icon: Bell,            end: false },
-  { to: '/settings',      label: 'Settings',          icon: Settings,        end: false },
-  { to: '/admin',         label: 'Admin',             icon: ShieldCheck,     end: false, superAdminOnly: true },
-  { to: '/maintenance',   label: 'System Status',     icon: Wrench,          end: false, superAdminOnly: true },
+  { to: '/dashboard',     i18nKey: 'navDashboard',     icon: LayoutDashboard, end: false },
+  { to: '/jobs',          i18nKey: 'navJobs',           icon: List,            end: false },
+  { to: '/announcements', i18nKey: 'navAnnouncements',  icon: Megaphone,       end: false, hideWhenAnnouncementsDisabled: true },
+  { to: '/prowlarr',      i18nKey: 'navProwlarr',       icon: Search,          end: false },
+  { to: '/notifications', i18nKey: 'navNotifications',  icon: Bell,            end: false },
+  { to: '/settings',      i18nKey: 'navSettings',       icon: Settings,        end: false },
+  { to: '/admin',         i18nKey: 'navAdmin',          icon: ShieldCheck,     end: false, superAdminOnly: true },
+  { to: '/maintenance',   i18nKey: 'navMaintenance',    icon: Wrench,          end: false, superAdminOnly: true },
 ]
 
-/**
- * Titles for pages that exist but are not top-level sidebar items.
- * /jobs/new is an action; /providers and /destinations will live under Settings.
- */
-const NON_NAV_TITLES: Record<string, string> = {
-  '/jobs/new': 'New Job',
-  '/providers': 'Providers',
-  '/destinations': 'Destinations',
+const NON_NAV_KEYS: Record<string, TranslationKey> = {
+  '/jobs/new':      'navNewJob',
+  '/providers':     'navProviders',
+  '/destinations':  'navDestinations',
 }
 
 /**
  * Derives a page title from the current pathname.
  * Priority: exact sidebar match → non-nav exact match → longest prefix match.
  */
-export function getPageTitle(pathname: string, appName = 'Link2NAS'): string {
+export function getPageTitle(
+  pathname: string,
+  t: (key: TranslationKey) => string,
+  appName = 'Link2NAS',
+): string {
   const exact = NAV_ITEMS.find((item) => pathname === item.to)
-  if (exact) return exact.label
+  if (exact) return t(exact.i18nKey)
 
-  if (NON_NAV_TITLES[pathname]) return NON_NAV_TITLES[pathname]
+  if (NON_NAV_KEYS[pathname]) return t(NON_NAV_KEYS[pathname])
 
   const prefix = NAV_ITEMS.filter(
     (item) => !item.end && pathname.startsWith(item.to + '/'),
   ).sort((a, b) => b.to.length - a.to.length)[0]
 
-  return prefix?.label ?? appName
+  return prefix ? t(prefix.i18nKey) : appName
 }

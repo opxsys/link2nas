@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { NavItem } from '@/lib/nav'
+import { useI18n } from '@/i18n'
 
 interface SidebarNavItemProps {
   item: NavItem
@@ -36,7 +37,9 @@ function BadgePill({ count }: { count: number }) {
 }
 
 export default function SidebarNavItem({ item, collapsed, badge }: SidebarNavItemProps) {
-  const { to, label, icon: Icon, end } = item
+  const { to, i18nKey, icon: Icon, end } = item
+  const { t } = useI18n()
+  const label = t(i18nKey)
   const hasBadge = badge !== undefined && badge > 0
 
   if (collapsed) {

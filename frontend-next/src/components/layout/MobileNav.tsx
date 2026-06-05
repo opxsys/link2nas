@@ -7,6 +7,7 @@ import { useIntegrationSettings, isProwlarrAvailable, resolveHomePath } from '@/
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useAppInfo } from '@/lib/useAppInfo'
 import { useMe } from '@/lib/useMe'
+import { useI18n } from '@/i18n'
 
 interface Props {
   open: boolean
@@ -21,6 +22,7 @@ export default function MobileNav({ open, onClose }: Props) {
   const { appInfo } = useAppInfo()
   const appName = appInfo.app_name || 'Link2NAS'
   const { me } = useMe()
+  const { t } = useI18n()
   const isSuperAdmin = me?.role === 'super_admin'
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -63,7 +65,7 @@ export default function MobileNav({ open, onClose }: Props) {
   if (!open) return null
 
   return (
-    <div id="mobile-nav" className="fixed inset-0 z-50 md:hidden" aria-modal="true" role="dialog" aria-label="Navigation">
+    <div id="mobile-nav" className="fixed inset-0 z-50 md:hidden" aria-modal="true" role="dialog" aria-label={t('ariaMobileNav')}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
@@ -78,7 +80,7 @@ export default function MobileNav({ open, onClose }: Props) {
           <button
             onClick={() => { navigate(resolveHomePath(integrationSettings)); onClose() }}
             className="flex-1 min-w-0 truncate text-left text-sm font-semibold tracking-wide text-sidebar-foreground transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-            aria-label="Go to home page"
+            aria-label={t('ariaGoHome')}
           >
             {appName}
           </button>
@@ -86,7 +88,7 @@ export default function MobileNav({ open, onClose }: Props) {
             ref={closeButtonRef}
             onClick={onClose}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Close navigation"
+            aria-label={t('ariaCloseNav')}
           >
             <X size={15} aria-hidden="true" />
           </button>
@@ -95,7 +97,8 @@ export default function MobileNav({ open, onClose }: Props) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3">
           <ul className="space-y-0.5 px-2">
-            {visibleItems.map(({ to, label, icon: Icon, end }) => {
+            {visibleItems.map((item) => {
+              const { to, i18nKey, icon: Icon, end } = item
               const badge = to === '/announcements' ? announcementCount : 0
               return (
                 <li key={to}>
@@ -112,7 +115,7 @@ export default function MobileNav({ open, onClose }: Props) {
                     }
                   >
                     <Icon size={18} aria-hidden="true" className="shrink-0" />
-                    <span className="truncate">{label}</span>
+                    <span className="truncate">{t(i18nKey)}</span>
                     {badge > 0 && (
                       <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
                         {badge > 99 ? '99+' : badge}

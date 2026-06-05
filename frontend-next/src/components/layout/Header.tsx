@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react'
 import AccountMenu from './AccountMenu'
 import { getPageTitle } from '@/lib/nav'
 import { useAppInfo } from '@/lib/useAppInfo'
+import { useI18n } from '@/i18n'
 
 interface HeaderProps {
   onOpenMobileNav: () => void
@@ -13,8 +14,9 @@ interface HeaderProps {
 export default function Header({ onOpenMobileNav, mobileNavOpen = false }: HeaderProps) {
   const { pathname } = useLocation()
   const { appInfo } = useAppInfo()
+  const { t } = useI18n()
   const appName = appInfo.app_name || 'Link2NAS'
-  const pageTitle = getPageTitle(pathname, appName)
+  const pageTitle = getPageTitle(pathname, t, appName)
 
   useEffect(() => {
     document.title = pageTitle === appName ? appName : `${pageTitle} · ${appName}`
@@ -26,7 +28,7 @@ export default function Header({ onOpenMobileNav, mobileNavOpen = false }: Heade
       <button
         onClick={onOpenMobileNav}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-        aria-label="Open navigation"
+        aria-label={t('ariaOpenNav')}
         aria-expanded={mobileNavOpen}
         aria-controls="mobile-nav"
       >

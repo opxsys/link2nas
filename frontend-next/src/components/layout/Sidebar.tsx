@@ -8,6 +8,7 @@ import { useIntegrationSettings, isProwlarrAvailable, resolveHomePath } from '@/
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
+import { useI18n } from '@/i18n'
 
 interface SidebarProps {
   collapsed: boolean
@@ -20,6 +21,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const navigate = useNavigate()
   const { me } = useMe()
   const { appInfo } = useAppInfo()
+  const { t } = useI18n()
   const appName = appInfo.app_name || 'Link2NAS'
   const isSuperAdmin = me?.role === 'super_admin'
 
@@ -33,9 +35,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   })
 
   const displayName = me?.display_name || me?.email || 'admin'
-  const roleLabel   = me?.role === 'super_admin' ? 'Super Admin'
-                    : me?.role === 'user'         ? 'User'
-                    : me?.role                   ?? 'Administrator'
+  const roleLabel   = me?.role === 'super_admin' ? t('roleSuperAdmin')
+                    : me?.role === 'user'         ? t('roleUser')
+                    : me?.role                   ?? t('roleAdministrator')
   const initials    = displayName.charAt(0).toUpperCase()
 
   return (
@@ -55,7 +57,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               onClick={() => navigate(resolveHomePath(integrationSettings))}
               className="flex-1 truncate text-left text-sm font-semibold tracking-wide text-sidebar-foreground transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-              aria-label="Go to home page"
+              aria-label={t('ariaGoHome')}
             >
               {appName}
             </button>
@@ -63,7 +65,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <button
             onClick={onToggle}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? t('ariaExpandSidebar') : t('ariaCollapseSidebar')}
           >
             {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
           </button>
@@ -92,7 +94,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <button
                   onClick={() => navigate('/settings')}
                   className="flex w-full items-center justify-center p-3 transition-colors hover:bg-accent/50"
-                  aria-label="Go to account settings"
+                  aria-label={t('ariaAccountSettings')}
                 >
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary select-none">
                     {initials}
