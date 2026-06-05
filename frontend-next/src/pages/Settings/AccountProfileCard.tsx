@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { updateMe, requestEmailVerification } from '@/api/me'
@@ -30,6 +30,7 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
   const [saved, setSaved] = useState(false)
   const [verifySending, setVerifySending] = useState(false)
   const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setDisplayName(me.display_name ?? '')
@@ -38,6 +39,8 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
     setReceiveEmails(me.receive_application_emails)
     setVerifyMsg(null)
   }, [me])
+
+  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current) }, [])
 
   async function handleSave() {
     setSaving(true)
@@ -52,7 +55,8 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
       })
       onUpdate(updated)
       setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      if (successTimer.current) clearTimeout(successTimer.current)
+      successTimer.current = setTimeout(() => setSaved(false), 4000)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to save profile')
     } finally {
@@ -108,12 +112,12 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
         <div>
           <label htmlFor="acc-display-name" className={LABEL}>Display name</label>
           <input id="acc-display-name" type="text" value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)} className={INPUT} />
+            onChange={(e) => setDisplayName(e.target.value)} className={INPUT} disabled={saving} />
         </div>
         <div>
           <label htmlFor="acc-email" className={LABEL}>Email</label>
           <input id="acc-email" type="email" value={email}
-            onChange={(e) => setEmail(e.target.value)} className={INPUT} />
+            onChange={(e) => setEmail(e.target.value)} className={INPUT} disabled={saving} />
           {emailChanged && !me.single_user_mode && (
             <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
               Changing email will require re-verification.
@@ -124,8 +128,8 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
         <div>
           <label htmlFor="acc-lang" className={LABEL}>Preferred language</label>
           <select id="acc-lang" value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+            onChange={(e) => setLang(e.target.value)} disabled={saving}
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50">
             {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
           </select>
         </div>
@@ -133,9 +137,9 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
         {me.email_sending_available && (
           <div className="flex items-center gap-3 sm:col-span-1">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" checked={receiveEmails}
+              <input type="checkbox" checked={receiveEmails} disabled={saving}
                 onChange={(e) => setReceiveEmails(e.target.checked)}
-                className="h-4 w-4 rounded border-input accent-primary" />
+                className="h-4 w-4 rounded border-input accent-primary disabled:opacity-50" />
               Receive application emails
             </label>
           </div>
@@ -155,28 +159,63 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
           <p className="text-xs text-amber-800 dark:text-amber-300">
             Your email address is not verified. Magic login may be unavailable until verification is complete.
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <Button size="sm" variant="outline" onClick={handleRequestVerification} disabled={verifySending}>
+          <div className="mt-2">
+            <Button size="sm" variant="outline"
+              onClick={handleRequestVerification}
+              disabled={verifySending || !me.email_sending_available}>
               {verifySending && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
               Send verification email
             </Button>
-            {verifyMsg && (
-              <span className={`text-xs ${verifyMsg.ok ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-                {verifyMsg.text}
-              </span>
+            {!me.email_sending_available && (
+              <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
+                Email sending is not configured — contact an administrator.
+              </p>
             )}
           </div>
         </div>
       )}
+      {verifyMsg && (
+        <div className={`mt-3 flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs ${
+          verifyMsg.ok
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
+            : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'
+        }`}>
+          <span className="flex items-center gap-1.5">
+            {verifyMsg.ok
+              ? <CheckCircle2 size={12} aria-hidden="true" />
+              : <AlertCircle size={12} aria-hidden="true" />}
+            {verifyMsg.text}
+          </span>
+          <button onClick={() => setVerifyMsg(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <X size={13} aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       {/* Footer */}
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-        <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-          Save profile
-        </Button>
-        {saved && <span className="text-xs text-green-600 dark:text-green-400">Saved.</span>}
-        {error && <span className="text-xs text-destructive">{error}</span>}
+      <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+        <div>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+            Save profile
+          </Button>
+        </div>
+        {saved && (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+            <span className="flex items-center gap-2"><CheckCircle2 size={14} aria-hidden="true" /> Profile saved.</span>
+            <button onClick={() => setSaved(false)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        {error && (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </div>
     </SectionCard>
   )

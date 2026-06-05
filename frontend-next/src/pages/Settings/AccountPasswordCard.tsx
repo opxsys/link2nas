@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Loader2, Info } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Loader2, Info, CheckCircle2, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { changePassword } from '@/api/me'
@@ -19,6 +19,9 @@ export default function AccountPasswordCard({ singleUserMode }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current) }, [])
 
   async function handleSave() {
     setError(null)
@@ -34,7 +37,8 @@ export default function AccountPasswordCard({ singleUserMode }: Props) {
       setNewPw('')
       setConfirmPw('')
       setSaved(true)
-      setTimeout(() => setSaved(false), 4000)
+      if (successTimer.current) clearTimeout(successTimer.current)
+      successTimer.current = setTimeout(() => setSaved(false), 4000)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to change password')
     } finally {
@@ -72,13 +76,29 @@ export default function AccountPasswordCard({ singleUserMode }: Props) {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-              Change password
-            </Button>
-            {saved && <span className="text-xs text-green-600 dark:text-green-400">Password changed.</span>}
-            {error && <span className="text-xs text-destructive">{error}</span>}
+          <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+            <div>
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+                Change password
+              </Button>
+            </div>
+            {saved && (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} aria-hidden="true" /> Password changed.</span>
+                <button onClick={() => setSaved(false)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+                <span>{error}</span>
+                <button onClick={() => setError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
