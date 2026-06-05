@@ -82,6 +82,7 @@ export default function Jobs() {
                 onClose={state.clearSelection}
                 onAction={state.performAction}
                 onDeleteRequest={(id) => state.setDeletePendingId(id)}
+                onDismissError={state.clearActionError}
               />
             </div>
           )}

@@ -7,6 +7,7 @@ import type { RealJobFile } from '@/api/jobs'
 interface JobFilesTableProps {
   files: RealJobFile[]
   onUnrestrictFile?: (fileId: string | number) => void
+  fileBusy?: boolean
 }
 
 const TH = 'px-4 py-2 text-left text-xs font-medium text-muted-foreground'
@@ -36,6 +37,7 @@ function CopyLinkButton({ url, label }: { url: string; label: string }) {
 export default function JobFilesTable({
   files,
   onUnrestrictFile,
+  fileBusy,
 }: JobFilesTableProps) {
   if (files.length === 0) {
     return (
@@ -86,7 +88,8 @@ export default function JobFilesTable({
                     {canUnlock && (
                       <button
                         onClick={() => onUnrestrictFile(file.id)}
-                        className="text-xs text-muted-foreground hover:text-primary"
+                        disabled={fileBusy}
+                        className="text-xs text-muted-foreground hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                         title={file.download_url ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
                       >
                         {file.download_url ? 'Regenerate' : 'Generate link'}

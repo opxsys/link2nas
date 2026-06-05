@@ -28,6 +28,7 @@ interface Props {
   onClose: () => void
   onAction: (action: string, jobId: string, payload?: { destination_config_id?: string; provider_config_id?: string; file_id?: string | number }) => Promise<void>
   onDeleteRequest: (jobId: string) => void
+  onDismissError?: () => void
 }
 
 function CopyBtn({ text, label, small }: { text: string; label: string; small?: boolean }) {
@@ -78,7 +79,7 @@ function InlineSelector<T extends { id: string }>({ items, onSelect, onCancel, t
   )
 }
 
-export default function JobDetailsSheet({ job, actionPending, actionError, onClose, onAction, onDeleteRequest }: Props) {
+export default function JobDetailsSheet({ job, actionPending, actionError, onClose, onAction, onDeleteRequest, onDismissError }: Props) {
   const [tab, setTab] = useState<Tab>('summary')
   const [showDestSelector, setShowDestSelector] = useState<'send' | 'other' | null>(null)
   const [showProvSelector, setShowProvSelector] = useState(false)
@@ -168,6 +169,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         )}
         {cap.canSelectFiles && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('select_files', job.id)}>
+            {busy && <Loader2 size={13} className="animate-spin" />}
             Select all files
           </Button>
         )}
@@ -183,7 +185,8 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         )}
         {cap.canSendOtherDest && (
           <Button variant="outline" size="sm" disabled={busy} onClick={handleSendOther}>
-            <Send size={13} /> Other dest
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+            Other dest
           </Button>
         )}
         {cap.canStart && (
@@ -198,7 +201,8 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         )}
         {cap.canCloneWithProvider && (
           <Button variant="outline" size="sm" disabled={busy} onClick={handleClone}>
-            <Copy size={13} /> Clone
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
+            Clone
           </Button>
         )}
         {cap.canCancel && (
@@ -210,14 +214,15 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         )}
         {cap.canCancelLocalDownload && (
           <Button variant="outline" size="sm" disabled={busy}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
             onClick={() => onAction('cancel_local_download', job.id)}>
-            <CircleX size={13} /> Stop download
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <CircleX size={13} />}
+            Stop download
           </Button>
         )}
         <div className="ml-auto">
-          <Button variant="outline" size="sm"
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          <Button variant="outline" size="sm" disabled={busy}
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
             onClick={() => onDeleteRequest(job.id)}>
             <Trash2 size={13} /> Delete
           </Button>
@@ -226,9 +231,14 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
 
       {/* Action error */}
       {actionError && (
-        <div className="flex items-start gap-2 border-b border-border bg-red-50 px-4 py-2 text-xs text-red-700 dark:bg-red-950 dark:text-red-400">
+        <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
           <AlertCircle size={13} className="mt-0.5 shrink-0" />
-          <span><span className="font-medium">Action failed:</span> {actionError}</span>
+          <span className="flex-1"><span className="font-medium">Action failed:</span> {actionError}</span>
+          {onDismissError && (
+            <button onClick={onDismissError} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss error">
+              <X size={13} />
+            </button>
+          )}
         </div>
       )}
 
@@ -362,6 +372,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         {tab === 'files' && (
           <JobFilesTable
             files={job.files}
+            fileBusy={busy}
             onUnrestrictFile={
               job.output_mode === 'per_file' &&
               ['downloaded', 'ready', 'completed', 'partially_ready'].includes(job.status)
