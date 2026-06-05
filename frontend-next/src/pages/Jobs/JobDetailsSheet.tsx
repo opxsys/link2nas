@@ -220,13 +220,11 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             Stop download
           </Button>
         )}
-        <div className="ml-auto">
-          <Button variant="outline" size="sm" disabled={busy}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-            onClick={() => onDeleteRequest(job.id)}>
-            <Trash2 size={13} /> Delete
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" disabled={busy}
+          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+          onClick={() => onDeleteRequest(job.id)}>
+          <Trash2 size={13} /> Delete
+        </Button>
       </div>
 
       {/* Action error */}
