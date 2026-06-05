@@ -102,14 +102,24 @@ export default function ProviderRow({
           </p>
         )}
 
-        {testStatus !== 'idle' && (
-          <div className="mt-1 flex items-center gap-1.5 text-xs">
-            {testStatus === 'testing' && <Loader2 size={11} className="animate-spin text-muted-foreground" aria-hidden="true" />}
-            {testStatus === 'ok'      && <CheckCircle2 size={11} className="text-green-600 dark:text-green-400" aria-hidden="true" />}
-            {testStatus === 'error'   && <XCircle size={11} className="text-destructive" aria-hidden="true" />}
-            <span className={testStatus === 'error' ? 'text-destructive' : testStatus === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
-              {testStatus === 'testing' ? 'Testing…' : testMessage}
-            </span>
+        {testStatus === 'testing' && (
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 size={11} className="animate-spin" aria-hidden="true" />
+            <span>Testing…</span>
+          </div>
+        )}
+
+        {testStatus === 'ok' && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+            <CheckCircle2 size={11} aria-hidden="true" />
+            <span>{testMessage}</span>
+          </div>
+        )}
+
+        {testStatus === 'error' && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <XCircle size={11} aria-hidden="true" />
+            <span>{testMessage}</span>
           </div>
         )}
       </div>
