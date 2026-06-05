@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle2, XCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { CheckCircle2, XCircle, Loader2, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getRuntimeSettings, saveRuntimeSettings } from '@/api/admin-runtime'
 import type { DispatcherSettings, OrchestratorSettings, LocalWorkerSettings } from './admin.types'
@@ -27,6 +27,7 @@ export default function AdminRuntime() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveMessage, setSaveMessage] = useState('')
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -64,6 +65,7 @@ export default function AdminRuntime() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    if (saveTimer.current) clearTimeout(saveTimer.current)
     setSaveStatus('saving')
     setSaveMessage('')
     try {
@@ -74,10 +76,12 @@ export default function AdminRuntime() {
       })
       const d = updated.notifications.dispatcher
       setDispatcher({ enabled: d.enabled, interval_seconds: d.interval_seconds, limit: d.limit })
+      setDispatcherRuntime({ last_run_at: d.last_run_at, last_error: d.last_error })
       setOrchestrator(updated.jobs.orchestrator)
       setLocalWorker(updated.downloads.local_worker)
       setSaveStatus('saved')
       setSaveMessage('Runtime settings saved.')
+      saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
       setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
@@ -121,24 +125,38 @@ export default function AdminRuntime() {
         onLocalWorker={handleLocalWorker}
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" size="sm" disabled={busy}>
-          {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-          Save settings
-        </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={load}>
-          <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />
-          Refresh
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" size="sm" disabled={busy}>
+            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+            Save settings
+          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={busy || loading} onClick={load}>
+            {loading
+              ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+              : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
+            Refresh
+          </Button>
+        </div>
         {saveStatus === 'saved' && (
-          <span className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
-            <CheckCircle2 size={14} aria-hidden="true" /> {saveMessage}
-          </span>
+          <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+            <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+            <span className="flex-1">{saveMessage}</span>
+            <button type="button" onClick={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }}
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+              <X size={13} aria-hidden="true" />
+            </button>
+          </div>
         )}
         {saveStatus === 'error' && (
-          <span className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
-            <XCircle size={14} aria-hidden="true" /> {saveMessage}
-          </span>
+          <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <XCircle size={15} className="shrink-0" aria-hidden="true" />
+            <span className="flex-1">{saveMessage}</span>
+            <button type="button" onClick={() => setSaveStatus('idle')}
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+              <X size={13} aria-hidden="true" />
+            </button>
+          </div>
         )}
       </div>
     </form>
