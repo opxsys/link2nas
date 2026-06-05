@@ -24,7 +24,7 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
   const [name, setName] = useState(editing?.name ?? '')
   const [channel, setChannel] = useState<Channel>((editing?.channel as Channel) ?? 'email')
   const [isEnabled, setIsEnabled] = useState(editing?.is_enabled ?? true)
-  const [isDefault, setIsDefault] = useState(editing?.is_default ?? false)
+  // is_default is intentionally omitted: not used by notification dispatching
   // email
   const [toEmail, setToEmail] = useState(editing?.config.to_email ?? '')
   // gotify — token never pre-filled (backend only returns has_token)
@@ -67,8 +67,8 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
     setError(null)
     try {
       const saved = isEdit
-        ? await updateNotificationConfig(editing.id, { name, is_enabled: isEnabled, is_default: isDefault, config: configData })
-        : await createNotificationConfig({ name, channel, is_enabled: isEnabled, is_default: isDefault, config: configData })
+        ? await updateNotificationConfig(editing.id, { name, is_enabled: isEnabled, config: configData })
+        : await createNotificationConfig({ name, channel, is_enabled: isEnabled, config: configData })
       onSaved(saved)
       onClose()
     } catch (err) {
@@ -184,11 +184,6 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
               <input type="checkbox" checked={isEnabled} onChange={e => setIsEnabled(e.target.checked)}
                 disabled={saving} className="h-4 w-4 rounded border-input accent-primary" />
               Enabled
-            </label>
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)}
-                disabled={saving} className="h-4 w-4 rounded border-input accent-primary" />
-              Default
             </label>
           </div>
 

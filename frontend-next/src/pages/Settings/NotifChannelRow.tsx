@@ -46,11 +46,6 @@ export default function NotifChannelRow({ config, smtpEnabled, onEdit, onDelete 
           <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] text-muted-foreground capitalize">
             {CHANNEL_LABEL[config.channel as keyof typeof CHANNEL_LABEL] ?? config.channel}
           </span>
-          {config.is_default && (
-            <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400">
-              Default
-            </span>
-          )}
           {!config.is_enabled && (
             <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
               Disabled
