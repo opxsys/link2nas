@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { AlertTriangle, Loader2, Plus } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { AlertTriangle, CheckCircle2, Loader2, Plus, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +32,8 @@ export default function NotificationSettings() {
   const [channelModal, setChannelModal] = useState<ChannelModal>({ open: false })
   const [ruleModal, setRuleModal] = useState<RuleModal>({ open: false })
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>({ open: false })
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -53,9 +55,18 @@ export default function NotificationSettings() {
 
   useEffect(() => { load() }, [load])
 
+  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current) }, [])
+
+  function showSuccess(msg: string) {
+    if (successTimer.current) clearTimeout(successTimer.current)
+    setSuccessMessage(msg)
+    successTimer.current = setTimeout(() => setSuccessMessage(null), 4000)
+  }
+
   function handleConfigSaved(_cfg: NotificationConfig) {
     // Always reload: backend may have cleared is_default on other configs of the same channel type
     load()
+    showSuccess('Channel saved.')
   }
 
   function handleRuleSaved(rule: NotificationRule) {
@@ -76,9 +87,11 @@ export default function NotificationSettings() {
       await deleteNotificationConfig(deleteTarget.item.id)
       // Reload to get authoritative state (also fixes default display)
       await load()
+      showSuccess('Channel deleted.')
     } else {
       await deleteNotificationRule(deleteTarget.item.id)
       setRules(prev => prev.filter(r => r.id !== deleteTarget.item.id))
+      showSuccess('Rule deleted.')
     }
   }
 
@@ -100,6 +113,18 @@ export default function NotificationSettings() {
 
   return (
     <div className="flex flex-col gap-6">
+      {successMessage && (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={14} aria-hidden="true" />
+            {successMessage}
+          </span>
+          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       {/* Channels */}
       <SectionCard
         title="Notification Channels"
@@ -116,7 +141,11 @@ export default function NotificationSettings() {
             <Loader2 size={14} className="animate-spin" aria-hidden="true" /> Loading…
           </div>
         )}
-        {!loading && error && <p className="py-4 text-sm text-destructive">{error}</p>}
+        {!loading && error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            {error}
+          </div>
+        )}
         {!loading && !error && smtpDisabled && hasEmailConfig && (
           <div className="mb-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
             <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />

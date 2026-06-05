@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Mail, Zap, Webhook, Pencil, Trash2, FlaskConical, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { testNotificationConfig } from '@/api/notifications'
+import { ApiError } from '@/api/client'
 import type { NotificationConfig } from '@/pages/Notifications/notifications.types'
 
 const CHANNEL_ICON = { email: Mail, gotify: Zap, webhook: Webhook } as const
@@ -15,22 +16,22 @@ interface Props {
 }
 
 export default function NotifChannelRow({ config, smtpEnabled, onEdit, onDelete }: Props) {
-  const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null)
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+  const [testMessage, setTestMessage] = useState('')
 
   const emailBlocked = config.channel === 'email' && smtpEnabled === false
   const Icon = CHANNEL_ICON[config.channel as keyof typeof CHANNEL_ICON] ?? Mail
 
   async function handleTest() {
-    setTesting(true)
-    setTestResult(null)
+    setTestStatus('testing')
+    setTestMessage('')
     try {
       await testNotificationConfig(config.id)
-      setTestResult('ok')
-    } catch {
-      setTestResult('fail')
-    } finally {
-      setTesting(false)
+      setTestStatus('ok')
+      setTestMessage('Notification test successful.')
+    } catch (err) {
+      setTestStatus('error')
+      setTestMessage(err instanceof ApiError ? err.message : 'Test failed.')
     }
   }
 
@@ -61,23 +62,33 @@ export default function NotifChannelRow({ config, smtpEnabled, onEdit, onDelete 
             </span>
           )}
         </div>
-        {testResult && (
-          <p className={`mt-0.5 flex items-center gap-1 text-xs ${testResult === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-            {testResult === 'ok'
-              ? <CheckCircle2 size={11} aria-hidden="true" />
-              : <XCircle size={11} aria-hidden="true" />}
-            {testResult === 'ok' ? 'Test sent successfully.' : 'Test failed.'}
-          </p>
+        {testStatus === 'testing' && (
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 size={11} className="animate-spin" aria-hidden="true" />
+            <span>Testing…</span>
+          </div>
+        )}
+        {testStatus === 'ok' && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+            <CheckCircle2 size={11} aria-hidden="true" />
+            <span>{testMessage}</span>
+          </div>
+        )}
+        {testStatus === 'error' && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <XCircle size={11} aria-hidden="true" />
+            <span>{testMessage}</span>
+          </div>
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Button
           variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1"
-          disabled={testing || emailBlocked || !config.is_enabled}
+          disabled={testStatus === 'testing' || emailBlocked || !config.is_enabled}
           onClick={handleTest}
           aria-label={`Test ${config.name}`}
         >
-          {testing
+          {testStatus === 'testing'
             ? <Loader2 size={11} className="animate-spin" aria-hidden="true" />
             : <FlaskConical size={11} aria-hidden="true" />}
           <span className="hidden sm:inline">Test</span>

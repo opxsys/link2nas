@@ -40,7 +40,11 @@ export default function NotifDeleteModal({ title, description, onClose, onConfir
         </div>
         <div className="p-5">
           <p className="text-sm text-muted-foreground">{description}</p>
-          {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+          {error && (
+            <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              {error}
+            </p>
+          )}
           <div className="mt-4 flex justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={deleting}>
               Cancel
