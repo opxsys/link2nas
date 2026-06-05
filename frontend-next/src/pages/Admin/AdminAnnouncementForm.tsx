@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Loader2, XCircle } from 'lucide-react'
+import { Loader2, XCircle, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { createAnnouncement, updateAnnouncement } from '@/api/admin-announcements'
@@ -183,12 +183,21 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
           <Button type="button" size="sm" variant="outline" disabled={saving} onClick={onCancel}>
             Cancel
           </Button>
-          {error && (
-            <span className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
-              <XCircle size={14} aria-hidden="true" /> {error}
-            </span>
-          )}
         </div>
+        {error && (
+          <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <XCircle size={15} className="shrink-0" aria-hidden="true" />
+            <span className="flex-1">{error}</span>
+            <button
+              type="button"
+              onClick={() => setError('')}
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Dismiss"
+            >
+              <X size={13} aria-hidden="true" />
+            </button>
+          </div>
+        )}
 
       </form>
     </SectionCard>

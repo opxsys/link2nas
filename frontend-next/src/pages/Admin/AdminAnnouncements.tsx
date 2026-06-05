@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Loader2, AlertCircle, Pencil, Trash2, BarChart2, Plus, CheckSquare, Mail } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Loader2, AlertCircle, Pencil, Trash2, BarChart2, Plus, CheckSquare, Mail, CheckCircle2, XCircle, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { listAnnouncements, deleteAnnouncement } from '@/api/admin-announcements'
@@ -92,6 +92,8 @@ export default function AdminAnnouncements({ openCreate }: Props) {
   const [trackingId, setTrackingId] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [banner, setBanner] = useState<string | null>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -115,6 +117,9 @@ export default function AdminAnnouncements({ openCreate }: Props) {
       await deleteAnnouncement(pendingDeleteId)
       setItems((prev) => prev.filter((a) => a.id !== pendingDeleteId))
       setPendingDeleteId(null)
+      if (successTimer.current) clearTimeout(successTimer.current)
+      setBanner('Announcement deleted.')
+      successTimer.current = setTimeout(() => setBanner(null), 4000)
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Delete failed.')
     } finally {
@@ -123,11 +128,16 @@ export default function AdminAnnouncements({ openCreate }: Props) {
   }
 
   function handleFormSave(saved: RealAnnouncement) {
+    const wasEdit = editingAnn !== null
     setItems((prev) => {
       const idx = prev.findIndex((a) => a.id === saved.id)
       return idx >= 0 ? prev.map((a) => (a.id === saved.id ? saved : a)) : [saved, ...prev]
     })
+    setEditingAnn(null)
     setView('list')
+    if (successTimer.current) clearTimeout(successTimer.current)
+    setBanner(wasEdit ? `"${saved.title}" updated.` : `"${saved.title}" created.`)
+    successTimer.current = setTimeout(() => setBanner(null), 4000)
   }
 
   if (view === 'form') {
@@ -154,15 +164,40 @@ export default function AdminAnnouncements({ openCreate }: Props) {
           <span className="text-sm">Loading…</span>
         </div>
       )}
+      {banner && (
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+          <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+          <span className="flex-1">{banner}</span>
+          <button
+            className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={() => { if (successTimer.current) clearTimeout(successTimer.current); setBanner(null) }}
+            aria-label="Dismiss"
+          >
+            <X size={13} aria-hidden="true" />
+          </button>
+        </div>
+      )}
       {fetchError && (
-        <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-          <AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-          <div>{fetchError} <Button size="sm" variant="outline" className="ml-2" onClick={load}>Retry</Button></div>
+        <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-medium">Failed to load announcements</p>
+            <p className="mt-0.5 text-xs">{fetchError}</p>
+            <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+          </div>
         </div>
       )}
       {deleteError && (
-        <div className="mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-          {deleteError}
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          <XCircle size={15} className="shrink-0" aria-hidden="true" />
+          <span className="flex-1">{deleteError}</span>
+          <button
+            className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={() => setDeleteError(null)}
+            aria-label="Dismiss"
+          >
+            <X size={13} aria-hidden="true" />
+          </button>
         </div>
       )}
       {!loading && !fetchError && items.length === 0 && (
