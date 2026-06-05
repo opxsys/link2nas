@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Loader2, AlertCircle, CheckCircle2, XCircle, AlertTriangle, RotateCcw, X } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle2, XCircle, AlertTriangle, RotateCcw, X, Eye } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
-import { getEmailTemplate, saveEmailTemplate, resetEmailTemplate } from '@/api/admin-email-templates'
+import { getEmailTemplate, saveEmailTemplate, resetEmailTemplate, previewEmailTemplate } from '@/api/admin-email-templates'
 import { ApiError } from '@/api/client'
 import { useSmtpStatus } from '@/lib/useSmtpStatus'
-import type { EmailTemplate } from '@/api/admin-email-templates'
+import type { EmailTemplate, EmailTemplatePreview } from '@/api/admin-email-templates'
+import AdminEmailTemplatePreview from './AdminEmailTemplatePreview'
 
 const INPUT    = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const LABEL    = 'mb-1.5 block text-xs font-medium text-foreground'
@@ -44,6 +45,9 @@ export default function AdminEmailTemplates() {
   const [resetting, setResetting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [preview, setPreview] = useState<EmailTemplatePreview | null>(null)
+  const [previewing, setPreviewing] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   const loadTemplate = useCallback(async (key: string, lang: string) => {
     setLoading(true)
@@ -51,6 +55,9 @@ export default function AdminEmailTemplates() {
     setSuccessMsg(null)
     setSaveError(null)
     setConfirmReset(false)
+    setPreview(null)
+    setPreviewing(false)
+    setPreviewError(null)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     try {
       const t = await getEmailTemplate(key, lang)
@@ -70,6 +77,29 @@ export default function AdminEmailTemplates() {
   function clearFeedback() {
     if (successMsg) setSuccessMsg(null)
     if (saveError) setSaveError(null)
+  }
+
+  function clearPreview() {
+    setPreview(null)
+    setPreviewing(false)
+    setPreviewError(null)
+  }
+
+  async function handlePreview() {
+    setPreviewing(true)
+    setPreview(null)
+    setPreviewError(null)
+    try {
+      const result = await previewEmailTemplate(selectedKey, selectedLang, {
+        subject_template: subject.trim(),
+        body_template: body.trim(),
+      })
+      setPreview(result)
+    } catch (err) {
+      setPreviewError(err instanceof ApiError ? err.message : 'Preview failed.')
+    } finally {
+      setPreviewing(false)
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -117,6 +147,7 @@ export default function AdminEmailTemplates() {
   }
 
   const smtpUnavailable = !smtpLoading && !smtpAvailable
+  const showPreviewPanel = previewing || preview !== null || previewError !== null
 
   return (
     <SectionCard title="Email Templates" description="Customize email content sent to users.">
@@ -168,6 +199,8 @@ export default function AdminEmailTemplates() {
       )}
 
       {!loading && !loadError && template && (
+        <div className={showPreviewPanel ? 'flex flex-col gap-4 xl:flex-row xl:items-start' : undefined}>
+        <div className={showPreviewPanel ? 'min-w-0 xl:flex-1' : undefined}>
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           {/* Status / custom indicator */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -212,6 +245,13 @@ export default function AdminEmailTemplates() {
               {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
               Save template
             </Button>
+            <Button type="button" size="sm" variant="outline" disabled={saving || resetting || previewing}
+              onClick={handlePreview}>
+              {previewing
+                ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+                : <Eye size={13} className="mr-1.5" aria-hidden="true" />}
+              Preview
+            </Button>
             {!confirmReset ? (
               <Button type="button" size="sm" variant="outline" disabled={saving || resetting}
                 onClick={() => setConfirmReset(true)}>
@@ -254,6 +294,19 @@ export default function AdminEmailTemplates() {
             </div>
           )}
         </form>
+        </div>
+
+        {showPreviewPanel && (
+          <div className="w-full xl:w-[520px] xl:shrink-0 xl:sticky xl:top-20">
+            <AdminEmailTemplatePreview
+              preview={preview}
+              loading={previewing}
+              error={previewError}
+              onDismiss={clearPreview}
+            />
+          </div>
+        )}
+        </div>
       )}
     </SectionCard>
   )
