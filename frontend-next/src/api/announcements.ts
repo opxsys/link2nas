@@ -22,8 +22,14 @@ export interface UserAnnouncement {
   user_status: UserAnnouncementStatus
 }
 
+/** Returns all announcements for the current user (active and inactive). */
 export function listUserAnnouncements(): Promise<UserAnnouncement[]> {
   return request<UserAnnouncement[]>('/api/v2/announcements')
+}
+
+/** Returns only currently active announcements (respects is_active + date window). */
+export function listActiveAnnouncements(): Promise<UserAnnouncement[]> {
+  return request<UserAnnouncement[]>('/api/v2/announcements/active')
 }
 
 export function markAnnouncementRead(id: string): Promise<{ ok: boolean }> {

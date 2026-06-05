@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import MobileNav from './MobileNav'
+import AnnouncementBanner from './AnnouncementBanner'
 import { getStoredSidebarState, storeSidebarState } from '@/lib/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AnnouncementBadgeProvider } from '@/context/AnnouncementBadgeContext'
@@ -31,6 +32,7 @@ export default function AppShell() {
           <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <Header onOpenMobileNav={() => setMobileNavOpen(true)} mobileNavOpen={mobileNavOpen} />
+            <AnnouncementBanner />
             <main className="flex-1 overflow-y-auto p-6">
               <Outlet />
             </main>
