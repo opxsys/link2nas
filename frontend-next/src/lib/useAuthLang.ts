@@ -67,6 +67,14 @@ const EN: Strings = {
   resettingPassword: 'Resetting…',
   passwordResetSuccess: 'Password reset successfully.',
   goToLogin: 'Go to sign in',
+  acceptInviteTitle: 'Accept invitation',
+  activateAccount: 'Activate account',
+  activatingAccount: 'Activating…',
+  inviteAccepted: 'Account activated. You can now sign in.',
+  invalidInviteLink: 'This invitation link is invalid, expired, or already used.',
+  verifyingEmail: 'Verifying email…',
+  emailVerified: 'Email verified. You can now sign in.',
+  invalidVerifyLink: 'This verification link is invalid, expired, or already used.',
 }
 
 const FR: Strings = {
@@ -109,6 +117,14 @@ const FR: Strings = {
   resettingPassword: 'Réinitialisation…',
   passwordResetSuccess: 'Mot de passe réinitialisé avec succès.',
   goToLogin: 'Aller à la connexion',
+  acceptInviteTitle: "Accepter l'invitation",
+  activateAccount: 'Activer le compte',
+  activatingAccount: 'Activation en cours…',
+  inviteAccepted: 'Compte activé. Vous pouvez maintenant vous connecter.',
+  invalidInviteLink: "Ce lien d'invitation est invalide, expiré ou déjà utilisé.",
+  verifyingEmail: "Vérification de l'adresse email…",
+  emailVerified: 'Email vérifié. Vous pouvez maintenant vous connecter.',
+  invalidVerifyLink: 'Ce lien de vérification est invalide, expiré ou déjà utilisé.',
 }
 
 export function useAuthLang(): {

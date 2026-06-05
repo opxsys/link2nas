@@ -87,3 +87,30 @@ export function confirmPasswordReset(params: {
     body: JSON.stringify(params),
   })
 }
+
+export interface TokenStatus {
+  valid: boolean
+  token_type: string
+  expires_at: string
+}
+
+export function getTokenStatus(token: string): Promise<TokenStatus> {
+  return request<TokenStatus>(`/api/v2/public/tokens/${encodeURIComponent(token)}/status`)
+}
+
+export function acceptInvitation(params: {
+  token: string
+  password: string
+}): Promise<{ ok: boolean; message: string }> {
+  return request('/api/v2/public/invitations/accept', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  })
+}
+
+export function confirmEmailVerification(token: string): Promise<{ ok: boolean; message: string }> {
+  return request('/api/v2/public/email-verification/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  })
+}

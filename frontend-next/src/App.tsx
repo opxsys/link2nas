@@ -4,6 +4,8 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import LoginPage from '@/pages/Auth/LoginPage'
 import MagicLoginConfirmPage from '@/pages/Auth/MagicLoginConfirmPage'
 import ResetPasswordPage from '@/pages/Auth/ResetPasswordPage'
+import InvitePage from '@/pages/Auth/InvitePage'
+import VerifyEmailPage from '@/pages/Auth/VerifyEmailPage'
 import Dashboard from '@/pages/Dashboard'
 import Jobs from '@/pages/Jobs'
 import NewJob from '@/pages/NewJob'
@@ -37,6 +39,8 @@ export default function App() {
       <Route path="login" element={<LoginPage />} />
       <Route path="magic-login" element={<MagicLoginConfirmPage />} />
       <Route path="reset-password" element={<ResetPasswordPage />} />
+      <Route path="invite" element={<InvitePage />} />
+      <Route path="verify-email" element={<VerifyEmailPage />} />
 
       {/* Protected app routes — redirect to /login if no token */}
       <Route element={<ProtectedRoute />}>

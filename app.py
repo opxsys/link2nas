@@ -286,12 +286,6 @@ def create_app() -> Flask:
     if settings.DEBUG and settings.V2_DEV_ROUTES_ENABLED:
         app.register_blueprint(dev_v2_bp)
 
-    # /invite and /verify-email are not yet in the Next UI router — serve legacy temporarily.
-    @app.get("/invite")
-    @app.route("/verify-email")
-    def serve_legacy_token_pages() -> object:
-        return send_from_directory(_LEGACY_STATIC, "index.html")
-
     # SPA fallback — Next UI assets and all unmatched routes.
     @app.get("/<path:subpath>")
     def serve_next_spa(subpath: str) -> object:
