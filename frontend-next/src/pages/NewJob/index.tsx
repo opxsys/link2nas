@@ -57,7 +57,11 @@ export default function NewJob() {
         }
       />
 
-      <div className="flex max-w-3xl flex-col gap-3">
+      <div className={state.result
+        ? 'flex flex-col gap-3 xl:flex-row xl:items-start'
+        : 'flex max-w-3xl flex-col gap-3'
+      }>
+        <div className={state.result ? 'w-full min-w-0 xl:max-w-3xl xl:flex-1' : undefined}>
         <SectionCard title="Submit" bodyClassName="p-0">
           <NewJobTabs activeTab={state.activeTab} onTabChange={state.setActiveTab} />
 
@@ -124,9 +128,12 @@ export default function NewJob() {
             </Button>
           </div>
         </SectionCard>
+        </div>
 
         {state.result && (
-          <CreationResultPanel result={state.result} onDismiss={state.dismissResult} />
+          <div className="w-full xl:w-[480px] xl:shrink-0 xl:sticky xl:top-20">
+            <CreationResultPanel result={state.result} onDismiss={state.dismissResult} />
+          </div>
         )}
       </div>
     </>
