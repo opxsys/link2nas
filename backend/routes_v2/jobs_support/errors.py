@@ -116,6 +116,20 @@ def _handle_provider_exception(exc):
     raise exc
 
 
+def is_persistable_provider_error(exc: Exception) -> bool:
+    """Return True for provider content/API errors that should persist job as failed.
+
+    Auth errors are excluded: a bad API key does not indicate the job content is
+    invalid — fixing the key should allow the same job to be retried unchanged.
+    """
+    if isinstance(exc, (AllDebridAuthError, RealDebridAuthError)):
+        return False
+    return isinstance(exc, (
+        AllDebridApiError, AllDebridClientError,
+        RealDebridApiError, RealDebridClientError,
+    ))
+
+
 def _handle_destination_exception(exc):
     if isinstance(exc, ValueError):
         return _error(str(exc), 400)
