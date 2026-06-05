@@ -10,6 +10,12 @@ const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
 
 type Channel = 'email' | 'gotify' | 'webhook'
 
+const ALL_CHANNELS: { value: Channel; label: string }[] = [
+  { value: 'email',   label: 'Email'   },
+  { value: 'gotify',  label: 'Gotify'  },
+  { value: 'webhook', label: 'Webhook' },
+]
+
 interface Props {
   editing: NotificationConfig | null
   smtpEnabled: boolean | null
@@ -21,8 +27,17 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
   const isEdit = editing !== null
   const uid = useId()
 
+  // In create mode, remove Email when SMTP is confirmed unavailable.
+  const availableChannels = (!isEdit && smtpEnabled === false)
+    ? ALL_CHANNELS.filter((ch) => ch.value !== 'email')
+    : ALL_CHANNELS
+
   const [name, setName] = useState(editing?.name ?? '')
-  const [channel, setChannel] = useState<Channel>((editing?.channel as Channel) ?? 'email')
+  const [channel, setChannel] = useState<Channel>(() => {
+    if (editing) return (editing.channel as Channel) ?? 'email'
+    // Default to gotify when email is unavailable in create mode.
+    return smtpEnabled === false ? 'gotify' : 'email'
+  })
   const [isEnabled, setIsEnabled] = useState(editing?.is_enabled ?? true)
   // is_default is intentionally omitted: not used by notification dispatching
   // email
@@ -38,7 +53,11 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const emailBlocked = channel === 'email' && smtpEnabled === false
+  // emailUnavailable: channel is email but SMTP is confirmed off.
+  // In create mode this can't happen (email removed from availableChannels), but guard just in case.
+  // In edit mode: warn but do NOT block save — the user may still rename or disable the channel.
+  const emailUnavailable = channel === 'email' && smtpEnabled === false
+  const emailBlocked = emailUnavailable && !isEdit
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -103,17 +122,19 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
               <label htmlFor={`${uid}-ch`} className={LABEL}>Channel type</label>
               <select id={`${uid}-ch`} className={INPUT} value={channel}
                 onChange={e => setChannel(e.target.value as Channel)} disabled={saving}>
-                <option value="email">Email</option>
-                <option value="gotify">Gotify</option>
-                <option value="webhook">Webhook</option>
+                {availableChannels.map(ch => (
+                  <option key={ch.value} value={ch.value}>{ch.label}</option>
+                ))}
               </select>
             </div>
           )}
 
-          {emailBlocked && (
+          {emailUnavailable && (
             <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
               <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-              SMTP is not configured or disabled. Email channels cannot be created or tested.
+              {isEdit
+                ? 'SMTP is not configured or disabled — this channel will not be able to send notifications.'
+                : 'SMTP is not configured or disabled. Email channels cannot be created or tested.'}
             </div>
           )}
 
