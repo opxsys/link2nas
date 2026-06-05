@@ -103,9 +103,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
     ? { percent: job.progress ?? 0, downloadedSize: null, speed: null, eta: null, connections: null, provider: job.provider_name }
     : null
 
-  const showLinksHint =
-    allLinks.length > 0 &&
-    (job.status === 'links_only' || (!job.send_to_destination && !cap.hasAnyDestination))
+  const showLinksHint = allLinks.length > 0
 
   function destLabel(d: RealJobDestinationConfig) { return d.name || d.destination_type || d.id }
   function provLabel(p: RealJobProviderConfig) { return p.name || p.provider_type || p.id }
@@ -157,7 +155,8 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         )}
         {cap.canUnrestrict && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('unrestrict', job.id)}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Unlock size={13} />} Unlock
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Unlock size={13} />}
+            {allLinks.length > 0 ? 'Unlock again' : 'Unlock'}
           </Button>
         )}
         {cap.canRefresh && (
@@ -311,9 +310,17 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             <Row label="Updated"   value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
             <Row label="Cancelled" value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
 
-            {/* Subtle hint to open the Links tab — no buttons, no state changes */}
+            {/* Links ready card — shown whenever download links exist */}
             {showLinksHint && (
-              <p className="text-muted-foreground">Download links are ready — open the <span className="font-medium">Links</span> tab to copy them.</p>
+              <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <LinkIcon size={12} className="shrink-0" />
+                  <span>Download links are ready.</span>
+                </div>
+                <Button variant="outline" size="sm" className="h-6 shrink-0 px-2 text-xs" onClick={() => setTab('links')}>
+                  Open Links
+                </Button>
+              </div>
             )}
           </div>
         )}
