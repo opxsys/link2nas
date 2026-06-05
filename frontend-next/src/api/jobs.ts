@@ -52,7 +52,7 @@ export interface RealJob {
 
   // Output
   output_mode: string | null
-  output_links: Array<{ url?: string; debrid_link?: string; filename?: string; filesize?: number }>
+  output_links: Array<{ url?: string; debrid_link?: string; filename?: string; filesize?: number; file_id?: string | number }>
   filename: string | null
   filesize: number | null
   progress: number
