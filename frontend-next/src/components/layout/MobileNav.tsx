@@ -24,9 +24,12 @@ export default function MobileNav({ open, onClose }: Props) {
   const isSuperAdmin = me?.role === 'super_admin'
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
+  const announcementsEnabled = me?.announcements_enabled !== false
+
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
     if (item.superAdminOnly && !isSuperAdmin) return false
+    if (item.hideWhenAnnouncementsDisabled && !announcementsEnabled) return false
     return true
   })
 

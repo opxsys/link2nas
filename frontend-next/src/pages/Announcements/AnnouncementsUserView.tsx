@@ -11,6 +11,7 @@ import {
 import { ApiError } from '@/api/client'
 import type { UserAnnouncement } from '@/api/announcements'
 import { emitAnnouncementsChanged } from '@/lib/announcementEvents'
+import { useMe } from '@/lib/useMe'
 
 const TYPE_CLASS: Record<string, string> = {
   news:        'border-border bg-muted text-muted-foreground',
@@ -21,12 +22,16 @@ const TYPE_CLASS: Record<string, string> = {
 const BADGE = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize'
 
 export default function AnnouncementsUserView() {
+  const { me } = useMe()
   const [items, setItems] = useState<UserAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [acting, setActing] = useState<Set<string>>(new Set())
 
+  const disabled = me !== null && me.announcements_enabled === false
+
   const load = useCallback(async () => {
+    if (disabled) { setLoading(false); return }
     setLoading(true)
     setError(null)
     try {
@@ -43,9 +48,17 @@ export default function AnnouncementsUserView() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [disabled])
 
   useEffect(() => { load() }, [load])
+
+  if (disabled) {
+    return (
+      <SectionCard title="Announcements" description="Messages from administrators.">
+        <p className="py-4 text-sm text-muted-foreground">Announcements are disabled.</p>
+      </SectionCard>
+    )
+  }
 
   function startActing(id: string) {
     setActing(prev => { const s = new Set(prev); s.add(id); return s })

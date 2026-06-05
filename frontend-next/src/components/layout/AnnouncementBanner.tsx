@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
+import { useMe } from '@/lib/useMe'
 import { AlertCircle, AlertTriangle, Info, X, BookOpen, CheckSquare, Loader2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -68,13 +69,15 @@ function pickBanner(items: UserAnnouncement[], dismissed: Set<string>): UserAnno
 
 export default function AnnouncementBanner() {
   const { pathname } = useLocation()
+  const { me } = useMe()
   const [items, setItems] = useState<UserAnnouncement[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [acting, setActing] = useState(false)
 
   const refresh = useCallback(() => {
+    if (me?.announcements_enabled === false) { setItems([]); return }
     listActiveAnnouncements().then(setItems).catch(() => {})
-  }, [])
+  }, [me?.announcements_enabled])
 
   // Refetch on every navigation (AppShell never unmounts during SPA routing)
   useEffect(() => { refresh() }, [pathname, refresh])

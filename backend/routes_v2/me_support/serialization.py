@@ -25,6 +25,13 @@ def serialize_me(user):
     smtp_service = current_app.config.get("SMTP_SERVICE_V2")
     email_sending_available = smtp_service.is_email_sending_available() if smtp_service else False
 
+    announcements_enabled = True
+    if app_settings:
+        try:
+            announcements_enabled = app_settings.is_announcements_enabled()
+        except Exception:
+            announcements_enabled = True
+
     return {
         "id": user.id,
         "email": user.email,
@@ -41,6 +48,7 @@ def serialize_me(user):
         "single_user_mode": single_user_mode,
         "preferred_language": user.preferred_language,
         "email_sending_available": email_sending_available,
+        "announcements_enabled": announcements_enabled,
         "receive_application_emails": user.receive_application_emails,
         "can_use_local_space": bool(user.can_use_local_space),
         "ui_theme": user.ui_theme or "auto",

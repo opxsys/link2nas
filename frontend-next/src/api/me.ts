@@ -16,6 +16,7 @@ export interface MeProfile {
   single_user_mode: boolean
   preferred_language: string | null
   email_sending_available: boolean
+  announcements_enabled: boolean
   receive_application_emails: boolean
   can_use_local_space: boolean
   ui_theme: string

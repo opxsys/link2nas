@@ -23,9 +23,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const appName = appInfo.app_name || 'Link2NAS'
   const isSuperAdmin = me?.role === 'super_admin'
 
+  const announcementsEnabled = me?.announcements_enabled !== false
+
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
     if (item.superAdminOnly && !isSuperAdmin) return false
+    if (item.hideWhenAnnouncementsDisabled && !announcementsEnabled) return false
     return true
   })
 

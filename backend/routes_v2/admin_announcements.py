@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from backend.routes_v2._context import get_user_context
 from backend.services_v2.announcement_service import AnnouncementEmailUnavailableError
+from backend.services_v2.app_settings_support.validation import AppSettingsValidationError
 
 
 admin_announcements_bp = Blueprint(
@@ -88,4 +89,31 @@ def get_tracking(announcement_id):
     result = _service().get_tracking(announcement_id)
     if result is None:
         return jsonify({"error": "Announcement not found"}), 404
+    return jsonify(result)
+
+
+@admin_announcements_bp.get("/settings")
+def get_settings():
+    _, err = _require_admin()
+    if err:
+        return err
+    app_settings = current_app.config.get("APP_SETTINGS_SERVICE_V2")
+    if not app_settings:
+        return jsonify({"enabled": True})
+    return jsonify(app_settings.get_announcements_settings())
+
+
+@admin_announcements_bp.put("/settings")
+def save_settings():
+    _, err = _require_admin()
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    app_settings = current_app.config.get("APP_SETTINGS_SERVICE_V2")
+    if not app_settings:
+        return jsonify({"enabled": True})
+    try:
+        result = app_settings.save_announcements_settings(data)
+    except AppSettingsValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
     return jsonify(result)

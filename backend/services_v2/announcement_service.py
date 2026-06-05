@@ -61,6 +61,18 @@ class AnnouncementService:
         validate_announcement_payload(data)
 
     # ------------------------------------------------------------------
+    # Feature flag
+    # ------------------------------------------------------------------
+
+    def is_enabled(self) -> bool:
+        if not self.app_settings_service:
+            return True
+        try:
+            return self.app_settings_service.is_announcements_enabled()
+        except Exception:
+            return True
+
+    # ------------------------------------------------------------------
     # User-facing reads
     # ------------------------------------------------------------------
 
@@ -147,7 +159,7 @@ class AnnouncementService:
             updated_at=now,
         )
         self.ann_repo.create(a)
-        if a.send_email:
+        if a.send_email and self.is_enabled():
             self._send_announcement_emails(a)
         return self._serialize(a)
 

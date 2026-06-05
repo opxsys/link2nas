@@ -2,6 +2,9 @@ APP_PUBLIC_BASE_URL_KEY = "app.public_base_url"
 APP_NAME_KEY = "app.name"
 APP_TAGLINE_KEY = "app.tagline"
 
+ANNOUNCEMENTS_ENABLED_KEY = "announcements.enabled"
+DEFAULT_ANNOUNCEMENTS_SETTINGS = {"enabled": True}
+
 SECURITY_TOKEN_TTL_KEY = "security.token_ttl"
 SECURITY_PASSWORD_POLICY_KEY = "security.password_policy"
 CLEANUP_RETENTION_KEY = "cleanup.retention"

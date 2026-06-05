@@ -1,10 +1,12 @@
 from datetime import UTC, datetime
 
 from backend.services_v2.app_settings_support.defaults import (
+    ANNOUNCEMENTS_ENABLED_KEY,
     APP_NAME_KEY,
     APP_PUBLIC_BASE_URL_KEY,
     APP_TAGLINE_KEY,
     CLEANUP_RETENTION_KEY,
+    DEFAULT_ANNOUNCEMENTS_SETTINGS,
     DEFAULT_APP_NAME,
     DEFAULT_APP_TAGLINE,
     DEFAULT_CLEANUP_RETENTION,
@@ -44,6 +46,19 @@ class AppSettingsService:
 
     def now(self) -> str:
         return datetime.now(UTC).isoformat()
+
+    def get_announcements_settings(self) -> dict:
+        return self._get_json_setting(ANNOUNCEMENTS_ENABLED_KEY, DEFAULT_ANNOUNCEMENTS_SETTINGS)
+
+    def save_announcements_settings(self, payload: dict) -> dict:
+        if not isinstance(payload, dict):
+            raise AppSettingsValidationError("payload must be an object")
+        result = {"enabled": bool(payload.get("enabled", True))}
+        self._save_json_setting(ANNOUNCEMENTS_ENABLED_KEY, result)
+        return result
+
+    def is_announcements_enabled(self) -> bool:
+        return bool(self.get_announcements_settings().get("enabled", True))
 
     def get_security_settings(self) -> dict:
         return {

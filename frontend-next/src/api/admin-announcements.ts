@@ -1,6 +1,23 @@
 import { request } from './client'
 import type { RealAnnouncement, AnnouncementPayload, AnnouncementTracking } from '@/pages/Admin/admin.types'
 
+export interface AnnouncementSystemSettings {
+  enabled: boolean
+}
+
+export function getAnnouncementSystemSettings(): Promise<AnnouncementSystemSettings> {
+  return request<AnnouncementSystemSettings>('/api/v2/admin/announcements/settings')
+}
+
+export function saveAnnouncementSystemSettings(
+  payload: AnnouncementSystemSettings,
+): Promise<AnnouncementSystemSettings> {
+  return request<AnnouncementSystemSettings>('/api/v2/admin/announcements/settings', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function listAnnouncements(): Promise<RealAnnouncement[]> {
   return request<RealAnnouncement[]>('/api/v2/admin/announcements')
 }

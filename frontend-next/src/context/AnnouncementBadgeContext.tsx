@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import { listUserAnnouncements } from '@/api/announcements'
 import type { UserAnnouncement } from '@/api/announcements'
 import { subscribeAnnouncementsChanged } from '@/lib/announcementEvents'
+import { useMe } from '@/lib/useMe'
 
 function computeCount(items: UserAnnouncement[]): number {
   return items.filter(
@@ -22,14 +23,16 @@ const AnnouncementBadgeContext = createContext<AnnouncementBadgeValue>({
 })
 
 export function AnnouncementBadgeProvider({ children }: { children: React.ReactNode }) {
+  const { me } = useMe()
   const [count, setCount] = useState(0)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
+    if (me?.announcements_enabled === false) { setCount(0); return }
     listUserAnnouncements()
       .then((items) => setCount(computeCount(items)))
       .catch(() => {})
-  }, [tick])
+  }, [tick, me?.announcements_enabled])
 
   const invalidate = useCallback(() => setTick((t) => t + 1), [])
 

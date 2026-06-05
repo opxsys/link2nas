@@ -18,12 +18,14 @@ export interface NavItem {
   end: boolean
   /** If true, only shown to super_admin users. */
   superAdminOnly?: boolean
+  /** If true, hidden when announcements are globally disabled. */
+  hideWhenAnnouncementsDisabled?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard',     label: 'Dashboard',        icon: LayoutDashboard, end: false },
   { to: '/jobs',          label: 'Jobs',              icon: List,            end: false },
-  { to: '/announcements', label: 'Announcements',     icon: Megaphone,       end: false },
+  { to: '/announcements', label: 'Announcements',     icon: Megaphone,       end: false, hideWhenAnnouncementsDisabled: true },
   { to: '/prowlarr',      label: 'Prowlarr',          icon: Search,          end: false },
   { to: '/notifications', label: 'My Notifications',  icon: Bell,            end: false },
   { to: '/settings',      label: 'Settings',          icon: Settings,        end: false },
