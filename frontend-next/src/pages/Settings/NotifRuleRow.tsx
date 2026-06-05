@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Bell, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Bell, Pencil, Trash2, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { updateNotificationRule } from '@/api/notifications'
+import { ApiError } from '@/api/client'
 import type { NotificationConfig, NotificationRule } from '@/pages/Notifications/notifications.types'
 
 const SEV_CLASS: Record<string, string> = {
@@ -23,6 +24,7 @@ interface Props {
 
 export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDelete, onToggled }: Props) {
   const [toggling, setToggling] = useState(false)
+  const [toggleError, setToggleError] = useState<string | null>(null)
   const cfg = configs.find(c => c.id === rule.config_id)
   const isEmailRule = cfg?.channel === 'email'
   const blocked = isEmailRule && emailBlocked
@@ -30,11 +32,12 @@ export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDe
   async function handleToggle() {
     const next = !rule.is_enabled
     setToggling(true)
+    setToggleError(null)
     try {
       const updated = await updateNotificationRule(rule.id, { is_enabled: next })
       onToggled(updated)
-    } catch {
-      // revert: parent state unchanged, toggle reverts on re-render
+    } catch (err) {
+      setToggleError(err instanceof ApiError ? err.message : 'Could not update notification rule.')
     } finally {
       setToggling(false)
     }
@@ -59,6 +62,14 @@ export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDe
           </p>
         ) : (
           <p className="mt-0.5 text-xs text-muted-foreground">All events</p>
+        )}
+        {toggleError && (
+          <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <span>{toggleError}</span>
+            <button onClick={() => setToggleError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+              <X size={11} aria-hidden="true" />
+            </button>
+          </div>
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1">
