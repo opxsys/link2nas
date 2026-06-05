@@ -24,6 +24,8 @@ Use `docker-compose.ghcr.yml` when validating or deploying a released image. Use
 
 This is the recommended path for a fresh deployment from a released image. It does not build the image locally.
 
+Replace `<TAG>` with the release tag you want to deploy (e.g. `v3.1.0`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
+
 ```bash
 # 1. Create the deployment directory
 mkdir -p /opt/link2nas
@@ -31,11 +33,11 @@ cd /opt/link2nas
 
 # 2. Download the release Compose file
 curl -fsSL -o docker-compose.ghcr.yml \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/docker-compose.ghcr.yml
+  https://raw.githubusercontent.com/opxsys/link2nas/<TAG>/docker-compose.ghcr.yml
 
 # 3. Download the Docker environment sample
 curl -fsSL -o .env.sample \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/.env.docker.sample
+  https://raw.githubusercontent.com/opxsys/link2nas/<TAG>/.env.docker.sample
 
 # 4. Create and edit the private environment file
 cp .env.sample .env
@@ -56,10 +58,10 @@ V2_SECRET_ENCRYPTION_KEY=<fernet-key>
 PUBLIC_BASE_URL=http://<server-ip>:5000
 ```
 
-The image used by this release candidate is:
+The image tag pulled matches the `LINK2NAS_IMAGE` variable in your `.env`. If not set, `docker-compose.ghcr.yml` defaults to `ghcr.io/opxsys/link2nas:latest`. To pin a specific release, set:
 
-```bash
-ghcr.io/opxsys/link2nas:v3.0.0
+```env
+LINK2NAS_IMAGE=ghcr.io/opxsys/link2nas:<TAG>
 ```
 
 The expected services are:

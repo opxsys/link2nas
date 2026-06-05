@@ -58,15 +58,17 @@ There are two Docker deployment modes:
 
 #### Fresh install from GHCR
 
+Replace `<TAG>` with the release tag you want to deploy (e.g. `v3.1.0`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
+
 ```bash
 mkdir -p /opt/link2nas
 cd /opt/link2nas
 
 curl -fsSL -o docker-compose.ghcr.yml \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/docker-compose.ghcr.yml
+  https://raw.githubusercontent.com/opxsys/link2nas/<TAG>/docker-compose.ghcr.yml
 
 curl -fsSL -o .env.sample \
-  https://raw.githubusercontent.com/opxsys/link2nas/v3.0.0/.env.docker.sample
+  https://raw.githubusercontent.com/opxsys/link2nas/<TAG>/.env.docker.sample
 
 cp .env.sample .env
 # Edit .env — set FLASK_SECRET_KEY, V2_SECRET_ENCRYPTION_KEY, and PUBLIC_BASE_URL at minimum
@@ -75,11 +77,7 @@ docker compose -f docker-compose.ghcr.yml up -d
 docker compose -f docker-compose.ghcr.yml ps
 ```
 
-The image used by this release candidate is:
-
-```bash
-ghcr.io/opxsys/link2nas:v3.0.0
-```
+To pin a specific image tag, set `LINK2NAS_IMAGE=ghcr.io/opxsys/link2nas:<TAG>` in `.env`. Without it, the compose file defaults to the `latest` tag.
 
 The app is available at `http://localhost:5000`. On first run, a setup page lets you create the initial admin account.
 

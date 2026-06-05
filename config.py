@@ -58,7 +58,7 @@ class Settings:
     def __init__(self) -> None:
         self.APP_NAME = env("APP_NAME", "link2nas")
         self.APP_TAGLINE = env("APP_TAGLINE", "Job management + debrid provider")
-        self.APP_VERSION = env("APP_VERSION", "3.0.0-rc1")
+        self.APP_VERSION = env("APP_VERSION", "unknown")
         self.DEBUG = env_bool("DEBUG", False)
         self.V2_DEV_ROUTES_ENABLED = env_bool("V2_DEV_ROUTES_ENABLED", False)
         self.V2_RATE_LIMIT_ENABLED = env_bool("V2_RATE_LIMIT_ENABLED", True)
