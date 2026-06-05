@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { CheckCircle2, XCircle, Loader2, AlertCircle, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getRestartCooldowns, saveRestartCooldowns } from '@/api/admin-settings'
@@ -39,8 +39,11 @@ export default function AdminTimeouts() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveMessage, setSaveMessage] = useState('')
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function load() {
+  const busy = saveStatus === 'saving'
+
+  const load = useCallback(async () => {
     setLoading(true)
     setFetchError(null)
     try {
@@ -50,24 +53,48 @@ export default function AdminTimeouts() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+    }
+  }, [])
+
+  function clearFeedback() {
+    if (saveStatus !== 'idle') {
+      setSaveStatus('idle')
+      setSaveMessage('')
+    }
+  }
 
   function handleChange(key: keyof RestartCooldowns, raw: string) {
     const parsed = parseInt(raw, 10)
     setValues((prev) => ({ ...prev, [key]: Number.isFinite(parsed) ? parsed : 0 }))
+    clearFeedback()
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+
     setSaveStatus('saving')
     setSaveMessage('')
+
     try {
       const updated = await saveRestartCooldowns(values)
       setValues(updated)
       setSaveStatus('saved')
       setSaveMessage('Timeout settings saved.')
+      saveTimer.current = setTimeout(() => {
+        setSaveStatus('idle')
+        setSaveMessage('')
+      }, 4000)
     } catch (err) {
       setSaveStatus('error')
       setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
@@ -115,6 +142,7 @@ export default function AdminTimeouts() {
                   required
                   value={values[key]}
                   onChange={(e) => handleChange(key, e.target.value)}
+                  disabled={busy}
                   className={INPUT}
                 />
                 <span className="text-sm text-muted-foreground">s</span>
@@ -124,21 +152,49 @@ export default function AdminTimeouts() {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={saveStatus === 'saving'}>
-            {saveStatus === 'saving' && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            Save changes
-          </Button>
+        <div className="flex flex-col gap-3">
+          <div>
+            <Button type="submit" size="sm" disabled={busy}>
+              {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+              Save changes
+            </Button>
+          </div>
 
           {saveStatus === 'saved' && (
-            <span className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
-              <CheckCircle2 size={14} aria-hidden="true" />{saveMessage}
-            </span>
+            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+              <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+              <span className="flex-1">{saveMessage}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (saveTimer.current) clearTimeout(saveTimer.current)
+                  setSaveStatus('idle')
+                  setSaveMessage('')
+                }}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Dismiss"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            </div>
           )}
+
           {saveStatus === 'error' && (
-            <span className="flex items-center gap-1.5 text-sm text-red-700 dark:text-red-400">
-              <XCircle size={14} aria-hidden="true" />{saveMessage}
-            </span>
+            <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <XCircle size={15} className="shrink-0" aria-hidden="true" />
+              <span className="flex-1">{saveMessage}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSaveStatus('idle')
+                  setSaveMessage('')
+                }}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Dismiss"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            </div>
           )}
         </div>
       </form>
