@@ -6,10 +6,11 @@ import {
   listUserAnnouncements,
   markAnnouncementRead,
   acknowledgeAnnouncement,
+  markAnnouncementOpened,
 } from '@/api/announcements'
 import { ApiError } from '@/api/client'
 import type { UserAnnouncement } from '@/api/announcements'
-import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
+import { emitAnnouncementsChanged } from '@/lib/announcementEvents'
 
 const TYPE_CLASS: Record<string, string> = {
   news:        'border-border bg-muted text-muted-foreground',
@@ -20,7 +21,6 @@ const TYPE_CLASS: Record<string, string> = {
 const BADGE = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize'
 
 export default function AnnouncementsUserView() {
-  const { invalidate } = useAnnouncementBadge()
   const [items, setItems] = useState<UserAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +30,14 @@ export default function AnnouncementsUserView() {
     setLoading(true)
     setError(null)
     try {
-      setItems(await listUserAnnouncements())
+      const announcements = await listUserAnnouncements()
+      setItems(announcements)
+      // Silent open tracking — mirrors legacy loadAnnouncements behavior
+      for (const ann of announcements) {
+        if (ann.track_open && !ann.user_status.opened_at) {
+          markAnnouncementOpened(ann.id).catch(() => {})
+        }
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load announcements.')
     } finally {
@@ -54,7 +61,7 @@ export default function AnnouncementsUserView() {
       setItems(prev => prev.map(a =>
         a.id === id ? { ...a, user_status: { ...a.user_status, read_at: new Date().toISOString() } } : a,
       ))
-      invalidate()
+      emitAnnouncementsChanged()
     } finally {
       stopActing(id)
     }
@@ -67,7 +74,7 @@ export default function AnnouncementsUserView() {
       setItems(prev => prev.map(a =>
         a.id === id ? { ...a, user_status: { ...a.user_status, acknowledged_at: new Date().toISOString() } } : a,
       ))
-      invalidate()
+      emitAnnouncementsChanged()
     } finally {
       stopActing(id)
     }

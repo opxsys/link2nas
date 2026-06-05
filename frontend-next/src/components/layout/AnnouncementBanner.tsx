@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AlertCircle, AlertTriangle, Info, X, BookOpen, CheckSquare, Loader2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -7,7 +8,7 @@ import {
   acknowledgeAnnouncement,
 } from '@/api/announcements'
 import type { UserAnnouncement } from '@/api/announcements'
-import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
+import { subscribeAnnouncementsChanged, emitAnnouncementsChanged } from '@/lib/announcementEvents'
 
 // ── Severity display config ────────────────────────────────────────────────
 
@@ -66,14 +67,20 @@ function pickBanner(items: UserAnnouncement[], dismissed: Set<string>): UserAnno
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function AnnouncementBanner() {
-  const { invalidate } = useAnnouncementBadge()
+  const { pathname } = useLocation()
   const [items, setItems] = useState<UserAnnouncement[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [acting, setActing] = useState(false)
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     listActiveAnnouncements().then(setItems).catch(() => {})
   }, [])
+
+  // Refetch on every navigation (AppShell never unmounts during SPA routing)
+  useEffect(() => { refresh() }, [pathname, refresh])
+
+  // Refetch when admin creates/edits/deletes or user reads/acknowledges elsewhere
+  useEffect(() => subscribeAnnouncementsChanged(refresh), [refresh])
 
   const _banner = pickBanner(items, dismissed)
   if (!_banner) return null
@@ -102,7 +109,7 @@ export default function AnnouncementBanner() {
             : a,
         ),
       )
-      invalidate()
+      emitAnnouncementsChanged()
     } catch { /* non-critical — banner stays visible */ }
     finally { setActing(false) }
   }
@@ -127,7 +134,7 @@ export default function AnnouncementBanner() {
             : a,
         ),
       )
-      invalidate()
+      emitAnnouncementsChanged()
     } catch { /* non-critical */ }
     finally { setActing(false) }
   }

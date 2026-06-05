@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { listUserAnnouncements } from '@/api/announcements'
 import type { UserAnnouncement } from '@/api/announcements'
+import { subscribeAnnouncementsChanged } from '@/lib/announcementEvents'
 
 function computeCount(items: UserAnnouncement[]): number {
   return items.filter(
@@ -31,6 +32,9 @@ export function AnnouncementBadgeProvider({ children }: { children: React.ReactN
   }, [tick])
 
   const invalidate = useCallback(() => setTick((t) => t + 1), [])
+
+  // Respond to announcement mutations (admin create/edit/delete, user read/ack)
+  useEffect(() => subscribeAnnouncementsChanged(invalidate), [invalidate])
 
   return (
     <AnnouncementBadgeContext.Provider value={{ count, invalidate }}>

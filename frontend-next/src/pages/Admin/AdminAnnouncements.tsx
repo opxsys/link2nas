@@ -6,6 +6,7 @@ import { listAnnouncements, deleteAnnouncement } from '@/api/admin-announcements
 import type { RealAnnouncement } from './admin.types'
 import AdminAnnouncementForm from './AdminAnnouncementForm'
 import AdminAnnouncementTracking from './AdminAnnouncementTracking'
+import { emitAnnouncementsChanged } from '@/lib/announcementEvents'
 
 type View = 'list' | 'form' | 'tracking'
 
@@ -38,7 +39,7 @@ function AnnRow({
           <span className="text-sm font-medium text-foreground">{ann.title}</span>
           <span className={`${BADGE} ${TYPE_CLASS[ann.type] ?? TYPE_CLASS.news}`}>{ann.type}</span>
           <span className={`${BADGE} ${ann.is_active
-            ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
             : 'border-border bg-muted text-muted-foreground'}`}>
             {ann.is_active ? 'Active' : 'Inactive'}
           </span>
@@ -117,6 +118,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
       await deleteAnnouncement(pendingDeleteId)
       setItems((prev) => prev.filter((a) => a.id !== pendingDeleteId))
       setPendingDeleteId(null)
+      emitAnnouncementsChanged()
       if (successTimer.current) clearTimeout(successTimer.current)
       setBanner('Announcement deleted.')
       successTimer.current = setTimeout(() => setBanner(null), 4000)
@@ -135,6 +137,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
     })
     setEditingAnn(null)
     setView('list')
+    emitAnnouncementsChanged()
     if (successTimer.current) clearTimeout(successTimer.current)
     setBanner(wasEdit ? `"${saved.title}" updated.` : `"${saved.title}" created.`)
     successTimer.current = setTimeout(() => setBanner(null), 4000)
@@ -165,7 +168,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
         </div>
       )}
       {banner && (
-        <div className="mb-2 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+        <div className="mb-2 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
           <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
           <span className="flex-1">{banner}</span>
           <button
