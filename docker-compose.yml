@@ -33,7 +33,9 @@ services:
       start_period: 20s
     depends_on:
       - redis
-    command: ["gunicorn", "-b", "0.0.0.0:5000", "app:create_app()"]
+    # WEB_CONCURRENCY controls the gunicorn web worker count. Default/recommended: 1 for small
+    # self-hosted deployments (set in .env). See docs/CONFIGURATION.md before increasing.
+    command: ["sh", "-c", "gunicorn -w \"$${WEB_CONCURRENCY:-1}\" -b 0.0.0.0:5000 \"app:create_app()\""]
 
   worker:
     build: .

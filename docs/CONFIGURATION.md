@@ -108,6 +108,27 @@ Per-endpoint limits are defined in `config.py` and have sensible defaults. Overr
 
 ---
 
+## Web server (Gunicorn)
+
+| Variable | Default | Description |
+|---|---|---|
+| `WEB_CONCURRENCY` | `1` | Number of gunicorn worker processes for the web service. |
+
+The provided `docker-compose.yml` and `docker-compose.ghcr.yml` launch gunicorn with `-w "${WEB_CONCURRENCY:-1}"`, so this variable directly controls the running worker count. Setting it in `.env` is sufficient — no compose file change is needed.
+
+**Recommended: keep at `1` for small self-hosted instances.** A single web worker does not limit concurrent users. Long-running work (job processing, downloads, scheduling) is handled by the dedicated `worker`, `local-download-worker`, and `scheduler` services — not by the web worker count. Increasing `WEB_CONCURRENCY` increases HTTP concurrency, not job throughput.
+
+Increasing `WEB_CONCURRENCY` beyond `1` is an advanced configuration that must be explicitly validated. Before doing so, ensure all of the following conditions are met:
+
+- `V2_RATE_LIMIT_REDIS_REQUIRED=true` — rate limit state must be shared via Redis across all workers
+- A single `scheduler` instance only — the scheduler is not designed for concurrent instances
+- Dedicated `worker` and `local-download-worker` services running separately
+- Startup and migration behaviour validated with concurrent web processes running simultaneously
+- Sufficient PostgreSQL connection pool capacity and Redis capacity for the additional connections
+- Monitoring and log aggregation in place to detect issues across workers
+
+---
+
 ## Providers
 
 Provider credentials (RealDebrid, AllDebrid API keys) are configured **per user through the Settings UI** — not via environment variables.
