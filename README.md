@@ -157,6 +157,7 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model, rate limit
 | [docs/INSTALL.md](docs/INSTALL.md) | Installation, workers, first setup, SQLite, PostgreSQL, Redis |
 | [docs/DOCKER.md](docs/DOCKER.md) | Docker Compose deployment guide (SQLite + PostgreSQL) |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | All environment variables with defaults and descriptions |
+| [docs/PROVIDERS_DESTINATIONS.md](docs/PROVIDERS_DESTINATIONS.md) | Developer guide for adding new providers and destinations |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security model, secrets, deployment hardening, publication checklist |
 | [docs/testing.md](docs/testing.md) | Test runners, unit tests, prerequisites, quick commands |
 | [docs/VALIDATION.md](docs/VALIDATION.md) | Pre-deployment validation checklist |
