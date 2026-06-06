@@ -14,6 +14,7 @@ import AccessibilitySettings from './AccessibilitySettings'
 import UserSpaceSettings from './UserSpaceSettings'
 import { getMe } from '@/api/me'
 import { useAppInfo } from '@/lib/useAppInfo'
+import { useI18n } from '@/i18n'
 
 const VALID_SECTIONS: SettingsSection[] = [
   'account', 'providers', 'destinations', 'api-keys',
@@ -34,6 +35,7 @@ export default function Settings() {
   const [canUseSpace, setCanUseSpace] = useState(false)
   const { appInfo } = useAppInfo()
   const appName = appInfo.app_name || 'Link2NAS'
+  const { t } = useI18n()
 
   useEffect(() => {
     getMe().then(me => setCanUseSpace(me.can_use_local_space)).catch(() => {})
@@ -41,7 +43,7 @@ export default function Settings() {
 
   return (
     <>
-      <PageHeader title="Settings" description={`Configure your ${appName} instance.`} />
+      <PageHeader title={t('navSettings')} description={`${t('settingsDescPre')} ${appName} ${t('settingsDescPost')}`} />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <SettingsNav activeSection={activeSection} onSelect={setActiveSection} showSpace={canUseSpace} />
         <div className="min-w-0 flex-1">

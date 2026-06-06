@@ -3,19 +3,22 @@ import { X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createApiKey } from '@/api/user-api-keys'
 import type { CreatedApiKey } from '@/api/user-api-keys'
+import { useI18n } from '@/i18n'
 
-const SCOPES: { value: string; label: string; description: string }[] = [
-  { value: 'qbittorrent:write', label: 'qBittorrent / Prowlarr', description: 'Allow Prowlarr to push downloads via the qBittorrent-compatible API.' },
-]
+const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 
 interface Props {
   onClose: () => void
   onCreated: (created: CreatedApiKey) => void
 }
 
-const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
-
 export default function CreateApiKeyModal({ onClose, onCreated }: Props) {
+  const { t } = useI18n()
+
+  const SCOPES = [
+    { value: 'qbittorrent:write', label: 'qBittorrent / Prowlarr', description: t('qbtScopeDesc') },
+  ]
+
   const [name, setName]     = useState('')
   const [scopes, setScopes] = useState<string[]>(['qbittorrent:write'])
   const [saving, setSaving] = useState(false)
@@ -29,8 +32,8 @@ export default function CreateApiKeyModal({ onClose, onCreated }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) { setError('Name is required.'); return }
-    if (scopes.length === 0) { setError('Select at least one scope.'); return }
+    if (!name.trim()) { setError(t('nameRequired')); return }
+    if (scopes.length === 0) { setError(t('apiKeyScopeRequired')); return }
 
     setSaving(true)
     setError(null)
@@ -38,7 +41,7 @@ export default function CreateApiKeyModal({ onClose, onCreated }: Props) {
       const created = await createApiKey({ name: name.trim(), scopes })
       onCreated(created)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create key.')
+      setError(err instanceof Error ? err.message : t('apiKeyCreationFailed'))
       setSaving(false)
     }
   }
@@ -47,15 +50,15 @@ export default function CreateApiKeyModal({ onClose, onCreated }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="create-key-title">
       <div className="w-full max-w-md rounded-lg border border-border bg-background shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 id="create-key-title" className="text-sm font-semibold text-foreground">New API Key</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <h2 id="create-key-title" className="text-sm font-semibold text-foreground">{t('newApiKeyTitle')}</h2>
+          <button type="button" onClick={onClose} aria-label={t('close')} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
             <X size={16} aria-hidden="true" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5">
           <div>
-            <label htmlFor="key-name" className="mb-1.5 block text-xs font-medium text-foreground">Name</label>
+            <label htmlFor="key-name" className="mb-1.5 block text-xs font-medium text-foreground">{t('colName')}</label>
             <input
               id="key-name"
               type="text"
@@ -70,7 +73,7 @@ export default function CreateApiKeyModal({ onClose, onCreated }: Props) {
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-medium text-foreground">Scopes</p>
+            <p className="mb-2 text-xs font-medium text-foreground">{t('labelScopes')}</p>
             <div className="flex flex-col gap-2.5">
               {SCOPES.map(s => (
                 <label key={s.value} className="flex cursor-pointer items-start gap-3">
@@ -97,10 +100,10 @@ export default function CreateApiKeyModal({ onClose, onCreated }: Props) {
           )}
 
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{t('cancel')}</Button>
             <Button type="submit" size="sm" disabled={saving}>
               {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-              Create key
+              {t('createKey')}
             </Button>
           </div>
         </form>

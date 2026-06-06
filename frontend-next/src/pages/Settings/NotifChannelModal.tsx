@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { createNotificationConfig, updateNotificationConfig } from '@/api/notifications'
 import { ApiError } from '@/api/client'
 import type { NotificationConfig } from '@/pages/Notifications/notifications.types'
+import { useI18n } from '@/i18n'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
@@ -24,10 +25,10 @@ interface Props {
 }
 
 export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSaved }: Props) {
+  const { t } = useI18n()
   const isEdit = editing !== null
   const uid = useId()
 
-  // In create mode, remove Email when SMTP is confirmed unavailable.
   const availableChannels = (!isEdit && smtpEnabled === false)
     ? ALL_CHANNELS.filter((ch) => ch.value !== 'email')
     : ALL_CHANNELS
@@ -35,17 +36,12 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
   const [name, setName] = useState(editing?.name ?? '')
   const [channel, setChannel] = useState<Channel>(() => {
     if (editing) return (editing.channel as Channel) ?? 'email'
-    // Default to gotify when email is unavailable in create mode.
     return smtpEnabled === false ? 'gotify' : 'email'
   })
   const [isEnabled, setIsEnabled] = useState(editing?.is_enabled ?? true)
-  // is_default is intentionally omitted: not used by notification dispatching
-  // email
   const [toEmail, setToEmail] = useState(editing?.config.to_email ?? '')
-  // gotify — token never pre-filled (backend only returns has_token)
   const [gotifyUrl, setGotifyUrl] = useState(editing?.config.server_url ?? '')
   const [gotifyToken, setGotifyToken] = useState('')
-  // webhook — headers never pre-filled (backend only returns has_headers)
   const [webhookUrl, setWebhookUrl] = useState(editing?.config.url ?? '')
   const [webhookMethod, setWebhookMethod] = useState(editing?.config.method ?? 'POST')
   const [webhookHeaders, setWebhookHeaders] = useState('')
@@ -53,9 +49,6 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // emailUnavailable: channel is email but SMTP is confirmed off.
-  // In create mode this can't happen (email removed from availableChannels), but guard just in case.
-  // In edit mode: warn but do NOT block save — the user may still rename or disable the channel.
   const emailUnavailable = channel === 'email' && smtpEnabled === false
   const emailBlocked = emailUnavailable && !isEdit
 
@@ -67,13 +60,12 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
     if (channel === 'email') {
       configData = { to_email: toEmail.trim() }
     } else if (channel === 'gotify') {
-      // blank token → preserved server-side via fallback to existing
       configData = { server_url: gotifyUrl.trim(), token: gotifyToken }
     } else if (channel === 'webhook') {
       let parsed: Record<string, string> | undefined
       if (webhookHeaders.trim()) {
         try { parsed = JSON.parse(webhookHeaders) }
-        catch { setError('Headers must be valid JSON (e.g. {"Key": "Value"}).'); return }
+        catch { setError(t('invalidHeadersJson')); return }
       }
       configData = {
         url: webhookUrl.trim(),
@@ -91,7 +83,7 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
       onSaved(saved)
       onClose()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Save failed.')
+      setError(err instanceof ApiError ? err.message : t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -101,25 +93,26 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16"
       role="dialog" aria-modal="true"
+      aria-label={isEdit ? t('editChannel') : t('addChannel')}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-md rounded-lg border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground">{isEdit ? 'Edit channel' : 'Add channel'}</h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="Close">
+          <h2 className="text-sm font-semibold text-foreground">{isEdit ? t('editChannel') : t('addChannel')}</h2>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label={t('close')}>
             <X size={14} aria-hidden="true" />
           </Button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-5">
           <div>
-            <label htmlFor={`${uid}-name`} className={LABEL}>Name <span className="text-destructive">*</span></label>
+            <label htmlFor={`${uid}-name`} className={LABEL}>{t('colName')} <span className="text-destructive">*</span></label>
             <input id={`${uid}-name`} type="text" className={INPUT} value={name} required
               onChange={e => setName(e.target.value)} disabled={saving} />
           </div>
 
           {!isEdit && (
             <div>
-              <label htmlFor={`${uid}-ch`} className={LABEL}>Channel type</label>
+              <label htmlFor={`${uid}-ch`} className={LABEL}>{t('labelChannelType')}</label>
               <select id={`${uid}-ch`} className={INPUT} value={channel}
                 onChange={e => setChannel(e.target.value as Channel)} disabled={saving}>
                 {availableChannels.map(ch => (
@@ -132,34 +125,34 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
           {emailUnavailable && (
             <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
               <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-              {isEdit
-                ? 'SMTP is not configured or disabled — this channel will not be able to send notifications.'
-                : 'SMTP is not configured or disabled. Email channels cannot be created or tested.'}
+              {isEdit ? t('smtpEditWarning') : t('smtpCreateWarning')}
             </div>
           )}
 
           {channel === 'email' && (
             <div>
-              <label htmlFor={`${uid}-email`} className={LABEL}>Recipient override <span className="text-muted-foreground">(optional)</span></label>
+              <label htmlFor={`${uid}-email`} className={LABEL}>
+                {t('labelRecipientOverride')} <span className="text-muted-foreground">(optional)</span>
+              </label>
               <input id={`${uid}-email`} type="email" className={INPUT} value={toEmail}
                 onChange={e => setToEmail(e.target.value)} disabled={saving}
-                placeholder="Leave blank to use your account email" />
+                placeholder={t('recipientPlaceholder')} />
             </div>
           )}
 
           {channel === 'gotify' && (
             <>
               <div>
-                <label htmlFor={`${uid}-gurl`} className={LABEL}>Server URL <span className="text-destructive">*</span></label>
+                <label htmlFor={`${uid}-gurl`} className={LABEL}>{t('labelServerUrl')} <span className="text-destructive">*</span></label>
                 <input id={`${uid}-gurl`} type="url" className={INPUT} value={gotifyUrl}
                   onChange={e => setGotifyUrl(e.target.value)} required disabled={saving}
                   placeholder="http://gotify.example.com" />
               </div>
               <div>
                 <label htmlFor={`${uid}-gtok`} className={LABEL}>
-                  App token{!isEdit && <span className="text-destructive"> *</span>}
+                  {t('labelAppToken')}{!isEdit && <span className="text-destructive"> *</span>}
                   {isEdit && editing.config.has_token && (
-                    <span className="ml-1 font-normal text-muted-foreground">(blank = keep existing)</span>
+                    <span className="ml-1 font-normal text-muted-foreground">{t('labelKeepExisting')}</span>
                   )}
                 </label>
                 <input id={`${uid}-gtok`} type="password" className={INPUT} value={gotifyToken}
@@ -178,7 +171,7 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
                   placeholder="https://hooks.example.com/notify" />
               </div>
               <div>
-                <label htmlFor={`${uid}-wmeth`} className={LABEL}>Method</label>
+                <label htmlFor={`${uid}-wmeth`} className={LABEL}>{t('labelMethod')}</label>
                 <select id={`${uid}-wmeth`} className={INPUT} value={webhookMethod}
                   onChange={e => setWebhookMethod(e.target.value)} disabled={saving}>
                   <option value="POST">POST</option>
@@ -187,9 +180,9 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
               </div>
               <div>
                 <label htmlFor={`${uid}-whdr`} className={LABEL}>
-                  Headers (JSON)
+                  {t('labelHeaders')}
                   {isEdit && editing.config.has_headers && (
-                    <span className="ml-1 font-normal text-muted-foreground">(blank = keep existing)</span>
+                    <span className="ml-1 font-normal text-muted-foreground">{t('labelKeepExisting')}</span>
                   )}
                 </label>
                 <textarea id={`${uid}-whdr`}
@@ -204,7 +197,7 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input type="checkbox" checked={isEnabled} onChange={e => setIsEnabled(e.target.checked)}
                 disabled={saving} className="h-4 w-4 rounded border-input accent-primary" />
-              Enabled
+              {t('labelEnabled')}
             </label>
           </div>
 
@@ -215,10 +208,10 @@ export default function NotifChannelModal({ editing, smtpEnabled, onClose, onSav
           )}
 
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{t('cancel')}</Button>
             <Button type="submit" size="sm" disabled={saving || emailBlocked}>
               {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-              {isEdit ? 'Save changes' : 'Add channel'}
+              {isEdit ? t('saveChanges') : t('addChannel')}
             </Button>
           </div>
         </form>

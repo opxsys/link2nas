@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { testNotificationConfig } from '@/api/notifications'
 import { ApiError } from '@/api/client'
 import type { NotificationConfig } from '@/pages/Notifications/notifications.types'
+import { useI18n } from '@/i18n'
 
 const CHANNEL_ICON = { email: Mail, gotify: Zap, webhook: Webhook } as const
 const CHANNEL_LABEL = { email: 'Email', gotify: 'Gotify', webhook: 'Webhook' } as const
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function NotifChannelRow({ config, smtpEnabled, onEdit, onDelete }: Props) {
+  const { t } = useI18n()
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
   const [testMessage, setTestMessage] = useState('')
 
@@ -28,10 +30,10 @@ export default function NotifChannelRow({ config, smtpEnabled, onEdit, onDelete 
     try {
       await testNotificationConfig(config.id)
       setTestStatus('ok')
-      setTestMessage('Notification test successful.')
+      setTestMessage(t('notifTestOk'))
     } catch (err) {
       setTestStatus('error')
-      setTestMessage(err instanceof ApiError ? err.message : 'Test failed.')
+      setTestMessage(err instanceof ApiError ? err.message : t('testFailed'))
     }
   }
 
@@ -48,19 +50,19 @@ export default function NotifChannelRow({ config, smtpEnabled, onEdit, onDelete 
           </span>
           {!config.is_enabled && (
             <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-              Disabled
+              {t('badgeDisabled')}
             </span>
           )}
           {emailBlocked && (
             <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
-              SMTP unavailable
+              {t('badgeSmtpUnavailable')}
             </span>
           )}
         </div>
         {testStatus === 'testing' && (
           <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 size={11} className="animate-spin" aria-hidden="true" />
-            <span>Testing…</span>
+            <span>{t('testing')}</span>
           </div>
         )}
         {testStatus === 'ok' && (
@@ -81,17 +83,17 @@ export default function NotifChannelRow({ config, smtpEnabled, onEdit, onDelete 
           variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1"
           disabled={testStatus === 'testing' || emailBlocked || !config.is_enabled}
           onClick={handleTest}
-          aria-label={`Test ${config.name}`}
+          aria-label={`${t('btnTest')} ${config.name}`}
         >
           {testStatus === 'testing'
             ? <Loader2 size={11} className="animate-spin" aria-hidden="true" />
             : <FlaskConical size={11} aria-hidden="true" />}
-          <span className="hidden sm:inline">Test</span>
+          <span className="hidden sm:inline">{t('btnTest')}</span>
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Edit ${config.name}`} onClick={onEdit}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`${t('titleEdit')} ${config.name}`} onClick={onEdit}>
           <Pencil size={13} aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label={`Delete ${config.name}`} onClick={onDelete}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label={`${t('delete')} ${config.name}`} onClick={onDelete}>
           <Trash2 size={13} aria-hidden="true" />
         </Button>
       </div>

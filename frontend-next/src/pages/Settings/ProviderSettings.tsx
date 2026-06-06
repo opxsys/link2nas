@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button'
 import { listProviderConfigs, updateProviderConfig } from '@/api/provider-configs'
 import { ApiError } from '@/api/client'
 import type { ProviderConfig } from '@/api/provider-configs'
+import { useI18n } from '@/i18n'
 import ProviderRow from './ProviderRow'
 import ProviderModal from './ProviderModal'
 import ProviderDeleteModal from './ProviderDeleteModal'
 
 export default function ProviderSettings() {
+  const { t } = useI18n()
   const [configs, setConfigs] = useState<ProviderConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,11 +28,11 @@ export default function ProviderSettings() {
     try {
       setConfigs(await listProviderConfigs())
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load providers')
+      setError(err instanceof ApiError ? err.message : t('providerLoadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => { load() }, [load])
 
@@ -58,7 +60,7 @@ export default function ProviderSettings() {
       setConfigs(prev => prev.map(c => c.id === config.id ? updated : c))
     } catch (err) {
       setConfigs(prev => prev.map(c => c.id === config.id ? config : c))
-      setActionError(err instanceof ApiError ? err.message : 'Could not update provider.')
+      setActionError(err instanceof ApiError ? err.message : t('providerUpdateFailed'))
     } finally {
       setActing(config.id, null)
     }
@@ -71,7 +73,7 @@ export default function ProviderSettings() {
       await updateProviderConfig(config.id, config.provider_type, { is_default: true })
       await load()
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Could not set default provider.')
+      setActionError(err instanceof ApiError ? err.message : t('providerDefaultFailed'))
       await load()
     } finally {
       setActing(config.id, null)
@@ -81,7 +83,7 @@ export default function ProviderSettings() {
   function handleSaved() {
     load()
     if (successTimer.current) clearTimeout(successTimer.current)
-    setSuccessMessage('Provider saved.')
+    setSuccessMessage(t('providerSaved'))
     setActionError(null)
     successTimer.current = setTimeout(() => setSuccessMessage(null), 4000)
   }
@@ -90,18 +92,18 @@ export default function ProviderSettings() {
 
   return (
     <SectionCard
-      title="Providers"
-      description="Download provider profiles. One default per user."
+      title={t('sectionProviders')}
+      description={t('providersDesc')}
       actions={
         <Button variant="outline" size="sm" onClick={() => setModalTarget(null)}>
-          <Plus size={13} aria-hidden="true" /> Add provider
+          <Plus size={13} aria-hidden="true" /> {t('addProvider')}
         </Button>
       }
     >
       {loading && (
         <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
           <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-          Loading providers…
+          {t('loadingProviders')}
         </div>
       )}
 
@@ -113,7 +115,7 @@ export default function ProviderSettings() {
 
       {!loading && !error && configs.length === 0 && (
         <p className="py-4 text-sm text-muted-foreground italic">
-          No provider profiles configured. Add one to start creating jobs.
+          {t('noProvidersConfigured')}
         </p>
       )}
 
@@ -142,7 +144,7 @@ export default function ProviderSettings() {
       {successMessage && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
           <span>{successMessage}</span>
-          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
             <X size={13} aria-hidden="true" />
           </button>
         </div>
@@ -151,7 +153,7 @@ export default function ProviderSettings() {
       {actionError && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+          <button onClick={() => setActionError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
             <X size={13} aria-hidden="true" />
           </button>
         </div>

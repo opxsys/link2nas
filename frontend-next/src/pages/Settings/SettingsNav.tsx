@@ -10,22 +10,24 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 import type { SettingsSection } from './settings.types'
 
 interface NavItem {
   id: SettingsSection
-  label: string
   icon: LucideIcon
+  labelKey: TranslationKey
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'account', label: 'Account', icon: User },
-  { id: 'providers', label: 'Providers', icon: Cloud },
-  { id: 'destinations', label: 'Destinations', icon: FolderOutput },
-  { id: 'api-keys', label: 'API Keys', icon: Key },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'prowlarr', label: 'Prowlarr', icon: Search },
-  { id: 'accessibility', label: 'Accessibility', icon: Eye },
+  { id: 'account',       icon: User,        labelKey: 'settingsNavAccount'       },
+  { id: 'providers',     icon: Cloud,       labelKey: 'navProviders'             },
+  { id: 'destinations',  icon: FolderOutput,labelKey: 'navDestinations'          },
+  { id: 'api-keys',      icon: Key,         labelKey: 'settingsNavApiKeys'       },
+  { id: 'notifications', icon: Bell,        labelKey: 'settingsNavNotifications' },
+  { id: 'prowlarr',      icon: Search,      labelKey: 'navProwlarr'              },
+  { id: 'accessibility', icon: Eye,         labelKey: 'settingsNavAccessibility' },
 ]
 
 interface SettingsNavProps {
@@ -35,17 +37,19 @@ interface SettingsNavProps {
 }
 
 export default function SettingsNav({ activeSection, onSelect, showSpace }: SettingsNavProps) {
+  const { t } = useI18n()
+
   const visibleItems = showSpace
-    ? [...NAV_ITEMS, { id: 'space' as const, label: 'My Space', icon: HardDrive }]
+    ? [...NAV_ITEMS, { id: 'space' as const, icon: HardDrive, labelKey: 'settingsNavMySpace' as TranslationKey }]
     : NAV_ITEMS
 
   return (
     <nav
-      aria-label="Settings sections"
+      aria-label={t('ariaSettingsNav')}
       className="rounded-lg border border-border bg-card shadow-sm lg:w-48 lg:shrink-0"
     >
       <ul className="py-1">
-        {visibleItems.map(({ id, label, icon: Icon }) => {
+        {visibleItems.map(({ id, icon: Icon, labelKey }) => {
           const active = activeSection === id
           return (
             <li key={id}>
@@ -61,7 +65,7 @@ export default function SettingsNav({ activeSection, onSelect, showSpace }: Sett
                 )}
               >
                 <Icon size={15} aria-hidden="true" className="shrink-0" />
-                {label}
+                {t(labelKey)}
               </button>
             </li>
           )

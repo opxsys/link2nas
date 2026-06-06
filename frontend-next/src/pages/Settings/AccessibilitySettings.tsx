@@ -4,6 +4,8 @@ import SectionCard from '@/components/common/SectionCard'
 import { cn } from '@/lib/utils'
 import { type ThemePreference, THEME_PREFERENCES } from '@/lib/themes'
 import { useTheme, setThemePreferenceAsync } from '@/lib/useTheme'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 import AccessibilityPreview from './AccessibilityPreview'
 
 const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
@@ -14,17 +16,26 @@ const THEME_ICONS: Record<ThemePreference, typeof Sun> = {
   colorblind:      Eye,
 }
 
-const THEME_DESCRIPTIONS: Record<ThemePreference, string> = {
-  auto:            'Follow the operating system light/dark setting.',
-  light:           'Default cool-white interface.',
-  dark:            'Reduced brightness for low-light environments.',
-  'high-contrast': 'Maximum contrast for readability.',
-  colorblind:      'Warm-tinted palette. Orange/amber primary avoids red–green confusion.',
+const THEME_LABEL_KEYS: Record<ThemePreference, TranslationKey> = {
+  auto:            'themeAuto',
+  light:           'themeLight',
+  dark:            'themeDark',
+  'high-contrast': 'themeHighContrast',
+  colorblind:      'themeColorblind',
+}
+
+const THEME_DESC_KEYS: Record<ThemePreference, TranslationKey> = {
+  auto:            'themeDescAuto',
+  light:           'themeDescLight',
+  dark:            'themeDescDark',
+  'high-contrast': 'themeDescHighContrast',
+  colorblind:      'themeDescColorblind',
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 export default function AccessibilitySettings() {
+  const { t } = useI18n()
   const { preference } = useTheme()
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveMessage, setSaveMessage] = useState('')
@@ -38,23 +49,23 @@ export default function AccessibilitySettings() {
     try {
       await setThemePreferenceAsync(value)
       setSaveStatus('saved')
-      setSaveMessage('Theme saved.')
+      setSaveMessage(t('themeSaved'))
       if (successTimer.current) clearTimeout(successTimer.current)
       successTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
-      setSaveMessage(err instanceof Error ? err.message : 'Failed to save theme preference.')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <SectionCard
-        title="Theme"
-        description="Display preferences saved to your user profile."
+        title={t('sectionTheme')}
+        description={t('themeDisplayDesc')}
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {THEME_PREFERENCES.map(({ value, label }) => {
+          {THEME_PREFERENCES.map(({ value }) => {
             const Icon = THEME_ICONS[value]
             const active = preference === value
             return (
@@ -81,9 +92,9 @@ export default function AccessibilitySettings() {
                 </div>
                 <div>
                   <p className={cn('text-sm font-medium', active ? 'text-primary' : 'text-foreground')}>
-                    {label}
+                    {t(THEME_LABEL_KEYS[value])}
                   </p>
-                  <p className="text-xs text-muted-foreground">{THEME_DESCRIPTIONS[value]}</p>
+                  <p className="text-xs text-muted-foreground">{t(THEME_DESC_KEYS[value])}</p>
                 </div>
               </button>
             )
@@ -92,7 +103,7 @@ export default function AccessibilitySettings() {
         {saveStatus === 'saved' && (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
             <span className="flex items-center gap-1.5"><CheckCircle2 size={12} aria-hidden="true" />{saveMessage}</span>
-            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
               <X size={12} aria-hidden="true" />
             </button>
           </div>
@@ -100,19 +111,19 @@ export default function AccessibilitySettings() {
         {saveStatus === 'error' && (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
             <span className="flex items-center gap-1.5"><XCircle size={12} aria-hidden="true" />{saveMessage}</span>
-            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
               <X size={12} aria-hidden="true" />
             </button>
           </div>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
-          The Account menu in the top-right header provides quick access to the same setting.
+          {t('themeMenuHint')}
         </p>
       </SectionCard>
 
       <SectionCard
-        title="Preview"
-        description="How the active theme renders key interface elements."
+        title={t('sectionPreview')}
+        description={t('previewDesc')}
       >
         <AccessibilityPreview />
       </SectionCard>

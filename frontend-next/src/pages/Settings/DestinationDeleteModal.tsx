@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { deleteDestinationConfig } from '@/api/destination-configs'
 import { ApiError } from '@/api/client'
 import type { DestinationConfig } from '@/api/destination-configs'
+import { useI18n } from '@/i18n'
 
 interface Props {
   config: DestinationConfig
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function DestinationDeleteModal({ config, onClose, onDeleted }: Props) {
+  const { t } = useI18n()
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,7 +25,7 @@ export default function DestinationDeleteModal({ config, onClose, onDeleted }: P
       onDeleted()
       onClose()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete destination.')
+      setError(err instanceof ApiError ? err.message : t('destinationDeleteFailed'))
     } finally {
       setDeleting(false)
     }
@@ -32,32 +34,32 @@ export default function DestinationDeleteModal({ config, onClose, onDeleted }: P
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog" aria-modal="true" aria-label="Delete destination"
+      role="dialog" aria-modal="true" aria-label={t('deleteDestination')}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-sm rounded-lg border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground">Delete destination</h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="Close">
+          <h2 className="text-sm font-semibold text-foreground">{t('deleteDestination')}</h2>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label={t('close')}>
             <X size={14} aria-hidden="true" />
           </Button>
         </div>
         <div className="p-5">
           <p className="text-sm text-foreground">
-            Delete <span className="font-semibold">{config.name}</span>?
+            {t('delete')} <span className="font-semibold">{config.name}</span>?
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            This is permanent and cannot be undone. Existing jobs that used this destination are not affected.
+            {t('deleteDestinationPermanent')}
           </p>
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           <div className="mt-4 flex items-center justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={deleting}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
               {deleting && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
               <Trash2 size={13} aria-hidden="true" />
-              Delete destination
+              {t('deleteDestination')}
             </Button>
           </div>
         </div>

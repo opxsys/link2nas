@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { getPublicSpace } from '@/api/user-space'
 import { ApiError } from '@/api/client'
 import type { PublicSpace } from '@/api/user-space'
+import { useI18n } from '@/i18n'
 import UserSpaceCleanupModal from './UserSpaceCleanupModal'
 
 function formatBytes(bytes: number): string {
@@ -15,6 +16,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function UserSpaceSettings() {
+  const { t } = useI18n()
   const [space, setSpace] = useState<PublicSpace | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,11 +29,11 @@ export default function UserSpaceSettings() {
     try {
       setSpace(await getPublicSpace())
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load space info')
+      setError(err instanceof ApiError ? err.message : t('spaceLoadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => { load() }, [load])
 
@@ -46,7 +48,7 @@ export default function UserSpaceSettings() {
     return (
       <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
         <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-        Loading space…
+        {t('loadingSpace')}
       </div>
     )
   }
@@ -55,7 +57,7 @@ export default function UserSpaceSettings() {
     return (
       <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
         <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
-        {error ?? 'Space unavailable.'}
+        {error ?? t('spaceUnavailable')}
       </div>
     )
   }
@@ -63,8 +65,8 @@ export default function UserSpaceSettings() {
   return (
     <div className="flex flex-col gap-6">
       <SectionCard
-        title="My Space"
-        description="Your personal public file space."
+        title={t('sectionMySpace')}
+        description={t('mySpaceDesc')}
         actions={
           space.file_count > 0 ? (
             <Button
@@ -72,20 +74,20 @@ export default function UserSpaceSettings() {
               className="border-destructive/50 text-destructive hover:bg-destructive/10"
               onClick={() => setShowCleanup(true)}
             >
-              <Trash2 size={13} aria-hidden="true" /> Clean up
+              <Trash2 size={13} aria-hidden="true" /> {t('cleanUp')}
             </Button>
           ) : undefined
         }
       >
         <div className="flex flex-col gap-4">
           <div>
-            <p className="mb-1.5 text-xs font-medium text-foreground">Public URL</p>
+            <p className="mb-1.5 text-xs font-medium text-foreground">{t('publicUrl')}</p>
             <div className="flex items-center gap-2">
               <code className="flex-1 truncate rounded bg-muted px-3 py-2 font-mono text-xs text-foreground">
                 {space.url}
               </code>
               <Button variant="outline" size="icon" className="h-8 w-8 shrink-0"
-                onClick={copyUrl} aria-label="Copy public URL">
+                onClick={copyUrl} aria-label={t('ariaCopyPublicUrl')}>
                 {copied
                   ? <Check size={13} className="text-green-600 dark:text-green-400" aria-hidden="true" />
                   : <Copy size={13} aria-hidden="true" />}
@@ -93,7 +95,7 @@ export default function UserSpaceSettings() {
               <Button variant="outline" size="icon" className="h-8 w-8 shrink-0"
                 disabled={!space.url}
                 onClick={() => window.open(space.url, '_blank', 'noopener,noreferrer')}
-                aria-label="Open public URL in new tab">
+                aria-label={t('ariaOpenPublicUrl')}>
                 <ExternalLink size={13} aria-hidden="true" />
               </Button>
             </div>
@@ -101,11 +103,11 @@ export default function UserSpaceSettings() {
 
           <div className="flex gap-6 text-sm">
             <p>
-              <span className="text-muted-foreground">Files: </span>
+              <span className="text-muted-foreground">{t('labelFiles')} </span>
               <span className="font-medium text-foreground">{space.file_count}</span>
             </p>
             <p>
-              <span className="text-muted-foreground">Total size: </span>
+              <span className="text-muted-foreground">{t('labelTotalSize')} </span>
               <span className="font-medium text-foreground">{formatBytes(space.total_size_bytes)}</span>
             </p>
           </div>
@@ -113,7 +115,7 @@ export default function UserSpaceSettings() {
       </SectionCard>
 
       {space.files.length > 0 && (
-        <SectionCard title="Files">
+        <SectionCard title={t('sectionFiles')}>
           <ul className="divide-y divide-border">
             {space.files.map((file) => (
               <li key={file.relative_path} className="flex items-center gap-3 py-2.5">

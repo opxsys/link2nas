@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button'
 import { listDestinationConfigs } from '@/api/destination-configs'
 import { ApiError } from '@/api/client'
 import type { DestinationConfig } from '@/api/destination-configs'
+import { useI18n } from '@/i18n'
 import DestinationRow from './DestinationRow'
 import DestinationModal from './DestinationModal'
 import DestinationDeleteModal from './DestinationDeleteModal'
 
 export default function DestinationSettings() {
+  const { t } = useI18n()
   const [configs, setConfigs] = useState<DestinationConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,11 +26,11 @@ export default function DestinationSettings() {
     try {
       setConfigs(await listDestinationConfigs())
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load destinations')
+      setError(err instanceof ApiError ? err.message : t('destinationLoadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => { load() }, [load])
 
@@ -41,24 +43,24 @@ export default function DestinationSettings() {
   function handleSaved() {
     load()
     if (successTimer.current) clearTimeout(successTimer.current)
-    setSuccessMessage('Destination saved.')
+    setSuccessMessage(t('destinationSaved'))
     successTimer.current = setTimeout(() => setSuccessMessage(null), 4000)
   }
 
   return (
     <SectionCard
-      title="Destinations"
-      description="File transfer destinations. Zero active destinations means links-only mode."
+      title={t('sectionDestinations')}
+      description={t('destinationsDesc')}
       actions={
         <Button variant="outline" size="sm" onClick={() => setModalTarget(null)}>
-          <Plus size={13} aria-hidden="true" /> Add destination
+          <Plus size={13} aria-hidden="true" /> {t('addDestination')}
         </Button>
       }
     >
       {loading && (
         <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
           <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-          Loading destinations…
+          {t('loadingDestinations')}
         </div>
       )}
 
@@ -70,7 +72,7 @@ export default function DestinationSettings() {
 
       {!loading && !error && configs.length === 0 && (
         <p className="py-4 text-sm text-muted-foreground italic">
-          No destination profiles configured. Add one to enable file transfers, or leave empty for links-only mode.
+          {t('noDestinationsConfigured')}
         </p>
       )}
 
@@ -91,7 +93,7 @@ export default function DestinationSettings() {
       {successMessage && (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
           <span>{successMessage}</span>
-          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
             <X size={13} aria-hidden="true" />
           </button>
         </div>

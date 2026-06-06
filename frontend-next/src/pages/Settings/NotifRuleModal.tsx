@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button'
 import { createNotificationRule, updateNotificationRule } from '@/api/notifications'
 import { ApiError } from '@/api/client'
 import type { NotificationConfig, NotificationRule } from '@/pages/Notifications/notifications.types'
+import { useI18n } from '@/i18n'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
 
-// Canonical event types emitted by the backend
 const KNOWN_EVENT_TYPES = [
   'job.created', 'job.started', 'job.ready', 'job.links_ready',
   'job.completed', 'job.cancelled',
@@ -25,6 +25,7 @@ interface Props {
 }
 
 export default function NotifRuleModal({ editing, configs, onClose, onSaved }: Props) {
+  const { t } = useI18n()
   const isEdit = editing !== null
   const uid = useId()
 
@@ -37,19 +38,19 @@ export default function NotifRuleModal({ editing, configs, onClose, onSaved }: P
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function toggleType(t: string) {
-    setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  function toggleType(evType: string) {
+    setSelectedTypes(prev => prev.includes(evType) ? prev.filter(x => x !== evType) : [...prev, evType])
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const rate = parseInt(rateLimit, 10)
     if (isNaN(rate) || rate < 0 || rate > 1000) {
-      setError('Rate limit must be between 0 and 1000.')
+      setError(t('rateLimitError'))
       return
     }
     if (!configId) {
-      setError('Select a channel.')
+      setError(t('selectChannelError'))
       return
     }
     setSaving(true)
@@ -65,7 +66,7 @@ export default function NotifRuleModal({ editing, configs, onClose, onSaved }: P
       onSaved(saved)
       onClose()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Save failed.')
+      setError(err instanceof ApiError ? err.message : t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -75,28 +76,29 @@ export default function NotifRuleModal({ editing, configs, onClose, onSaved }: P
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16"
       role="dialog" aria-modal="true"
+      aria-label={isEdit ? t('editRule') : t('addRule')}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-md rounded-lg border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground">{isEdit ? 'Edit rule' : 'Add rule'}</h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="Close">
+          <h2 className="text-sm font-semibold text-foreground">{isEdit ? t('editRule') : t('addRule')}</h2>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label={t('close')}>
             <X size={14} aria-hidden="true" />
           </Button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-5">
           <div>
-            <label htmlFor={`${uid}-name`} className={LABEL}>Name <span className="text-destructive">*</span></label>
+            <label htmlFor={`${uid}-name`} className={LABEL}>{t('colName')} <span className="text-destructive">*</span></label>
             <input id={`${uid}-name`} type="text" className={INPUT} value={name} required
               onChange={e => setName(e.target.value)} disabled={saving} />
           </div>
 
           <div>
-            <label htmlFor={`${uid}-cfg`} className={LABEL}>Channel <span className="text-destructive">*</span></label>
+            <label htmlFor={`${uid}-cfg`} className={LABEL}>{t('labelChannel')} <span className="text-destructive">*</span></label>
             <select id={`${uid}-cfg`} className={INPUT} value={configId}
               onChange={e => setConfigId(e.target.value)} disabled={saving || configs.length === 0}>
               {configs.length === 0
-                ? <option value="">No channels — add one first</option>
+                ? <option value="">{t('noChannelsOption')}</option>
                 : configs.map(c => (
                   <option key={c.id} value={c.id}>{c.name} ({c.channel})</option>
                 ))}
@@ -104,7 +106,7 @@ export default function NotifRuleModal({ editing, configs, onClose, onSaved }: P
           </div>
 
           <div>
-            <label htmlFor={`${uid}-sev`} className={LABEL}>Minimum severity</label>
+            <label htmlFor={`${uid}-sev`} className={LABEL}>{t('labelMinSeverity')}</label>
             <select id={`${uid}-sev`} className={INPUT} value={severityMin}
               onChange={e => setSeverityMin(e.target.value)} disabled={saving}>
               {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -113,23 +115,25 @@ export default function NotifRuleModal({ editing, configs, onClose, onSaved }: P
 
           <div>
             <p className={`${LABEL} mb-2`}>
-              Event types
-              <span className="ml-1 font-normal text-muted-foreground">(none selected = all events)</span>
+              {t('labelEventTypes')}
+              <span className="ml-1 font-normal text-muted-foreground">{t('eventTypesHint')}</span>
             </p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              {KNOWN_EVENT_TYPES.map(t => (
-                <label key={t} className="flex items-center gap-1.5 text-xs text-foreground">
-                  <input type="checkbox" checked={selectedTypes.includes(t)}
-                    onChange={() => toggleType(t)} disabled={saving}
+              {KNOWN_EVENT_TYPES.map(evType => (
+                <label key={evType} className="flex items-center gap-1.5 text-xs text-foreground">
+                  <input type="checkbox" checked={selectedTypes.includes(evType)}
+                    onChange={() => toggleType(evType)} disabled={saving}
                     className="h-3.5 w-3.5 rounded border-input accent-primary" />
-                  {t}
+                  {evType}
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <label htmlFor={`${uid}-rate`} className={LABEL}>Rate limit per hour <span className="text-muted-foreground">(0 = unlimited)</span></label>
+            <label htmlFor={`${uid}-rate`} className={LABEL}>
+              {t('labelRateLimit')} <span className="text-muted-foreground">{t('rateLimitHint')}</span>
+            </label>
             <input id={`${uid}-rate`} type="number" min={0} max={1000} className={INPUT}
               value={rateLimit} onChange={e => setRateLimit(e.target.value)} disabled={saving} />
           </div>
@@ -137,7 +141,7 @@ export default function NotifRuleModal({ editing, configs, onClose, onSaved }: P
           <label className="flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" checked={isEnabled} onChange={e => setIsEnabled(e.target.checked)}
               disabled={saving} className="h-4 w-4 rounded border-input accent-primary" />
-            Enabled
+            {t('labelEnabled')}
           </label>
 
           {error && (
@@ -147,10 +151,10 @@ export default function NotifRuleModal({ editing, configs, onClose, onSaved }: P
           )}
 
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{t('cancel')}</Button>
             <Button type="submit" size="sm" disabled={saving || configs.length === 0}>
               {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-              {isEdit ? 'Save changes' : 'Add rule'}
+              {isEdit ? t('saveChanges') : t('addRule')}
             </Button>
           </div>
         </form>

@@ -6,6 +6,7 @@ import { ApiError } from '@/api/client'
 import type { DestinationConfig } from '@/api/destination-configs'
 import { getMe } from '@/api/me'
 import { useAppInfo } from '@/lib/useAppInfo'
+import { useI18n } from '@/i18n'
 
 const ALL_DEST_TYPES = [
   { value: 'synology', label: 'Synology NAS' },
@@ -23,36 +24,31 @@ interface Props {
 }
 
 export default function DestinationModal({ initial, onClose, onSaved }: Props) {
+  const { t } = useI18n()
   const isEdit = initial !== null
   const { appInfo } = useAppInfo()
   const appName = appInfo.app_name || 'Link2NAS'
 
   const [name,            setName]            = useState(initial?.name                          ?? '')
   const [destType,        setDestType]        = useState(initial?.destination_type              ?? 'synology')
-  // Synology
   const [synologyUrl,     setSynologyUrl]     = useState(initial?.config.synology_url           ?? '')
   const [username,        setUsername]        = useState(initial?.config.username               ?? '')
-  const [password,        setPassword]        = useState('')        // never pre-filled
+  const [password,        setPassword]        = useState('')
   const [verifySSL,       setVerifySSL]       = useState(initial?.config.verify_ssl             !== false)
   const [destinationBase, setDestinationBase] = useState(initial?.config.destination_base       ?? '')
-  // Local
   const [basePath,        setBasePath]        = useState(initial?.config.base_path              ?? '')
-  // Common
   const [isEnabled,       setIsEnabled]       = useState(initial?.is_enabled                    ?? true)
   const [isDefault,       setIsDefault]       = useState(initial?.is_default                    ?? false)
   const [saving,          setSaving]          = useState(false)
   const [error,           setError]           = useState<string | null>(null)
-  const [canUseLocal,     setCanUseLocal]     = useState(false)  // safe default until me resolves
+  const [canUseLocal,     setCanUseLocal]     = useState(false)
 
-  // Fetch local-space capability once on mount
   useEffect(() => {
     getMe().then(me => setCanUseLocal(me.can_use_local_space)).catch(() => {/* keep false */})
   }, [])
 
-  // Available types: local only shown when account has local-space permission,
-  // OR when editing an existing local destination (type is locked, so it stays in the list).
-  const availableTypes = ALL_DEST_TYPES.filter(t => {
-    if (t.value !== 'local') return true
+  const availableTypes = ALL_DEST_TYPES.filter(dt => {
+    if (dt.value !== 'local') return true
     return canUseLocal || (isEdit && initial?.destination_type === 'local')
   })
 
@@ -86,11 +82,11 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) { setError('Name is required.'); return }
+    if (!name.trim()) { setError(t('nameRequired')); return }
     if (destType === 'synology') {
-      if (!synologyUrl.trim()) { setError('Synology URL is required.'); return }
-      if (!username.trim())    { setError('Username is required.');     return }
-      if (!isEdit && !password.trim()) { setError('Password is required when creating a Synology destination.'); return }
+      if (!synologyUrl.trim()) { setError(t('destUrlRequired')); return }
+      if (!username.trim())    { setError(t('destUsernameRequired')); return }
+      if (!isEdit && !password.trim()) { setError(t('destPasswordRequired')); return }
     }
     setSaving(true)
     setError(null)
@@ -106,7 +102,7 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
       onSaved()
       onClose()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save destination.')
+      setError(err instanceof ApiError ? err.message : t('destinationSaveFailed'))
     } finally {
       setSaving(false)
     }
@@ -115,54 +111,55 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit destination' : 'Add destination'}
+      role="dialog" aria-modal="true"
+      aria-label={isEdit ? t('editDestination') : t('addDestination')}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-sm font-semibold text-foreground">
-            {isEdit ? `Edit — ${initial.name}` : 'Add destination'}
+            {isEdit ? `${t('editModalPre')} ${initial.name}` : t('addDestination')}
           </h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="Close">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label={t('close')}>
             <X size={14} aria-hidden="true" />
           </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-5">
           <div>
-            <label htmlFor="dest-name" className={LABEL}>Name</label>
+            <label htmlFor="dest-name" className={LABEL}>{t('colName')}</label>
             <input id="dest-name" type="text" value={name} onChange={(e) => setName(e.target.value)}
               placeholder="e.g. NAS Maison" className={INPUT} />
           </div>
 
           <div>
-            <label htmlFor="dest-type" className={LABEL}>Destination type</label>
+            <label htmlFor="dest-type" className={LABEL}>{t('labelDestinationType')}</label>
             <select id="dest-type" value={destType} onChange={(e) => setDestType(e.target.value)}
               disabled={isEdit} className={SELECT}>
-              {availableTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {availableTypes.map(dt => <option key={dt.value} value={dt.value}>{dt.label}</option>)}
             </select>
             {isEdit && (
-              <p className="mt-1 text-xs text-muted-foreground">Type cannot be changed after creation.</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t('destTypeLocked')}</p>
             )}
           </div>
 
           {destType === 'synology' && (
             <>
               <div>
-                <label htmlFor="dest-url" className={LABEL}>Synology URL</label>
+                <label htmlFor="dest-url" className={LABEL}>{t('labelSynologyUrl')}</label>
                 <input id="dest-url" type="text" value={synologyUrl}
                   onChange={(e) => setSynologyUrl(e.target.value)}
                   placeholder="http://nas.local:5000" className={INPUT} />
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="dest-user" className={LABEL}>Username</label>
+                  <label htmlFor="dest-user" className={LABEL}>{t('labelUsername')}</label>
                   <input id="dest-user" type="text" value={username}
                     onChange={(e) => setUsername(e.target.value)} autoComplete="off" className={INPUT} />
                 </div>
                 <div>
                   <label htmlFor="dest-pw" className={LABEL}>
-                    Password{isEdit ? ' (optional)' : ''}
+                    {isEdit ? t('labelPasswordOptional') : t('labelPassword')}
                   </label>
                   <input id="dest-pw" type="password" value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -173,32 +170,32 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
               {isEdit && (
                 <div className="flex items-start gap-2 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
                   <Info size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
-                  Leave blank to keep the existing password.
+                  {t('leaveBlankKeepPassword')}
                 </div>
               )}
               <div>
-                <label htmlFor="dest-base" className={LABEL}>Destination folder (optional)</label>
+                <label htmlFor="dest-base" className={LABEL}>{t('labelDestFolder')}</label>
                 <input id="dest-base" type="text" value={destinationBase}
                   onChange={(e) => setDestinationBase(e.target.value)}
                   placeholder="downloads" className={INPUT} />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Logical destination folder managed by {appName} — e.g. <code>downloads</code>, <code>movies</code>.
+                  {t('destFolderHintPre')} {appName} {t('destFolderHintPost')}
                 </p>
               </div>
               <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={verifySSL} onChange={(e) => setVerifySSL(e.target.checked)}
                   className="h-4 w-4 rounded border-input accent-primary" />
-                Verify SSL certificate
+                {t('verifySSL')}
               </label>
             </>
           )}
 
           {destType === 'local' && (
             <div>
-              <label htmlFor="dest-path" className={LABEL}>Base path (relative)</label>
+              <label htmlFor="dest-path" className={LABEL}>{t('labelBasePath')}</label>
               <input id="dest-path" type="text" value={basePath}
                 onChange={(e) => setBasePath(e.target.value)} placeholder="downloads" className={INPUT} />
-              <p className="mt-1 text-xs text-muted-foreground">Relative path only — absolute paths are not allowed.</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t('destPathHint')}</p>
             </div>
           )}
 
@@ -206,22 +203,22 @@ export default function DestinationModal({ initial, onClose, onSaved }: Props) {
             <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
               <input type="checkbox" checked={isEnabled} onChange={(e) => setIsEnabled(e.target.checked)}
                 className="h-4 w-4 rounded border-input accent-primary" />
-              Enabled
+              {t('labelEnabled')}
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
               <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)}
                 className="h-4 w-4 rounded border-input accent-primary" />
-              Default
+              {t('badgeDefault')}
             </label>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{t('cancel')}</Button>
             <Button type="submit" size="sm" disabled={saving}>
               {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-              {isEdit ? 'Save changes' : 'Add destination'}
+              {isEdit ? t('saveChanges') : t('addDestination')}
             </Button>
           </div>
         </form>

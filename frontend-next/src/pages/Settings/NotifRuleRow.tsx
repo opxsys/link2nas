@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { updateNotificationRule } from '@/api/notifications'
 import { ApiError } from '@/api/client'
 import type { NotificationConfig, NotificationRule } from '@/pages/Notifications/notifications.types'
+import { useI18n } from '@/i18n'
 
 const SEV_CLASS: Record<string, string> = {
   info:     'border-border bg-muted text-muted-foreground',
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDelete, onToggled }: Props) {
+  const { t } = useI18n()
   const [toggling, setToggling] = useState(false)
   const [toggleError, setToggleError] = useState<string | null>(null)
   const cfg = configs.find(c => c.id === rule.config_id)
@@ -37,7 +39,7 @@ export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDe
       const updated = await updateNotificationRule(rule.id, { is_enabled: next })
       onToggled(updated)
     } catch (err) {
-      setToggleError(err instanceof ApiError ? err.message : 'Could not update notification rule.')
+      setToggleError(err instanceof ApiError ? err.message : t('saveFailed'))
     } finally {
       setToggling(false)
     }
@@ -58,15 +60,15 @@ export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDe
         </div>
         {rule.event_types.length > 0 ? (
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            Events: {rule.event_types.join(', ')}
+            {t('labelEventsPrefix')} {rule.event_types.join(', ')}
           </p>
         ) : (
-          <p className="mt-0.5 text-xs text-muted-foreground">All events</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('allEvents')}</p>
         )}
         {toggleError && (
           <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
             <span>{toggleError}</span>
-            <button onClick={() => setToggleError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <button onClick={() => setToggleError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
               <X size={11} aria-hidden="true" />
             </button>
           </div>
@@ -74,7 +76,7 @@ export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDe
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <label className={`flex items-center gap-1.5 ${blocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-          <span className="text-xs text-muted-foreground">{rule.is_enabled ? 'On' : 'Off'}</span>
+          <span className="text-xs text-muted-foreground">{rule.is_enabled ? t('toggleOn') : t('toggleOff')}</span>
           {toggling
             ? <Loader2 size={13} className="animate-spin text-muted-foreground" aria-hidden="true" />
             : (
@@ -84,15 +86,15 @@ export default function NotifRuleRow({ rule, configs, emailBlocked, onEdit, onDe
                 disabled={blocked}
                 onChange={handleToggle}
                 className="h-4 w-4 rounded border-input accent-primary disabled:opacity-50"
-                aria-label={`${rule.is_enabled ? 'Disable' : 'Enable'} ${rule.name}`}
+                aria-label={`${rule.is_enabled ? t('titleDisable') : t('titleEnable')} ${rule.name}`}
               />
             )
           }
         </label>
-        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Edit ${rule.name}`} onClick={onEdit}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`${t('titleEdit')} ${rule.name}`} onClick={onEdit}>
           <Pencil size={13} aria-hidden="true" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label={`Delete ${rule.name}`} onClick={onDelete}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label={`${t('delete')} ${rule.name}`} onClick={onDelete}>
           <Trash2 size={13} aria-hidden="true" />
         </Button>
       </div>

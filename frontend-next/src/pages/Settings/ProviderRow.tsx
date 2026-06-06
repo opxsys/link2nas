@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { testProviderConfig } from '@/api/provider-configs'
 import { ApiError } from '@/api/client'
 import type { ProviderConfig } from '@/api/provider-configs'
+import { useI18n } from '@/i18n'
 
 const TYPE_ICON: Record<string, LucideIcon> = {
   realdebrid: Zap,
@@ -41,8 +42,9 @@ interface Props {
 
 export default function ProviderRow({
   config, actingAction, isLastActiveDefault,
-  onEdit, onToggleEnabled, onSetDefault, onDelete, onReload,
+  onEdit, onToggleEnabled, onSetDefault, onDelete,
 }: Props) {
+  const { t } = useI18n()
   const acting = actingAction !== null
   const [testStatus, setTestStatus] = useState<TestStatus>('idle')
   const [testMessage, setTestMessage] = useState('')
@@ -60,10 +62,10 @@ export default function ProviderRow({
       const result = await testProviderConfig(config.id)
       const username = result.provider_user?.['username'] as string | undefined
       setTestStatus('ok')
-      setTestMessage(username ? `Connected — ${username}` : 'Connected')
+      setTestMessage(username ? `${t('providerConnected')} — ${username}` : t('providerConnected'))
     } catch (err) {
       setTestStatus('error')
-      setTestMessage(err instanceof ApiError ? err.message : 'Test failed')
+      setTestMessage(err instanceof ApiError ? err.message : t('testFailed'))
     }
   }
 
@@ -78,33 +80,33 @@ export default function ProviderRow({
           <span className="text-sm font-medium text-foreground">{config.name}</span>
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{typeLabel}</span>
           {config.is_enabled && (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">Active</span>
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">{t('badgeActive')}</span>
           )}
           {config.is_default && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Default</span>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{t('badgeDefault')}</span>
           )}
           {config.has_api_key && (
             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              <KeyRound size={10} aria-hidden="true" /> API key set
+              <KeyRound size={10} aria-hidden="true" /> {t('badgeApiKeySet')}
             </span>
           )}
           {isExpired && (
             <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-              <AlertTriangle size={10} aria-hidden="true" /> Expired
+              <AlertTriangle size={10} aria-hidden="true" /> {t('badgeExpired')}
             </span>
           )}
         </div>
 
         {expiryLabel && (
           <p className={`mt-0.5 text-xs ${isExpired ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
-            {isExpired ? 'Expired' : 'Expires'}: {expiryLabel}
+            {isExpired ? t('badgeExpired') : t('labelExpires')}: {expiryLabel}
           </p>
         )}
 
         {testStatus === 'testing' && (
           <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 size={11} className="animate-spin" aria-hidden="true" />
-            <span>Testing…</span>
+            <span>{t('testing')}</span>
           </div>
         )}
 
@@ -125,14 +127,14 @@ export default function ProviderRow({
 
       <div className="flex shrink-0 items-center gap-1">
         <Button variant="ghost" size="icon" className="h-7 w-7" disabled={acting}
-          aria-label={`Edit ${config.name}`} title="Edit" onClick={onEdit}>
+          aria-label={`${t('titleEdit')} ${config.name}`} title={t('titleEdit')} onClick={onEdit}>
           <Pencil size={13} aria-hidden="true" />
         </Button>
 
         <Button variant="ghost" size="icon" className="h-7 w-7"
           disabled={acting || testStatus === 'testing' || !config.is_enabled}
-          aria-label={`Test ${config.name}`}
-          title={!config.is_enabled ? 'Enable provider first' : 'Test connection'}
+          aria-label={`${t('testConnection')} ${config.name}`}
+          title={!config.is_enabled ? t('provEnableFirst') : t('testConnection')}
           onClick={handleTest}>
           {testStatus === 'testing'
             ? <Loader2 size={13} className="animate-spin" aria-hidden="true" />
@@ -142,11 +144,11 @@ export default function ProviderRow({
         <Button variant="ghost" size="icon" className="h-7 w-7"
           disabled={acting || (config.is_default && !isLastActiveDefault)}
           title={
-            config.is_default && !isLastActiveDefault ? 'Set another provider as default first'
-              : isLastActiveDefault ? 'Disable — this will leave no active provider'
-              : config.is_enabled ? 'Disable' : 'Enable'
+            config.is_default && !isLastActiveDefault ? t('provSetAnotherDefault')
+              : isLastActiveDefault ? t('provDisableLastWarning')
+              : config.is_enabled ? t('titleDisable') : t('titleEnable')
           }
-          aria-label={config.is_enabled ? `Disable ${config.name}` : `Enable ${config.name}`}
+          aria-label={config.is_enabled ? `${t('titleDisable')} ${config.name}` : `${t('titleEnable')} ${config.name}`}
           onClick={onToggleEnabled}>
           {acting && actingAction === 'toggle'
             ? <Loader2 size={13} className="animate-spin" aria-hidden="true" />
@@ -155,15 +157,15 @@ export default function ProviderRow({
 
         <Button variant="ghost" size="icon" className="h-7 w-7"
           disabled={acting || config.is_default || !config.is_enabled}
-          title={!config.is_enabled ? 'Enable provider first' : config.is_default ? 'Already default' : 'Set as default'}
-          aria-label={`Set ${config.name} as default`} onClick={onSetDefault}>
+          title={!config.is_enabled ? t('provEnableFirst') : config.is_default ? t('alreadyDefault') : t('setAsDefault')}
+          aria-label={`${t('setAsDefault')} ${config.name}`} onClick={onSetDefault}>
           {acting && actingAction === 'default'
             ? <Loader2 size={13} className="animate-spin" aria-hidden="true" />
             : <Star size={13} className={config.is_default ? 'fill-primary text-primary' : ''} aria-hidden="true" />}
         </Button>
 
         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-          disabled={acting} aria-label={`Delete ${config.name}`} onClick={onDelete}>
+          disabled={acting} aria-label={`${t('delete')} ${config.name}`} onClick={onDelete}>
           <Trash2 size={13} aria-hidden="true" />
         </Button>
       </div>

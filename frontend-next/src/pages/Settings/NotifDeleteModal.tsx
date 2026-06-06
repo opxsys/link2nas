@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { Trash2, X, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n'
 
 interface Props {
   title: string
   description: string
-  /** When >0, renders an amber warning that N linked rules will also be deleted. */
   linkedCount?: number
   onClose: () => void
   onConfirm: () => Promise<void>
 }
 
 export default function NotifDeleteModal({ title, description, linkedCount = 0, onClose, onConfirm }: Props) {
+  const { t } = useI18n()
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,7 +23,7 @@ export default function NotifDeleteModal({ title, description, linkedCount = 0, 
       await onConfirm()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.')
+      setError(err instanceof Error ? err.message : t('deleteFailed'))
       setDeleting(false)
     }
   }
@@ -36,7 +37,7 @@ export default function NotifDeleteModal({ title, description, linkedCount = 0, 
       <div className="w-full max-w-sm rounded-lg border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="Close">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label={t('close')}>
             <X size={14} aria-hidden="true" />
           </Button>
         </div>
@@ -46,8 +47,8 @@ export default function NotifDeleteModal({ title, description, linkedCount = 0, 
             <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
               <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
               <span>
-                This channel is linked to <strong>{linkedCount}</strong> notification rule{linkedCount > 1 ? 's' : ''}.
-                {linkedCount > 1 ? ' They' : ' It'} will also be permanently deleted.
+                {t('notifLinkedPre')} <strong>{linkedCount}</strong>{' '}
+                {linkedCount > 1 ? t('notifLinkedRuleN') : t('notifLinkedRule1')}
               </span>
             </div>
           )}
@@ -58,13 +59,13 @@ export default function NotifDeleteModal({ title, description, linkedCount = 0, 
           )}
           <div className="mt-4 flex justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={deleting}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="button" variant="destructive" size="sm" onClick={handleConfirm} disabled={deleting}>
               {deleting
                 ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
                 : <Trash2 size={13} className="mr-1.5" aria-hidden="true" />}
-              Delete
+              {t('delete')}
             </Button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { listMyApiKeys, revokeApiKey, deleteApiKey } from '@/api/user-api-keys'
 import { invalidateQbtWriteKeyStatus } from '@/lib/useQbtWriteKeyStatus'
 import type { UserApiKey, CreatedApiKey } from '@/api/user-api-keys'
+import { useI18n } from '@/i18n'
 import CreateApiKeyModal from './CreateApiKeyModal'
 import NewKeyReveal from './NewKeyReveal'
 
@@ -13,13 +14,15 @@ type ConfirmState = { keyId: string; keyName: string; action: 'revoke' | 'delete
 const TH = 'px-4 py-2.5 text-left text-xs font-medium text-muted-foreground'
 const TD = 'px-4 py-3 text-sm'
 
-function StatusBadge({ active }: { active: boolean }) {
+function ApiKeyStatusBadge({ active }: { active: boolean }) {
+  const { t } = useI18n()
   return active
-    ? <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 border border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">Active</span>
-    : <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">Revoked</span>
+    ? <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 border border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">{t('badgeActive')}</span>
+    : <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border border-border">{t('badgeRevoked')}</span>
 }
 
 export default function ApiKeysSettings() {
+  const { t } = useI18n()
   const [keys, setKeys]           = useState<UserApiKey[] | null>(null)
   const [loading, setLoading]     = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -37,11 +40,11 @@ export default function ApiKeysSettings() {
     try {
       setKeys(await listMyApiKeys())
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load API keys.')
+      setFetchError(err instanceof Error ? err.message : t('apiKeyLoadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => { fetchKeys() }, [fetchKeys])
 
@@ -75,9 +78,9 @@ export default function ApiKeysSettings() {
       }
       fetchKeys()
       invalidateQbtWriteKeyStatus()
-      showSuccess(action === 'revoke' ? 'API key revoked.' : 'API key deleted.')
+      showSuccess(action === 'revoke' ? t('apiKeyRevoked') : t('apiKeyDeleted'))
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Action failed.')
+      setActionError(err instanceof Error ? err.message : t('apiKeyActionFailed'))
     } finally {
       setActing(null)
     }
@@ -86,11 +89,11 @@ export default function ApiKeysSettings() {
   return (
     <>
       <SectionCard
-        title="API Keys"
-        description="Keys used for external integrations such as qBittorrent and Prowlarr."
+        title={t('sectionApiKeys')}
+        description={t('apiKeysDesc')}
         actions={
           <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus size={13} aria-hidden="true" /> Create key
+            <Plus size={13} aria-hidden="true" /> {t('createKey')}
           </Button>
         }
         bodyClassName="p-0"
@@ -111,7 +114,7 @@ export default function ApiKeysSettings() {
               <CheckCircle2 size={13} aria-hidden="true" />
               {actionSuccess}
             </span>
-            <button onClick={() => setActionSuccess(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <button onClick={() => setActionSuccess(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
               <X size={13} aria-hidden="true" />
             </button>
           </div>
@@ -123,7 +126,7 @@ export default function ApiKeysSettings() {
               <AlertCircle size={13} aria-hidden="true" />
               {actionError}
             </span>
-            <button onClick={() => setActionError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <button onClick={() => setActionError(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
               <X size={13} aria-hidden="true" />
             </button>
           </div>
@@ -132,7 +135,7 @@ export default function ApiKeysSettings() {
         {loading && (
           <div className="flex items-center gap-2 px-4 py-8 text-muted-foreground">
             <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-            <span className="text-sm">Loading…</span>
+            <span className="text-sm">{t('loadingApiKeys')}</span>
           </div>
         )}
 
@@ -142,7 +145,7 @@ export default function ApiKeysSettings() {
               <AlertCircle size={14} aria-hidden="true" /> {fetchError}
             </span>
             <Button variant="outline" size="sm" onClick={fetchKeys}>
-              <RefreshCw size={13} className="mr-1.5" aria-hidden="true" /> Retry
+              <RefreshCw size={13} className="mr-1.5" aria-hidden="true" /> {t('retry')}
             </Button>
           </div>
         )}
@@ -152,12 +155,12 @@ export default function ApiKeysSettings() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  <th className={TH}>Name</th>
-                  <th className={TH}>Prefix</th>
-                  <th className={TH}>Scopes</th>
-                  <th className={TH}>Status</th>
-                  <th className={`${TH} hidden sm:table-cell`}>Created</th>
-                  <th className={`${TH} hidden sm:table-cell`}>Last used</th>
+                  <th className={TH}>{t('colName')}</th>
+                  <th className={TH}>{t('colPrefix')}</th>
+                  <th className={TH}>{t('colScopes')}</th>
+                  <th className={TH}>{t('colStatus')}</th>
+                  <th className={`${TH} hidden sm:table-cell`}>{t('colCreated')}</th>
+                  <th className={`${TH} hidden sm:table-cell`}>{t('colLastUsed')}</th>
                   <th className={TH}><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
@@ -165,7 +168,7 @@ export default function ApiKeysSettings() {
                 {keys.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No API keys yet.
+                      {t('noApiKeys')}
                     </td>
                   </tr>
                 )}
@@ -190,7 +193,7 @@ export default function ApiKeysSettings() {
                           ))}
                         </div>
                       </td>
-                      <td className={TD}><StatusBadge active={key.is_active} /></td>
+                      <td className={TD}><ApiKeyStatusBadge active={key.is_active} /></td>
                       <td className={`${TD} hidden text-muted-foreground sm:table-cell`}>
                         {key.created_at ? key.created_at.slice(0, 10) : '—'}
                       </td>
@@ -203,13 +206,13 @@ export default function ApiKeysSettings() {
                         ) : isConfirming ? (
                           <span className="flex items-center justify-end gap-2">
                             <span className="text-xs text-muted-foreground">
-                              {confirm.action === 'revoke' ? 'Revoke?' : 'Delete?'}
+                              {confirm.action === 'revoke' ? t('confirmRevoke') : t('confirmDeleteKey')}
                             </span>
                             <Button size="sm" variant="destructive" onClick={handleConfirmedAction}>
-                              Yes
+                              {t('yes')}
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setConfirm(null)}>
-                              Cancel
+                              {t('cancel')}
                             </Button>
                           </span>
                         ) : key.is_active ? (
@@ -217,20 +220,20 @@ export default function ApiKeysSettings() {
                             variant="ghost"
                             size="sm"
                             className="text-muted-foreground hover:text-amber-600 dark:hover:text-amber-400"
-                            aria-label={`Revoke ${key.name}`}
+                            aria-label={`${t('btnRevoke')} ${key.name}`}
                             onClick={() => setConfirm({ keyId: key.id, keyName: key.name, action: 'revoke' })}
                           >
-                            <Ban size={13} className="mr-1" aria-hidden="true" /> Revoke
+                            <Ban size={13} className="mr-1" aria-hidden="true" /> {t('btnRevoke')}
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="text-destructive/60 hover:text-destructive"
-                            aria-label={`Delete ${key.name}`}
+                            aria-label={`${t('delete')} ${key.name}`}
                             onClick={() => setConfirm({ keyId: key.id, keyName: key.name, action: 'delete' })}
                           >
-                            <Trash2 size={13} className="mr-1" aria-hidden="true" /> Delete
+                            <Trash2 size={13} className="mr-1" aria-hidden="true" /> {t('delete')}
                           </Button>
                         )}
                       </td>
@@ -243,7 +246,7 @@ export default function ApiKeysSettings() {
         )}
 
         <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
-          Revoking a key disables it immediately. Revoked keys can then be permanently deleted.
+          {t('revokeNote')}
         </p>
       </SectionCard>
 

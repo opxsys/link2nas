@@ -8,6 +8,7 @@ import {
 } from '@/api/notifications'
 import { ApiError } from '@/api/client'
 import type { NotificationConfig, NotificationRule } from '@/pages/Notifications/notifications.types'
+import { useI18n } from '@/i18n'
 import NotifChannelRow from './NotifChannelRow'
 import NotifRuleRow from './NotifRuleRow'
 import NotifChannelModal from './NotifChannelModal'
@@ -23,6 +24,7 @@ type DeleteTarget =
   | { open: true; kind: 'rule';   item: NotificationRule }
 
 export default function NotificationSettings() {
+  const { t } = useI18n()
   const [configs, setConfigs] = useState<NotificationConfig[]>([])
   const [rules, setRules] = useState<NotificationRule[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,7 +37,6 @@ export default function NotificationSettings() {
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { me } = useMe()
-  // Derived from /api/v2/me (non-admin endpoint) — reliable for all user roles.
   const smtpEnabled: boolean | null = me !== null ? (me.email_sending_available ?? null) : null
 
   const load = useCallback(async () => {
@@ -46,11 +47,11 @@ export default function NotificationSettings() {
       setConfigs(cfgs)
       setRules(rlz)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load notification settings.')
+      setError(err instanceof ApiError ? err.message : t('notifLoadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => { load() }, [load])
 
@@ -63,9 +64,8 @@ export default function NotificationSettings() {
   }
 
   function handleConfigSaved(_cfg: NotificationConfig) {
-    // Always reload: backend may have cleared is_default on other configs of the same channel type
     load()
-    showSuccess('Channel saved.')
+    showSuccess(t('channelSaved'))
   }
 
   function handleRuleSaved(rule: NotificationRule) {
@@ -78,26 +78,24 @@ export default function NotificationSettings() {
   async function handleDeleteConfirm() {
     if (!deleteTarget.open) return
     if (deleteTarget.kind === 'config') {
-      // Delete linked rules first — backend does not cascade, leaving orphans otherwise
       const linked = rules.filter(r => r.config_id === deleteTarget.item.id)
       for (const rule of linked) {
         await deleteNotificationRule(rule.id)
       }
       await deleteNotificationConfig(deleteTarget.item.id)
-      // Reload to get authoritative state (also fixes default display)
       await load()
-      showSuccess('Channel deleted.')
+      showSuccess(t('channelDeleted'))
     } else {
       await deleteNotificationRule(deleteTarget.item.id)
       setRules(prev => prev.filter(r => r.id !== deleteTarget.item.id))
-      showSuccess('Rule deleted.')
+      showSuccess(t('ruleDeleted'))
     }
   }
 
   function deleteDescription(): string {
     if (!deleteTarget.open) return ''
-    if (deleteTarget.kind === 'rule') return `Delete rule "${deleteTarget.item.name}"? This cannot be undone.`
-    return `Delete channel "${deleteTarget.item.name}"? This cannot be undone.`
+    if (deleteTarget.kind === 'rule') return `${t('deleteRuleConfirmPre')} "${deleteTarget.item.name}"${t('deleteConfirmPost')}`
+    return `${t('deleteChannelConfirmPre')} "${deleteTarget.item.name}"${t('deleteConfirmPost')}`
   }
 
   function deleteLinkedCount(): number {
@@ -116,26 +114,25 @@ export default function NotificationSettings() {
             <CheckCircle2 size={14} aria-hidden="true" />
             {successMessage}
           </span>
-          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss">
+          <button onClick={() => setSuccessMessage(null)} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
             <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}
 
-      {/* Channels */}
       <SectionCard
-        title="Notification Channels"
-        description="Delivery endpoints: email, Gotify, or webhook."
+        title={t('sectionChannels')}
+        description={t('channelsDesc')}
         actions={
           <Button variant="outline" size="sm"
             onClick={() => setChannelModal({ open: true, editing: null })}>
-            <Plus size={13} className="mr-1.5" aria-hidden="true" /> Add channel
+            <Plus size={13} className="mr-1.5" aria-hidden="true" /> {t('addChannel')}
           </Button>
         }
       >
         {loading && (
           <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 size={14} className="animate-spin" aria-hidden="true" /> Loading…
+            <Loader2 size={14} className="animate-spin" aria-hidden="true" /> {t('loading')}
           </div>
         )}
         {!loading && error && (
@@ -146,11 +143,11 @@ export default function NotificationSettings() {
         {!loading && !error && smtpDisabled && hasEmailConfig && (
           <div className="mb-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
             <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-            SMTP is not configured or disabled — email channels are unavailable.
+            {t('smtpDisabledChannelWarning')}
           </div>
         )}
         {!loading && !error && configs.length === 0 && (
-          <p className="py-4 text-sm italic text-muted-foreground">No channels configured yet.</p>
+          <p className="py-4 text-sm italic text-muted-foreground">{t('noChannels')}</p>
         )}
         {!loading && !error && configs.length > 0 && (
           <div className="flex flex-col gap-2">
@@ -165,21 +162,20 @@ export default function NotificationSettings() {
         )}
       </SectionCard>
 
-      {/* Rules */}
       <SectionCard
-        title="Notification Rules"
-        description="Define when and via which channel you are notified."
+        title={t('sectionRules')}
+        description={t('rulesDesc')}
         actions={
           <Button variant="outline" size="sm" disabled={configs.length === 0}
-            title={configs.length === 0 ? 'Add a channel first' : undefined}
+            title={configs.length === 0 ? t('addChannelFirst') : undefined}
             onClick={() => setRuleModal({ open: true, editing: null })}>
-            <Plus size={13} className="mr-1.5" aria-hidden="true" /> Add rule
+            <Plus size={13} className="mr-1.5" aria-hidden="true" /> {t('addRule')}
           </Button>
         }
       >
         {!loading && !error && rules.length === 0 && (
           <p className="py-4 text-sm italic text-muted-foreground">
-            {configs.length === 0 ? 'Add a channel first.' : 'No rules configured yet.'}
+            {configs.length === 0 ? `${t('addChannelFirst')}.` : t('noRules')}
           </p>
         )}
         {!loading && !error && rules.length > 0 && (
@@ -196,7 +192,6 @@ export default function NotificationSettings() {
         )}
       </SectionCard>
 
-      {/* Modals */}
       {channelModal.open && (
         <NotifChannelModal
           editing={channelModal.editing} smtpEnabled={smtpEnabled}
@@ -213,7 +208,7 @@ export default function NotificationSettings() {
       )}
       {deleteTarget.open && (
         <NotifDeleteModal
-          title={deleteTarget.kind === 'config' ? 'Delete channel' : 'Delete rule'}
+          title={deleteTarget.kind === 'config' ? t('deleteChannelTitle') : t('deleteRuleTitle')}
           description={deleteDescription()}
           linkedCount={deleteLinkedCount()}
           onClose={() => setDeleteTarget({ open: false })}
