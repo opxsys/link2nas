@@ -181,7 +181,7 @@ export default function AnnouncementBanner() {
               className={btnClass}
               onClick={handleAcknowledge}
               disabled={acting}
-              aria-label={`Acknowledge: ${banner.title}`}
+              aria-label={`${t('annAcknowledge')}: ${banner.title}`}
             >
               {acting
                 ? <Loader2 size={11} className="animate-spin" aria-hidden="true" />
@@ -194,7 +194,7 @@ export default function AnnouncementBanner() {
               className={btnClass}
               onClick={handleRead}
               disabled={acting}
-              aria-label={`Mark as read: ${banner.title}`}
+              aria-label={`${t('annMarkRead')}: ${banner.title}`}
             >
               {acting
                 ? <Loader2 size={11} className="animate-spin" aria-hidden="true" />
@@ -205,7 +205,7 @@ export default function AnnouncementBanner() {
           <button
             className={`rounded p-1.5 transition-colors hover:bg-current/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40 ${style.muted}`}
             onClick={dismiss}
-            aria-label={`Dismiss announcement: ${banner.title}`}
+            aria-label={`${t('ariaAnnDismiss')}: ${banner.title}`}
           >
             <X size={14} aria-hidden="true" />
           </button>
