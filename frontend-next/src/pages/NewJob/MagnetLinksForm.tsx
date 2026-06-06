@@ -1,9 +1,12 @@
+import { useI18n } from '@/i18n'
+
 interface MagnetLinksFormProps {
   value: string
   onChange: (value: string) => void
 }
 
 export default function MagnetLinksForm({ value, onChange }: MagnetLinksFormProps) {
+  const { t } = useI18n()
   const lineCount = value.trim() ? value.trim().split('\n').filter(Boolean).length : 0
 
   return (
@@ -13,7 +16,7 @@ export default function MagnetLinksForm({ value, onChange }: MagnetLinksFormProp
           htmlFor="magnet-links-input"
           className="mb-1.5 block text-xs font-medium text-foreground"
         >
-          Magnet links or direct download URLs
+          {t('magnetLinksLabel')}
         </label>
         <textarea
           id="magnet-links-input"
@@ -30,8 +33,8 @@ export default function MagnetLinksForm({ value, onChange }: MagnetLinksFormProp
       </div>
       <p id="magnet-links-hint" className="text-xs text-muted-foreground">
         {lineCount > 0
-          ? `${lineCount} link${lineCount !== 1 ? 's' : ''} entered`
-          : 'Accepts magnet links, torrent URLs, and direct download links — one per line.'}
+          ? `${lineCount} ${lineCount !== 1 ? t('links') : t('link')} ${t('entered')}`
+          : t('magnetLinksHint')}
       </p>
     </div>
   )

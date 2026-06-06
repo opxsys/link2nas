@@ -6,6 +6,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/components/status/StatusBadge'
+import { useI18n } from '@/i18n'
 import JobFilesTable from './JobFilesTable'
 import JobProgressCard from './JobProgressCard'
 import { jobName, jobProvider, jobDestination, formatBytes } from './jobs.types'
@@ -13,13 +14,6 @@ import { getJobCapabilities } from './JobCapabilities'
 import type { RealJob, RealJobDestinationConfig, RealJobProviderConfig } from '@/api/jobs'
 
 type Tab = 'summary' | 'destination' | 'files' | 'links' | 'technical'
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'summary',     label: 'Summary'     },
-  { id: 'destination', label: 'Destination' },
-  { id: 'files',       label: 'Files'       },
-  { id: 'links',       label: 'Links'       },
-  { id: 'technical',   label: 'Technical'   },
-]
 
 interface Props {
   job: RealJob
@@ -32,10 +26,11 @@ interface Props {
 }
 
 function CopyBtn({ text, label, small }: { text: string; label: string; small?: boolean }) {
+  const { t } = useI18n()
   const [done, setDone] = useState(false)
   function copy() { navigator.clipboard.writeText(text).catch(() => undefined); setDone(true); setTimeout(() => setDone(false), 2000) }
   return (
-    <button onClick={copy} className={cn('shrink-0 rounded text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', small && 'p-0.5')} aria-label={label} title="Copy">
+    <button onClick={copy} className={cn('shrink-0 rounded text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', small && 'p-0.5')} aria-label={label} title={t('copy')}>
       {done ? <CheckCircle2 size={small ? 12 : 14} className="text-green-600" /> : <Copy size={small ? 12 : 14} />}
     </button>
   )
@@ -64,6 +59,7 @@ function ProgressBar({ percent, colorClass }: { percent: number; colorClass?: st
 
 interface SelectItemProps<T> { items: T[]; onSelect: (item: T) => void; onCancel: () => void; title: string; labelFn: (item: T) => string }
 function InlineSelector<T extends { id: string }>({ items, onSelect, onCancel, title, labelFn }: SelectItemProps<T>) {
+  const { t } = useI18n()
   const [chosen, setChosen] = useState(items[0]?.id ?? '')
   return (
     <div className="rounded-md border border-border bg-muted/30 p-3 text-xs">
@@ -72,17 +68,26 @@ function InlineSelector<T extends { id: string }>({ items, onSelect, onCancel, t
         {items.map(item => <option key={item.id} value={item.id}>{labelFn(item)}</option>)}
       </select>
       <div className="flex gap-2">
-        <Button size="sm" className="h-7 text-xs" onClick={() => { const item = items.find(i => i.id === chosen); if (item) onSelect(item) }}>Confirm</Button>
-        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
+        <Button size="sm" className="h-7 text-xs" onClick={() => { const item = items.find(i => i.id === chosen); if (item) onSelect(item) }}>{t('confirm')}</Button>
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onCancel}>{t('cancel')}</Button>
       </div>
     </div>
   )
 }
 
 export default function JobDetailsSheet({ job, actionPending, actionError, onClose, onAction, onDeleteRequest, onDismissError }: Props) {
+  const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('summary')
   const [showDestSelector, setShowDestSelector] = useState<'send' | 'other' | null>(null)
   const [showProvSelector, setShowProvSelector] = useState(false)
+
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'summary',     label: t('tabSummary')     },
+    { id: 'destination', label: t('tabDestination') },
+    { id: 'files',       label: t('tabFiles')       },
+    { id: 'links',       label: t('tabLinks')       },
+    { id: 'technical',   label: t('tabTechnical')   },
+  ]
 
   const cap = getJobCapabilities(job)
   const busy = actionPending === job.id
@@ -142,7 +147,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
           <p className="truncate text-sm font-semibold text-foreground" title={jobName(job)}>{jobName(job)}</p>
           <div className="mt-1.5"><StatusBadge status={job.status} /></div>
         </div>
-        <button onClick={onClose} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+        <button onClick={onClose} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t('close')}>
           <X size={15} />
         </button>
       </div>
@@ -151,7 +156,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       <div className="flex flex-wrap items-center gap-1 border-b border-border px-3 py-2 [&>button]:whitespace-nowrap">
         {(cap.canCopySingle || cap.canCopyAll) && (
           <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(allLinks.join('\n')).catch(() => undefined)}>
-            <Copy size={13} />{allLinks.length > 1 ? 'Copy all' : 'Copy link'}
+            <Copy size={13} />{allLinks.length > 1 ? t('copyAll') : t('copyLink')}
           </Button>
         )}
         {cap.canUnrestrict && (
@@ -159,57 +164,57 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             title={allLinks.length > 0 ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
             onClick={() => onAction('unrestrict', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Unlock size={13} />}
-            {allLinks.length > 0 ? 'Regenerate' : 'Generate link'}
+            {allLinks.length > 0 ? t('regenerate') : t('generateLink')}
           </Button>
         )}
         {cap.canRefresh && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('refresh', job.id)}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} Refresh
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />} {t('refresh')}
           </Button>
         )}
         {cap.canSelectFiles && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('select_files', job.id)}>
             {busy && <Loader2 size={13} className="animate-spin" />}
-            Select all files
+            {t('selectAllFiles')}
           </Button>
         )}
         {(cap.canSendDirect || cap.canChooseSendDest) && (
           <Button variant="outline" size="sm" disabled={busy} onClick={handleSendDirect}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} {t('send')}
           </Button>
         )}
         {cap.canResend && (
           <Button variant="outline" size="sm" disabled={busy} onClick={handleResend}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Resend
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} {t('resend')}
           </Button>
         )}
         {cap.canSendOtherDest && (
           <Button variant="outline" size="sm" disabled={busy} onClick={handleSendOther}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-            Other dest
+            {t('otherDest')}
           </Button>
         )}
         {cap.canStart && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('start', job.id)}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Start
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} {t('start')}
           </Button>
         )}
         {cap.canRestart && (
           <Button variant="outline" size="sm" disabled={busy} onClick={() => onAction('restart', job.id)}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />} Restart
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />} {t('restart')}
           </Button>
         )}
         {cap.canCloneWithProvider && (
           <Button variant="outline" size="sm" disabled={busy} onClick={handleClone}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
-            Clone
+            {t('clone')}
           </Button>
         )}
         {cap.canCancel && (
           <Button variant="outline" size="sm" disabled={busy}
             className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
             onClick={() => onAction('cancel', job.id)}>
-            {busy ? <Loader2 size={13} className="animate-spin" /> : <CircleX size={13} />} Cancel
+            {busy ? <Loader2 size={13} className="animate-spin" /> : <CircleX size={13} />} {t('cancelJob')}
           </Button>
         )}
         {cap.canCancelLocalDownload && (
@@ -217,13 +222,13 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
             onClick={() => onAction('cancel_local_download', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <CircleX size={13} />}
-            Stop download
+            {t('stopDownload')}
           </Button>
         )}
         <Button variant="outline" size="sm" disabled={busy}
           className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
           onClick={() => onDeleteRequest(job.id)}>
-          <Trash2 size={13} /> Delete
+          <Trash2 size={13} /> {t('delete')}
         </Button>
       </div>
 
@@ -231,9 +236,9 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       {actionError && (
         <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
           <AlertCircle size={13} className="mt-0.5 shrink-0" />
-          <span className="flex-1"><span className="font-medium">Action failed:</span> {actionError}</span>
+          <span className="flex-1"><span className="font-medium">{t('actionFailed')}</span> {actionError}</span>
           {onDismissError && (
-            <button onClick={onDismissError} className="shrink-0 opacity-60 hover:opacity-100" aria-label="Dismiss error">
+            <button onClick={onDismissError} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('ariaDismissError')}>
               <X size={13} />
             </button>
           )}
@@ -244,7 +249,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       {showDestSelector && (
         <div className="border-b border-border p-3">
           <InlineSelector<RealJobDestinationConfig>
-            title={showDestSelector === 'other' ? 'Select another destination' : 'Select destination'}
+            title={showDestSelector === 'other' ? t('selectAnotherDestination') : t('selectDestination')}
             items={showDestSelector === 'other'
               ? cap.activeDestinations.filter(d => d.id !== job.destination_config_id)
               : cap.activeDestinations}
@@ -257,7 +262,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
       {showProvSelector && (
         <div className="border-b border-border p-3">
           <InlineSelector<RealJobProviderConfig>
-            title="Select provider to clone with"
+            title={t('selectProviderClone')}
             items={cap.otherProviders}
             labelFn={provLabel}
             onSelect={async (p) => { setShowProvSelector(false); await onAction('clone_with_provider', job.id, { provider_config_id: p.id }) }}
@@ -284,26 +289,28 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             {/* Hint: file selection required */}
             {job.status === 'waiting_files_selection' && (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
-                <p>File selection required. Click <span className="font-medium">Select all files</span> in the action bar to proceed automatically, or open the <span className="font-medium">Files</span> tab to review available files.</p>
+                <p>
+                  {t('fileSelectionPre')} <span className="font-medium">{t('selectAllFiles')}</span> {t('fileSelectionMid')} <span className="font-medium">{t('tabFiles')}</span> {t('fileSelectionPost')}
+                </p>
               </div>
             )}
 
-            <Row label="Source type" value={job.source_type} />
-            <Row label="Provider"    value={jobProvider(job)} />
-            <Row label="Destination" value={jobDestination(job) ?? 'Links only'} />
-            <Row label="Files"       value={job.files.length || null} />
-            <Row label="Size"        value={formatBytes(job.filesize)} />
+            <Row label={t('labelSourceType')} value={job.source_type} />
+            <Row label={t('colProvider')}     value={jobProvider(job)} />
+            <Row label={t('colDestination')}  value={jobDestination(job) ?? t('linksOnly')} />
+            <Row label={t('colFiles')}        value={job.files.length || null} />
+            <Row label={t('colSize')}         value={formatBytes(job.filesize)} />
 
             {/* Provider download progress — hide for statuses where progress has no meaning */}
             {!['created', 'failed', 'cancelled', 'links_only'].includes(job.status) && (
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-muted-foreground">Download progress</span>
+                  <span className="text-muted-foreground">{t('labelDownloadProgress')}</span>
                   <span className="font-medium text-foreground">{job.progress ?? 0}%</span>
                 </div>
                 <ProgressBar percent={job.progress ?? 0} />
                 {job.provider_status && (
-                  <p className="mt-1 text-[11px] text-muted-foreground">Provider: {job.provider_status}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{t('colProvider')}: {job.provider_status}</p>
                 )}
               </div>
             )}
@@ -311,24 +318,24 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
             {/* Last job error — shown before timestamps so it is not buried */}
             {job.error_message && (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-                <p className="mb-1 font-medium">Last job error</p>
+                <p className="mb-1 font-medium">{t('labelLastJobError')}</p>
                 <p className="font-mono text-[11px]">{job.error_message}</p>
               </div>
             )}
 
-            <Row label="Created"   value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
-            <Row label="Updated"   value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
-            <Row label="Cancelled" value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
+            <Row label={t('colCreated')}    value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
+            <Row label={t('labelUpdated')}  value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
+            <Row label={t('labelCancelled')} value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
 
             {/* Links ready card — shown whenever download links exist */}
             {showLinksHint && (
               <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <LinkIcon size={12} className="shrink-0" />
-                  <span>Download links are ready.</span>
+                  <span>{t('linksReadyHint')}</span>
                 </div>
                 <Button variant="outline" size="sm" className="h-6 shrink-0 px-2 text-xs" onClick={() => setTab('links')}>
-                  Open Links
+                  {t('openLinks')}
                 </Button>
               </div>
             )}
@@ -339,17 +346,17 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         {tab === 'destination' && (
           <div className="space-y-3 p-4 text-xs">
             {!cap.hasAnyDestination && !job.send_to_destination && (
-              <p className="italic text-muted-foreground">No destination configured for this job.</p>
+              <p className="italic text-muted-foreground">{t('noDestinationForJob')}</p>
             )}
-            <Row label="Send configured" value={job.send_to_destination ? 'Yes' : 'No'} />
-            <Row label="Sent"            value={job.sent_to_destination ? 'Yes' : 'No'} />
-            <Row label="Status"          value={job.destination_status} />
+            <Row label={t('labelSendConfigured')} value={job.send_to_destination ? t('yes') : t('no')} />
+            <Row label={t('labelSent')}           value={job.sent_to_destination ? t('yes') : t('no')} />
+            <Row label={t('labelStatus')}         value={job.destination_status} />
 
             {/* Destination download progress bar */}
             {job.destination_progress > 0 && (
               <div>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-muted-foreground">Destination progress</span>
+                  <span className="text-muted-foreground">{t('labelDestProgress')}</span>
                   <span className="font-medium text-foreground">{job.destination_progress}%</span>
                 </div>
                 <ProgressBar
@@ -359,10 +366,10 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
               </div>
             )}
 
-            <Row label="Message"      value={job.destination_message} />
-            <Row label="Path"         value={job.destination_display_path ?? job.destination_path} />
-            <Row label="Last attempt" value={job.destination_last_attempt ? new Date(job.destination_last_attempt).toLocaleString() : null} />
-            <Row label="Sent at"      value={job.sent_to_destination_at ? new Date(job.sent_to_destination_at).toLocaleString() : null} />
+            <Row label={t('labelMessage')}     value={job.destination_message} />
+            <Row label={t('labelPath')}        value={job.destination_display_path ?? job.destination_path} />
+            <Row label={t('labelLastAttempt')} value={job.destination_last_attempt ? new Date(job.destination_last_attempt).toLocaleString() : null} />
+            <Row label={t('labelSentAt')}      value={job.sent_to_destination_at ? new Date(job.sent_to_destination_at).toLocaleString() : null} />
           </div>
         )}
 
@@ -384,14 +391,14 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         {tab === 'links' && (
           <div className="p-4">
             {allLinks.length === 0
-              ? <p className="text-sm text-muted-foreground">No download links available yet.</p>
+              ? <p className="text-sm text-muted-foreground">{t('noLinksAvailable')}</p>
               : (
                 <>
                   {allLinks.length > 1 && (
                     <div className="mb-3 flex justify-end">
                       <Button variant="outline" size="sm"
                         onClick={() => navigator.clipboard.writeText(allLinks.join('\n')).catch(() => undefined)}>
-                        <Copy size={13} /> Copy all {allLinks.length} links
+                        <Copy size={13} /> {t('copyAll')} {allLinks.length} {t('links')}
                       </Button>
                     </div>
                   )}
@@ -415,12 +422,12 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
                                         onClick={() => onAction('unrestrict_file', job.id, { file_id: l.file_id })}
                                         className="shrink-0 rounded text-muted-foreground hover:text-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         title="Regenerate this file link."
-                                        aria-label={`Regenerate link for ${filename}`}
+                                        aria-label={`${t('regenerate')} ${filename}`}
                                       >
                                         {busy ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />}
                                       </button>
                               )}
-                              <CopyBtn text={url} label={`Copy direct download link for ${filename}`} small />
+                              <CopyBtn text={url} label={`${t('copy')} ${filename}`} small />
                             </li>
                           )
                         })
@@ -428,7 +435,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
                           <li key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2">
                             <LinkIcon size={11} className="shrink-0 text-muted-foreground" />
                             <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{url}</span>
-                            <CopyBtn text={url} label="Copy direct download link" small />
+                            <CopyBtn text={url} label={t('copy')} small />
                           </li>
                         ))
                     }
@@ -441,16 +448,16 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         {/* ── Technical ─────────────────────────────────────────── */}
         {tab === 'technical' && (
           <div className="space-y-2.5 p-4 text-xs">
-            <Row label="Job ID"             value={<span className="font-mono text-[11px]">{job.id}</span>} />
-            <Row label="Source type"        value={job.source_type} />
-            <Row label="Output mode"        value={job.output_mode} />
-            <Row label="Provider resource"  value={job.provider_resource_id ? <span className="font-mono text-[11px]">{job.provider_resource_id}</span> : null} />
-            <Row label="Provider status"    value={job.provider_status} />
-            <Row label="Created"            value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
-            <Row label="Updated"            value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
-            <Row label="Started"            value={job.started_at ? new Date(job.started_at).toLocaleString() : null} />
-            <Row label="Completed"          value={job.completed_at ? new Date(job.completed_at).toLocaleString() : null} />
-            <Row label="Cancelled"          value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
+            <Row label={t('labelJobId')}           value={<span className="font-mono text-[11px]">{job.id}</span>} />
+            <Row label={t('labelSourceType')}      value={job.source_type} />
+            <Row label={t('labelOutputMode')}      value={job.output_mode} />
+            <Row label={t('labelProviderResource')} value={job.provider_resource_id ? <span className="font-mono text-[11px]">{job.provider_resource_id}</span> : null} />
+            <Row label={t('labelProviderStatus')}  value={job.provider_status} />
+            <Row label={t('colCreated')}           value={job.created_at ? new Date(job.created_at).toLocaleString() : null} />
+            <Row label={t('labelUpdated')}         value={job.updated_at ? new Date(job.updated_at).toLocaleString() : null} />
+            <Row label={t('labelStarted')}         value={job.started_at ? new Date(job.started_at).toLocaleString() : null} />
+            <Row label={t('labelCompleted')}       value={job.completed_at ? new Date(job.completed_at).toLocaleString() : null} />
+            <Row label={t('labelCancelled')}       value={job.cancelled_at ? new Date(job.cancelled_at).toLocaleString() : null} />
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import StatusBadge from '@/components/status/StatusBadge'
+import { useI18n } from '@/i18n'
 import { displayValue } from './jobs.utils'
 import { jobName, jobProvider, jobDestination, formatBytes } from './jobs.types'
 import { EmptyNoProvider, EmptyNoJobs, EmptyFiltered } from './JobsEmptyState'
@@ -22,8 +23,10 @@ export default function JobsTable({
   jobs, totalJobs, hasActiveProvider,
   selectedJobId, onSelect, onClearFilters, loading,
 }: JobsTableProps) {
+  const { t } = useI18n()
+
   if (loading) {
-    return <div className="px-4 py-10 text-center text-sm text-muted-foreground">Loading jobs…</div>
+    return <div className="px-4 py-10 text-center text-sm text-muted-foreground">{t('loadingJobs')}</div>
   }
 
   if (jobs.length === 0) {
@@ -37,13 +40,13 @@ export default function JobsTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/30">
-            <th className={TH}>Name</th>
-            <th className={TH}>Status</th>
-            <th className={cn(TH, 'hidden sm:table-cell')}>Provider</th>
-            <th className={cn(TH, 'hidden md:table-cell')}>Destination</th>
-            <th className={cn(TH, 'hidden lg:table-cell')}>Files</th>
-            <th className={cn(TH, 'hidden lg:table-cell')}>Size</th>
-            <th className={cn(TH, 'hidden xl:table-cell')}>Created</th>
+            <th className={TH}>{t('colName')}</th>
+            <th className={TH}>{t('colStatus')}</th>
+            <th className={cn(TH, 'hidden sm:table-cell')}>{t('colProvider')}</th>
+            <th className={cn(TH, 'hidden md:table-cell')}>{t('colDestination')}</th>
+            <th className={cn(TH, 'hidden lg:table-cell')}>{t('colFiles')}</th>
+            <th className={cn(TH, 'hidden lg:table-cell')}>{t('colSize')}</th>
+            <th className={cn(TH, 'hidden xl:table-cell')}>{t('colCreated')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -65,7 +68,7 @@ export default function JobsTable({
                 <td className={TD}><StatusBadge status={job.status} /></td>
                 <td className={cn(TD, 'hidden text-muted-foreground sm:table-cell')}>{jobProvider(job)}</td>
                 <td className={cn(TD, 'hidden text-muted-foreground md:table-cell')}>
-                  {displayValue(jobDestination(job), 'Links only')}
+                  {displayValue(jobDestination(job), t('linksOnly'))}
                 </td>
                 <td className={cn(TD, 'hidden text-right text-muted-foreground lg:table-cell')}>
                   {displayValue(job.files.length || null)}
@@ -81,7 +84,7 @@ export default function JobsTable({
         </tbody>
       </table>
       <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-        {jobs.length} job{jobs.length !== 1 ? 's' : ''}
+        {jobs.length} {jobs.length !== 1 ? t('jobs') : t('job')}
       </div>
     </div>
   )

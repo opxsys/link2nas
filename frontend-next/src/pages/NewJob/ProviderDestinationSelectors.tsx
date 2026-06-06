@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 import type { ProviderConfig } from '@/api/provider-configs'
 import type { DestinationConfig } from '@/api/destination-configs'
 
@@ -34,6 +35,7 @@ export default function ProviderDestinationSelectors({
   onDestinationChange,
   onLinksOnlyChange,
 }: ProviderDestinationSelectorsProps) {
+  const { t } = useI18n()
   const noDestination = destinations.length === 0
 
   return (
@@ -41,7 +43,7 @@ export default function ProviderDestinationSelectors({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="provider-select" className="mb-1.5 block text-xs font-medium text-foreground">
-            Provider
+            {t('colProvider')}
           </label>
           <select
             id="provider-select"
@@ -51,7 +53,7 @@ export default function ProviderDestinationSelectors({
             disabled={providers.length === 0}
           >
             {providers.length === 0 ? (
-              <option value="">No active provider</option>
+              <option value="">{t('noActiveProvider')}</option>
             ) : (
               providers.map((p) => (
                 <option key={p.id} value={p.id}>{providerLabel(p)}</option>
@@ -65,7 +67,7 @@ export default function ProviderDestinationSelectors({
             htmlFor="destination-select"
             className={cn('mb-1.5 block text-xs font-medium', linksOnly ? 'text-muted-foreground' : 'text-foreground')}
           >
-            Destination
+            {t('colDestination')}
           </label>
           <select
             id="destination-select"
@@ -75,7 +77,7 @@ export default function ProviderDestinationSelectors({
             disabled={linksOnly || noDestination}
           >
             {noDestination ? (
-              <option value="">No active destination</option>
+              <option value="">{t('noActiveDestination')}</option>
             ) : (
               destinations.map((d) => (
                 <option key={d.id} value={d.id}>{destinationLabel(d)}</option>
@@ -92,12 +94,12 @@ export default function ProviderDestinationSelectors({
           onChange={(e) => onLinksOnlyChange(e.target.checked)}
           className="h-4 w-4 rounded border-input accent-primary"
         />
-        <span className="text-foreground">Links only — do not transfer to a destination</span>
+        <span className="text-foreground">{t('linksOnlyLabel')}</span>
       </label>
 
       {(linksOnly || noDestination) && (
         <p className="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-700 dark:bg-sky-900/20 dark:text-sky-400">
-          Job will complete with download links available only. No file transfer will occur.
+          {t('linksOnlyHint')}
         </p>
       )}
     </div>

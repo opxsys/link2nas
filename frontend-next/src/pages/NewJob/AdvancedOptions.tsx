@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useI18n } from '@/i18n'
 
 interface AdvancedOptionsProps {
   open: boolean
@@ -9,6 +10,7 @@ const SELECT_CLASS =
   'h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
 
 export default function AdvancedOptions({ open, onToggle }: AdvancedOptionsProps) {
+  const { t } = useI18n()
   return (
     <div>
       <button
@@ -19,30 +21,30 @@ export default function AdvancedOptions({ open, onToggle }: AdvancedOptionsProps
         {open
           ? <ChevronDown size={15} aria-hidden="true" />
           : <ChevronRight size={15} aria-hidden="true" />}
-        Advanced options
+        {t('advancedOptions')}
       </button>
 
       {open && (
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="priority-select" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-              Priority
+              {t('priority')}
             </label>
             <select id="priority-select" className={SELECT_CLASS}>
-              <option>Normal</option>
-              <option>High</option>
-              <option>Low</option>
+              <option>{t('priorityNormal')}</option>
+              <option>{t('priorityHigh')}</option>
+              <option>{t('priorityLow')}</option>
             </select>
           </div>
 
           <div>
             <label htmlFor="custom-path-input" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-              Custom path override
+              {t('customPathLabel')}
             </label>
             <input
               id="custom-path-input"
               type="text"
-              placeholder="Leave blank to use destination default"
+              placeholder={t('customPathPlaceholder')}
               disabled
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
             />

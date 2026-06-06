@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 import type { JobProgress } from './jobs.types'
 
 interface JobProgressCardProps {
@@ -21,6 +22,7 @@ function StatRow({ label, value }: { label: string; value: string | number | nul
 }
 
 export default function JobProgressCard({ progress }: JobProgressCardProps) {
+  const { t } = useI18n()
   const percent = progress.percent ?? 0
   const hasStats =
     progress.downloadedSize !== null ||
@@ -30,12 +32,12 @@ export default function JobProgressCard({ progress }: JobProgressCardProps) {
 
   return (
     <div className="border-t border-border p-5">
-      <p className="mb-2 text-xs font-semibold text-foreground">Progress</p>
+      <p className="mb-2 text-xs font-semibold text-foreground">{t('progress')}</p>
 
       <div className="mb-1.5 flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Overall</span>
+        <span className="text-muted-foreground">{t('overall')}</span>
         <span className="font-medium text-foreground">
-          {progress.percent !== null ? `${percent}%` : 'Unknown'}
+          {progress.percent !== null ? `${percent}%` : t('unknown')}
         </span>
       </div>
 
@@ -47,24 +49,24 @@ export default function JobProgressCard({ progress }: JobProgressCardProps) {
           aria-valuenow={percent}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Download progress: ${percent}%`}
+          aria-label={`${t('progress')}: ${percent}%`}
         />
       </div>
 
       {hasStats && (
         <div className="mt-3 space-y-1.5">
-          {progress.downloadedSize && <StatRow label="Downloaded" value={progress.downloadedSize} />}
-          {progress.speed && <StatRow label="Speed" value={progress.speed} />}
-          {progress.eta && <StatRow label="ETA" value={progress.eta} />}
+          {progress.downloadedSize && <StatRow label={t('downloaded')} value={progress.downloadedSize} />}
+          {progress.speed && <StatRow label={t('speed')} value={progress.speed} />}
+          {progress.eta && <StatRow label={t('eta')} value={progress.eta} />}
           {progress.connections !== null && progress.connections > 0 && (
-            <StatRow label="Connections" value={progress.connections} />
+            <StatRow label={t('connections')} value={progress.connections} />
           )}
-          {progress.provider && <StatRow label="Provider" value={progress.provider} />}
+          {progress.provider && <StatRow label={t('colProvider')} value={progress.provider} />}
         </div>
       )}
 
       {!hasStats && progress.percent === null && (
-        <p className="mt-2 text-xs text-muted-foreground">No progress data available.</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t('noProgressData')}</p>
       )}
     </div>
   )

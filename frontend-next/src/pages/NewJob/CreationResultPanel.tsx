@@ -3,6 +3,7 @@ import { CircleCheck, CircleX, Link as LinkIcon, ChevronRight } from 'lucide-rea
 import { cn } from '@/lib/utils'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n'
 import type { NewJobResult } from './newJob.types'
 
 interface CreationResultPanelProps {
@@ -14,6 +15,7 @@ const TH = 'px-4 py-2 text-left text-xs font-medium text-muted-foreground'
 const TD = 'px-4 py-3'
 
 export default function CreationResultPanel({ result, onDismiss }: CreationResultPanelProps) {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const allOk = result.failed === 0
   const allFailed = result.created === 0
@@ -24,10 +26,10 @@ export default function CreationResultPanel({ result, onDismiss }: CreationResul
 
   return (
     <SectionCard
-      title="Submission result"
+      title={t('submissionResult')}
       actions={
         <Button variant="ghost" size="sm" onClick={onDismiss}>
-          Dismiss
+          {t('dismiss')}
         </Button>
       }
     >
@@ -45,10 +47,10 @@ export default function CreationResultPanel({ result, onDismiss }: CreationResul
             ? <CircleCheck size={16} aria-hidden="true" />
             : <CircleX size={16} aria-hidden="true" />}
           <span>
-            {result.submitted} submitted —{' '}
-            <strong>{result.created} created</strong>
+            {result.submitted} {t('submitted')} —{' '}
+            <strong>{result.created} {t('created')}</strong>
             {result.failed > 0 && (
-              <>, <strong>{result.failed} failed</strong></>
+              <>, <strong>{result.failed} {t('failed')}</strong></>
             )}
           </span>
           {result.created > 0 && (
@@ -57,7 +59,7 @@ export default function CreationResultPanel({ result, onDismiss }: CreationResul
               onClick={() => navigate('/jobs', singleJobId ? { state: { selectedJobId: singleJobId } } : undefined)}
               className="ml-auto flex items-center gap-1 text-xs underline-offset-2 hover:underline"
             >
-              {singleJobId ? 'View job' : 'View jobs'} <ChevronRight size={12} aria-hidden="true" />
+              {singleJobId ? t('viewJob') : t('viewJobs')} <ChevronRight size={12} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -67,9 +69,9 @@ export default function CreationResultPanel({ result, onDismiss }: CreationResul
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className={TH}>Input</th>
-                <th className={TH}>Status</th>
-                <th className={TH}>Details</th>
+                <th className={TH}>{t('colInput')}</th>
+                <th className={TH}>{t('colStatus')}</th>
+                <th className={TH}>{t('colDetails')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -87,15 +89,15 @@ export default function CreationResultPanel({ result, onDismiss }: CreationResul
                   <td className={TD}>
                     {item.status === 'failed' ? (
                       <span className="flex items-center gap-1.5 text-xs font-medium text-red-700 dark:text-red-400">
-                        <CircleX size={13} aria-hidden="true" /> Failed
+                        <CircleX size={13} aria-hidden="true" /> {t('resultFailed')}
                       </span>
                     ) : item.status === 'reused' ? (
                       <span className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
-                        <CircleCheck size={13} aria-hidden="true" /> Reused
+                        <CircleCheck size={13} aria-hidden="true" /> {t('resultReused')}
                       </span>
                     ) : (
                       <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                        <CircleCheck size={13} aria-hidden="true" /> Created
+                        <CircleCheck size={13} aria-hidden="true" /> {t('resultCreated')}
                       </span>
                     )}
                   </td>

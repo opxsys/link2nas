@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 import type { NewJobTab } from './newJob.types'
 
 interface NewJobTabsProps {
@@ -6,14 +7,16 @@ interface NewJobTabsProps {
   onTabChange: (tab: NewJobTab) => void
 }
 
-const TABS: { id: NewJobTab; label: string; hint: string }[] = [
-  { id: 'magnet',  label: 'Magnet / Links',  hint: 'Magnet links, direct URLs — one per line' },
-  { id: 'torrent', label: 'Torrent Files',   hint: 'One or more .torrent files — one job per file' },
-]
-
 export default function NewJobTabs({ activeTab, onTabChange }: NewJobTabsProps) {
+  const { t } = useI18n()
+
+  const TABS: { id: NewJobTab; label: string; hint: string }[] = [
+    { id: 'magnet',  label: t('tabMagnet'),  hint: t('tabMagnetHint')  },
+    { id: 'torrent', label: t('tabTorrent'), hint: t('tabTorrentHint') },
+  ]
+
   return (
-    <nav className="flex border-b border-border" aria-label="New job input method" role="tablist">
+    <nav className="flex border-b border-border" aria-label={t('ariaNewJobInputMethod')} role="tablist">
       {TABS.map(({ id, label, hint }) => (
         <button
           key={id}

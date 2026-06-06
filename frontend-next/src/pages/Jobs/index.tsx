@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { AlertCircle, Info } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
+import { useI18n } from '@/i18n'
 import { useJobsState } from './useJobsState'
 import JobsToolbar from './JobsToolbar'
 import JobsTable from './JobsTable'
@@ -9,6 +10,7 @@ import JobDetailsSheet from './JobDetailsSheet'
 import JobDeleteModal from './JobDeleteModal'
 
 export default function Jobs() {
+  const { t } = useI18n()
   const state = useJobsState()
   const location = useLocation()
   const navigate = useNavigate()
@@ -29,17 +31,17 @@ export default function Jobs() {
 
   return (
     <>
-      <PageHeader title="Jobs" description="Manage and monitor your download jobs." />
+      <PageHeader title={t('navJobs')} description={t('jobsDesc')} />
 
       {notice === 'no-active-provider' && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           <Info size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
           <span>
-            No active provider configured.{' '}
+            {t('jobsNoActiveProvider')}{' '}
             <Link to="/settings?section=providers" className="font-medium underline underline-offset-2 hover:no-underline">
-              Add and enable a provider
+              {t('addEnableProvider')}
             </Link>
-            {' '}before creating jobs.
+            {' '}{t('beforeCreatingJobs')}
           </span>
         </div>
       )}

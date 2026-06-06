@@ -2,6 +2,7 @@ import { HardDrive } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SectionCard from '@/components/common/SectionCard'
 import UnavailableState from '@/components/common/UnavailableState'
+import { useI18n } from '@/i18n'
 import type { MaintenanceDisk } from '@/pages/Admin/admin.types'
 
 interface Props {
@@ -24,13 +25,14 @@ function barColor(freePercent: number): string {
 }
 
 export default function DashboardStorage({ disk, loading }: Props) {
+  const { t } = useI18n()
   return (
-    <SectionCard title="Storage">
+    <SectionCard title={t('dashStorage')}>
       {loading ? (
-        <p className="text-sm italic text-muted-foreground">Loading…</p>
+        <p className="text-sm italic text-muted-foreground">{t('loading')}</p>
       ) : !disk ? (
         <UnavailableState
-          message="Storage info unavailable."
+          message={t('dashStorageUnavailable')}
           className="py-4"
         />
       ) : (
@@ -41,7 +43,7 @@ export default function DashboardStorage({ disk, loading }: Props) {
               <span className="text-sm font-medium text-foreground">{disk.path}</span>
             </div>
             <span className="shrink-0 text-xs text-muted-foreground">
-              {disk.percent_free.toFixed(0)}% free
+              {disk.percent_free.toFixed(0)}% {t('free')}
             </span>
           </div>
 
@@ -53,13 +55,13 @@ export default function DashboardStorage({ disk, loading }: Props) {
               aria-valuenow={disk.percent_free}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label={`${disk.path}: ${disk.percent_free.toFixed(0)}% free`}
+              aria-label={`${disk.path}: ${disk.percent_free.toFixed(0)}% ${t('free')}`}
             />
           </div>
 
           <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-            <span>{formatBytes(disk.used_bytes)} used</span>
-            <span>{formatBytes(disk.free_bytes)} free</span>
+            <span>{formatBytes(disk.used_bytes)} {t('used')}</span>
+            <span>{formatBytes(disk.free_bytes)} {t('free')}</span>
           </div>
 
           {!disk.ok && disk.message && (

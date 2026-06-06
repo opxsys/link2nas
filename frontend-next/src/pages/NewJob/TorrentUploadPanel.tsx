@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Upload, FileText, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 interface TorrentUploadPanelProps {
   files: File[]
@@ -8,6 +9,7 @@ interface TorrentUploadPanelProps {
 }
 
 export default function TorrentUploadPanel({ files, onFiles }: TorrentUploadPanelProps) {
+  const { t } = useI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
@@ -28,7 +30,7 @@ export default function TorrentUploadPanel({ files, onFiles }: TorrentUploadPane
     <div className="flex flex-col gap-3">
       <input ref={inputRef} type="file" accept=".torrent" multiple className="sr-only"
         onChange={e => { addFiles(e.target.files); e.target.value = '' }}
-        aria-label="Select .torrent files" />
+        aria-label={t('ariaTorrentInput')} />
 
       <button type="button" onClick={() => inputRef.current?.click()}
         onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
@@ -39,8 +41,8 @@ export default function TorrentUploadPanel({ files, onFiles }: TorrentUploadPane
           dragging && 'border-primary bg-primary/5 text-primary',
         )}>
         <Upload size={22} aria-hidden="true" />
-        <span>Click or drag <strong>.torrent</strong> files here</span>
-        <span className="text-xs">Multiple files supported — one job per file</span>
+        <span>{t('torrentDropPre')} <strong>.torrent</strong> {t('torrentDropPost')}</span>
+        <span className="text-xs">{t('torrentDropHint')}</span>
       </button>
 
       {files.length > 0 && (
@@ -51,7 +53,7 @@ export default function TorrentUploadPanel({ files, onFiles }: TorrentUploadPane
               <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{file.name}</span>
               <button type="button" onClick={() => removeFile(file.name)}
                 className="shrink-0 rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`Remove ${file.name}`}>
+                aria-label={`${t('delete')} ${file.name}`}>
                 <X size={14} aria-hidden="true" />
               </button>
             </li>

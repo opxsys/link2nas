@@ -1,6 +1,7 @@
 import type { JobStatus } from '@/lib/types'
 import type { RealJob } from '@/api/jobs'
 import type { JobsFilters } from './jobs.types'
+import type { TranslationKey } from '@/i18n'
 import { jobName, jobProvider, jobDestination } from './jobs.types'
 
 export { jobName, jobProvider, jobDestination }
@@ -40,16 +41,16 @@ export function getUniqueDestinations(jobs: RealJob[]): string[] {
     .sort()
 }
 
-export const JOB_STATUS_OPTIONS: { value: JobStatus; label: string }[] = [
-  { value: 'created',     label: 'Created'     },
-  { value: 'waiting',     label: 'Waiting'     },
-  { value: 'running',     label: 'Running'     },
-  { value: 'downloading', label: 'Downloading' },
-  { value: 'ready',       label: 'Ready'       },
-  { value: 'completed',   label: 'Completed'   },
-  { value: 'failed',      label: 'Failed'      },
-  { value: 'cancelled',   label: 'Cancelled'   },
-  { value: 'sending',     label: 'Sending'     },
-  { value: 'sent',        label: 'Sent'        },
-  { value: 'links_only',  label: 'Links only'  },
+export const JOB_STATUS_OPTIONS: { value: JobStatus; labelKey: TranslationKey }[] = [
+  { value: 'created',     labelKey: 'statusFilterCreated'     },
+  { value: 'waiting',     labelKey: 'statusFilterWaiting'     },
+  { value: 'running',     labelKey: 'statusFilterRunning'     },
+  { value: 'downloading', labelKey: 'statusFilterDownloading' },
+  { value: 'ready',       labelKey: 'statusFilterReady'       },
+  { value: 'completed',   labelKey: 'statusFilterCompleted'   },
+  { value: 'failed',      labelKey: 'statusFilterFailed'      },
+  { value: 'cancelled',   labelKey: 'statusFilterCancelled'   },
+  { value: 'sending',     labelKey: 'statusFilterSending'     },
+  { value: 'sent',        labelKey: 'statusFilterSent'        },
+  { value: 'links_only',  labelKey: 'statusFilterLinksOnly'   },
 ]

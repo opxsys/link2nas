@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Copy, CheckCircle2 } from 'lucide-react'
 import UnavailableState from '@/components/common/UnavailableState'
+import { useI18n } from '@/i18n'
 import { formatBytes } from './jobs.types'
 import type { RealJobFile } from '@/api/jobs'
 
@@ -14,6 +15,7 @@ const TH = 'px-4 py-2 text-left text-xs font-medium text-muted-foreground'
 const TD = 'px-4 py-2.5'
 
 function CopyLinkButton({ url, label }: { url: string; label: string }) {
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
 
   function handleCopy() {
@@ -26,8 +28,8 @@ function CopyLinkButton({ url, label }: { url: string; label: string }) {
     <button
       onClick={handleCopy}
       className="rounded text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      aria-label={`Copy link for ${label}`}
-      title="Copy download link"
+      aria-label={`${t('copy')} ${label}`}
+      title={t('copy')}
     >
       {copied ? <CheckCircle2 size={13} className="text-green-600" /> : <Copy size={13} />}
     </button>
@@ -39,11 +41,13 @@ export default function JobFilesTable({
   onUnrestrictFile,
   fileBusy,
 }: JobFilesTableProps) {
+  const { t } = useI18n()
+
   if (files.length === 0) {
     return (
       <UnavailableState
-        message="No files available"
-        note="File list appears once the job starts processing."
+        message={t('noFilesAvailable')}
+        note={t('noFilesNote')}
         className="py-6"
       />
     )
@@ -54,10 +58,10 @@ export default function JobFilesTable({
       <table className="w-full">
         <thead>
           <tr className="border-b border-border bg-muted/20">
-            <th className={TH}>File</th>
-            <th className={TH}>Size</th>
+            <th className={TH}>{t('colFile')}</th>
+            <th className={TH}>{t('colSize')}</th>
             <th className={`${TH} text-right`}>
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">{t('colActions')}</span>
             </th>
           </tr>
         </thead>
@@ -92,7 +96,7 @@ export default function JobFilesTable({
                         className="text-xs text-muted-foreground hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                         title={file.download_url ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
                       >
-                        {file.download_url ? 'Regenerate' : 'Generate link'}
+                        {file.download_url ? t('regenerate') : t('generateLink')}
                       </button>
                     )}
 

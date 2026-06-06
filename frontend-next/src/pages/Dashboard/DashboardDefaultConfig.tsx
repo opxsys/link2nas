@@ -1,5 +1,6 @@
 import { Cloud, FolderOutput, Link } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
+import { useI18n } from '@/i18n'
 import type { ProviderConfig } from '@/api/provider-configs'
 import type { DestinationConfig } from '@/api/destination-configs'
 
@@ -20,26 +21,27 @@ function destinationDisplayName(destinations: DestinationConfig[]): string | nul
 }
 
 export default function DashboardDefaultConfig({ providers, destinations, loading }: Props) {
-  const providerName   = providers   ? providerDisplayName(providers)     : null
+  const { t } = useI18n()
+  const providerName    = providers    ? providerDisplayName(providers)       : null
   const destinationName = destinations ? destinationDisplayName(destinations) : null
-  const linksOnly      = destinations !== null && destinations.filter(d => d.is_enabled).length === 0
+  const linksOnly       = destinations !== null && destinations.filter(d => d.is_enabled).length === 0
 
   return (
-    <SectionCard title="Default Configuration">
+    <SectionCard title={t('dashDefaultConfig')}>
       <dl className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
             <Cloud size={15} aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Default Provider</dt>
+            <dt className="text-xs text-muted-foreground">{t('dashDefaultProvider')}</dt>
             <dd className="truncate text-sm font-medium text-foreground">
               {loading ? (
-                <span className="italic text-muted-foreground">Loading…</span>
+                <span className="italic text-muted-foreground">{t('loading')}</span>
               ) : providerName ? (
                 providerName
               ) : (
-                <span className="italic text-muted-foreground">Not configured</span>
+                <span className="italic text-muted-foreground">{t('notConfigured')}</span>
               )}
             </dd>
           </div>
@@ -50,16 +52,16 @@ export default function DashboardDefaultConfig({ providers, destinations, loadin
             {linksOnly ? <Link size={15} aria-hidden="true" /> : <FolderOutput size={15} aria-hidden="true" />}
           </div>
           <div className="min-w-0">
-            <dt className="text-xs text-muted-foreground">Default Destination</dt>
+            <dt className="text-xs text-muted-foreground">{t('dashDefaultDestination')}</dt>
             <dd className="truncate text-sm font-medium text-foreground">
               {loading ? (
-                <span className="italic text-muted-foreground">Loading…</span>
+                <span className="italic text-muted-foreground">{t('loading')}</span>
               ) : linksOnly ? (
-                <span className="text-sky-700 dark:text-sky-400">Links only — no destination</span>
+                <span className="text-sky-700 dark:text-sky-400">{t('linksOnlyNoDestination')}</span>
               ) : destinationName ? (
                 destinationName
               ) : (
-                <span className="italic text-muted-foreground">Not configured</span>
+                <span className="italic text-muted-foreground">{t('notConfigured')}</span>
               )}
             </dd>
           </div>

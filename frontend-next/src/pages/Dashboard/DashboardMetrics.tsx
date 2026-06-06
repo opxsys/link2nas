@@ -1,5 +1,6 @@
 import { Activity, Clock, CircleCheck, CircleX } from 'lucide-react'
 import MetricCard from '@/components/common/MetricCard'
+import { useI18n } from '@/i18n'
 import type { ControlCenter } from '@/api/system'
 import type { RealJob } from '@/api/jobs'
 
@@ -26,6 +27,7 @@ const ACTIVE_STATUSES = [
 ]
 
 export default function DashboardMetrics({ controlCenter, jobs, loading }: Props) {
+  const { t } = useI18n()
   const sc = controlCenter?.status_counts ?? {}
   const activeJobs  = ACTIVE_STATUSES.reduce((sum, s) => sum + (sc[s] ?? 0), 0)
   // queued + waiting only — created is already counted in activeJobs, so omit to avoid double-counting
@@ -39,31 +41,31 @@ export default function DashboardMetrics({ controlCenter, jobs, loading }: Props
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <MetricCard
-        label="Active Jobs"
+        label={t('dashActiveJobs')}
         value={fmt(activeJobs)}
         icon={Activity}
-        description="Running now"
+        description={t('dashRunningNow')}
         iconClassName="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
       />
       <MetricCard
-        label="Waiting"
+        label={t('dashWaiting')}
         value={fmt(waitingJobs)}
         icon={Clock}
-        description="Queued"
+        description={t('dashQueued')}
         iconClassName="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
       />
       <MetricCard
-        label="Completed Today"
+        label={t('dashCompletedToday')}
         value={fmt(completedToday)}
         icon={CircleCheck}
-        description="Since midnight"
+        description={t('dashSinceMidnight')}
         iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
       />
       <MetricCard
-        label="Failed Today"
+        label={t('dashFailedToday')}
         value={fmt(failedToday)}
         icon={CircleX}
-        description="Since midnight"
+        description={t('dashSinceMidnight')}
         iconClassName="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
       />
     </div>

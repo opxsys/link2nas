@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import SectionCard from '@/components/common/SectionCard'
 import StatusBadge from '@/components/status/StatusBadge'
 import UnavailableState from '@/components/common/UnavailableState'
+import { useI18n } from '@/i18n'
 import type { RealJob } from '@/api/jobs'
 
 interface Props {
@@ -31,6 +32,7 @@ function formatDate(iso: string): string {
 const RECENT_LIMIT = 10
 
 export default function DashboardRecentJobs({ jobs, loading }: Props) {
+  const { t } = useI18n()
   const recent = jobs
     ? [...jobs]
         .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
@@ -39,28 +41,28 @@ export default function DashboardRecentJobs({ jobs, loading }: Props) {
 
   return (
     <SectionCard
-      title="Recent Jobs"
+      title={t('dashRecentJobs')}
       actions={
         <Link to="/jobs" className="text-xs text-primary hover:underline">
-          View all
+          {t('viewAll')}
         </Link>
       }
       bodyClassName="p-0"
     >
       {loading ? (
-        <p className="px-4 py-6 text-sm italic text-muted-foreground">Loading…</p>
+        <p className="px-4 py-6 text-sm italic text-muted-foreground">{t('loading')}</p>
       ) : !recent || recent.length === 0 ? (
-        <UnavailableState message="No jobs yet." className="py-6" />
+        <UnavailableState message={t('dashNoJobsYet')} className="py-6" />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground">Name</th>
-                <th className="px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                <th className="hidden px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground sm:table-cell">Provider</th>
-                <th className="hidden px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground md:table-cell">Destination</th>
-                <th className="hidden px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground lg:table-cell">Created</th>
+                <th className="px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground">{t('colName')}</th>
+                <th className="px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground">{t('colStatus')}</th>
+                <th className="hidden px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground sm:table-cell">{t('colProvider')}</th>
+                <th className="hidden px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground md:table-cell">{t('colDestination')}</th>
+                <th className="hidden px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground lg:table-cell">{t('colCreated')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

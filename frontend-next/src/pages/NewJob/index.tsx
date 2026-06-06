@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n'
 import { useNewJobState } from './useNewJobState'
 import NewJobTabs from './NewJobTabs'
 import MagnetLinksForm from './MagnetLinksForm'
@@ -13,6 +14,7 @@ import AdvancedOptions from './AdvancedOptions'
 import CreationResultPanel from './CreationResultPanel'
 
 export default function NewJob() {
+  const { t } = useI18n()
   const state = useNewJobState()
   const navigate = useNavigate()
 
@@ -29,17 +31,17 @@ export default function NewJob() {
     return (
       <>
         <PageHeader
-          title="New Job"
-          description="Submit magnet links, direct URLs, or .torrent files."
+          title={t('navNewJob')}
+          description={t('newJobDesc')}
           actions={
             <Button variant="outline" size="sm" asChild>
-              <Link to="/jobs"><ArrowLeft size={13} className="mr-1.5" />Back to Jobs</Link>
+              <Link to="/jobs"><ArrowLeft size={13} className="mr-1.5" />{t('backToJobs')}</Link>
             </Button>
           }
         />
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-          Loading…
+          {t('loading')}
         </div>
       </>
     )
@@ -48,11 +50,11 @@ export default function NewJob() {
   return (
     <>
       <PageHeader
-        title="New Job"
-        description="Submit magnet links, direct URLs, or .torrent files."
+        title={t('navNewJob')}
+        description={t('newJobDesc')}
         actions={
           <Button variant="outline" size="sm" asChild>
-            <Link to="/jobs"><ArrowLeft size={13} className="mr-1.5" />Back to Jobs</Link>
+            <Link to="/jobs"><ArrowLeft size={13} className="mr-1.5" />{t('backToJobs')}</Link>
           </Button>
         }
       />
@@ -62,7 +64,7 @@ export default function NewJob() {
         : 'flex max-w-3xl flex-col gap-3'
       }>
         <div className={state.result ? 'w-full min-w-0 xl:max-w-3xl xl:flex-1' : undefined}>
-        <SectionCard title="Submit" bodyClassName="p-0">
+        <SectionCard title={t('submit')} bodyClassName="p-0">
           <NewJobTabs activeTab={state.activeTab} onTabChange={state.setActiveTab} />
 
           <div className="p-5">
@@ -80,7 +82,7 @@ export default function NewJob() {
           <div className="border-t border-border p-5">
             {state.configsLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 size={14} className="animate-spin" /> Loading providers…
+                <Loader2 size={14} className="animate-spin" /> {t('loadingProviders')}
               </div>
             ) : state.configsError ? (
               <div className="flex items-start gap-2 text-sm text-destructive">
@@ -88,7 +90,7 @@ export default function NewJob() {
               </div>
             ) : state.providers.length === 0 ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                No active provider configured. Go to <Link to="/settings" className="underline">Settings → Providers</Link> to add one before creating jobs.
+                {t('newJobNoProviderPre')} <Link to="/settings" className="underline">{t('settingsProviders')}</Link> {t('newJobNoProviderPost')}
               </div>
             ) : (
               <ProviderDestinationSelectors
@@ -116,15 +118,15 @@ export default function NewJob() {
               <span className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 size={14} className="animate-spin" />
                 {state.activeTab === 'torrent' && state.torrentFiles.length > 1
-                  ? `Uploading ${state.torrentFiles.length} files…`
-                  : 'Creating job…'}
+                  ? `${t('loading')} ${state.torrentFiles.length}…`
+                  : t('creatingJob')}
               </span>
             )}
             {!state.submitting && <span />}
             <Button onClick={state.handleSubmit} disabled={!state.canSubmit}>
               {state.activeTab === 'torrent' && state.torrentFiles.length > 1
-                ? `Create ${state.torrentFiles.length} Jobs`
-                : 'Create Job'}
+                ? `${t('create')} ${state.torrentFiles.length} ${t('jobsPlural')}`
+                : t('createJob')}
             </Button>
           </div>
         </SectionCard>
