@@ -33,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'timeouts',      labelKey: 'adminNavTimeouts',      icon: Timer },
   { id: 'runtime',       labelKey: 'adminNavRuntime',       icon: Cpu },
   { id: 'cleanup',       labelKey: 'adminNavCleanup',       icon: Trash2 },
-  { id: 'system-events', labelKey: 'adminNavSystemEvents',  icon: AlertTriangle },
+  { id: 'system-events', labelKey: 'adminNavEvents',        icon: AlertTriangle },
   { id: 'maintenance',   labelKey: 'adminNavMaintenance',   icon: Wrench },
 ]
 
@@ -63,7 +63,7 @@ export default function AdminNav({ activeSection, onSelect }: Props) {
                 )}
               >
                 <Icon size={15} aria-hidden="true" className="shrink-0" />
-                {t(labelKey)}
+                <span className="truncate">{t(labelKey)}</span>
               </button>
             </li>
           )

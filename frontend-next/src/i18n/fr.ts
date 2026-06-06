@@ -602,7 +602,7 @@ export const fr: Translations = {
   adminNavTimeouts:           'Délais',
   adminNavRuntime:            'Exécution',
   adminNavCleanup:            'Nettoyage',
-  adminNavSystemEvents:       'Événements système',
+  adminNavEvents:             'Événements',
   adminNavMaintenance:        'Maintenance',
   // Admin overview
   adminLoadingOverview:       "Chargement de la vue d'ensemble…",
@@ -622,6 +622,14 @@ export const fr: Translations = {
   adminStatTotal:             'Total',
   adminConfiguration:         'Configuration',
   adminConfigUnavailable:     'Données de configuration indisponibles.',
+  adminCfgDatabase:           'Base de données',
+  adminCfgConnected:          'connecté',
+  adminCfgDbError:            'erreur',
+  adminCfgSvcEnabled:         'services activés',
+  adminCfgActive:             'actif',
+  adminCfgDisabled:           'désactivé',
+  adminCfgAvailable:          'disponible',
+  adminCfgAnnTotal:           'au total',
   // Admin general
   adminGeneralTitle:          'Général',
   adminGeneralDesc:           "Nom de l'application, accroche et URL publique.",
@@ -812,6 +820,7 @@ export const fr: Translations = {
   adminMagicLoginTtl:         'Jeton de connexion magique',
   adminEmailVerifTtl:         "Jeton de vérification d'e-mail",
   adminSessionInactivity:     'Inactivité de session',
+  adminPwChars:               'caractères',
   // Admin anti-abuse
   adminAntiAbuseTitle:        'Anti-abus / Limites de débit',
   adminAntiAbuseDesc:         'Compteurs de limitation en temps réel. Réinitialisez pour débloquer les identités verrouillées.',

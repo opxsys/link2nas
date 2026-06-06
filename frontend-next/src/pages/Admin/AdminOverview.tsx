@@ -132,13 +132,13 @@ export default function AdminOverview() {
           label={t('adminTotalUsers')}
           value={userStats?.total ?? '—'}
           icon={Users}
-          description={userStats ? `${userStats.active} active` : undefined}
+          description={userStats ? `${userStats.active} ${t('adminCfgActive')}` : undefined}
         />
         <MetricCard
           label={t('adminActiveUsersLabel')}
           value={userStats?.active ?? '—'}
           icon={UserCheck}
-          description={userStats ? `${userStats.disabled} disabled` : undefined}
+          description={userStats ? `${userStats.disabled} ${t('adminCfgDisabled')}` : undefined}
           iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
         />
         <MetricCard
@@ -152,7 +152,7 @@ export default function AdminOverview() {
           label={t('adminDiskFreeLabel')}
           value={maintenance ? `${maintenance.disk.percent_free.toFixed(1)}%` : '—'}
           icon={HardDrive}
-          description={maintenance ? `${fmtBytes(maintenance.disk.free_bytes)} available` : undefined}
+          description={maintenance ? `${fmtBytes(maintenance.disk.free_bytes)} ${t('adminCfgAvailable')}` : undefined}
           iconClassName={maintenance && !maintenance.disk.ok ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : undefined}
         />
       </div>
@@ -199,29 +199,29 @@ export default function AdminOverview() {
             )}
             {maintenance && (
               <ConfigRow
-                label="Database"
-                value={`${maintenance.database.backend} — ${maintenance.database.ok ? 'connected' : 'error'}`}
+                label={t('adminCfgDatabase')}
+                value={`${maintenance.database.backend} — ${maintenance.database.ok ? t('adminCfgConnected') : t('adminCfgDbError')}`}
                 bad={!maintenance.database.ok}
               />
             )}
             {smtp && (
               <ConfigRow
                 label="SMTP"
-                value={smtpReady ? `${smtp.host}:${smtp.port}` : 'Not configured'}
+                value={smtpReady ? `${smtp.host}:${smtp.port}` : t('notConfigured')}
                 bad={!smtpReady}
               />
             )}
             {runtimeEnabled !== null && (
               <ConfigRow
                 label={t('adminNavRuntime')}
-                value={`${runtimeEnabled}/3 services enabled`}
+                value={`${runtimeEnabled}/3 ${t('adminCfgSvcEnabled')}`}
                 bad={runtimeEnabled < 3}
               />
             )}
             {announcements !== null && (
               <ConfigRow
-                label="Announcements"
-                value={`${activeAnn} active · ${announcements.length} total`}
+                label={t('adminNavAnnouncements')}
+                value={`${activeAnn} ${t('adminCfgActive')} · ${announcements.length} ${t('adminCfgAnnTotal')}`}
               />
             )}
           </dl>

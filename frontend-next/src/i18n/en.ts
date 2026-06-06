@@ -600,7 +600,7 @@ export const en = {
   adminNavTimeouts:           'Timeouts',
   adminNavRuntime:            'Runtime',
   adminNavCleanup:            'Cleanup',
-  adminNavSystemEvents:       'System Events',
+  adminNavEvents:             'Events',
   adminNavMaintenance:        'Maintenance',
   // Admin overview
   adminLoadingOverview:       'Loading overview…',
@@ -620,6 +620,14 @@ export const en = {
   adminStatTotal:             'Total',
   adminConfiguration:         'Configuration',
   adminConfigUnavailable:     'Configuration data unavailable.',
+  adminCfgDatabase:           'Database',
+  adminCfgConnected:          'connected',
+  adminCfgDbError:            'error',
+  adminCfgSvcEnabled:         'services enabled',
+  adminCfgActive:             'active',
+  adminCfgDisabled:           'disabled',
+  adminCfgAvailable:          'available',
+  adminCfgAnnTotal:           'total',
   // Admin general
   adminGeneralTitle:          'General',
   adminGeneralDesc:           'Application name, tagline, and public URL.',
@@ -810,6 +818,7 @@ export const en = {
   adminMagicLoginTtl:         'Magic login token',
   adminEmailVerifTtl:         'Email verification token',
   adminSessionInactivity:     'Session inactivity',
+  adminPwChars:               'chars',
   // Admin anti-abuse
   adminAntiAbuseTitle:        'Anti-Abuse / Rate Limits',
   adminAntiAbuseDesc:         'Live rate-limit counters. Reset to unblock locked identities.',

@@ -66,7 +66,7 @@ export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled
 
       <SectionCard title={t('adminPwPolicyTitle')} description={t('adminPwPolicyDesc')}>
         <div className="flex flex-col gap-4">
-          <div className={ROW}>
+          <div className="flex items-center gap-3">
             <label htmlFor="sec-pw-min-length" className={FIELD_LABEL}>
               {t('adminMinLengthLabel')}
               <span className="ml-1.5 text-xs text-muted-foreground">(8–128)</span>
@@ -82,10 +82,10 @@ export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled
                 max={128}
                 onChange={(e) => onPasswordPolicy('min_length', Number(e.target.value))}
               />
-              <span className={UNIT}>chars</span>
+              <span className={UNIT}>{t('adminPwChars')}</span>
             </div>
           </div>
-          <div className="flex flex-col gap-2.5">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
             {POLICY_CHECKS.map(({ key, labelKey }) => (
               <div key={key} className={CHECK_ROW}>
                 <input
