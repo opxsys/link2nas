@@ -37,8 +37,7 @@ It is designed for self-hosted use on a trusted network. Validation on your own 
 | Layer | Technology |
 |---|---|
 | Backend | Python 3, Flask |
-| Frontend (primary) | React + Vite + TypeScript (Next UI) |
-| Frontend (legacy) | Vanilla JS, no build step — still available |
+| Frontend | React + Vite + TypeScript (Next UI) |
 | Database | SQLite or PostgreSQL |
 | Task queues | Redis + RQ |
 | Encryption | Fernet (cryptography) |

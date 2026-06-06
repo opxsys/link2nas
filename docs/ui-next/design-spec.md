@@ -64,7 +64,7 @@ The built frontend should be served by Flask under:
 /next
 ```
 
-The legacy frontend must stay available.
+Historical note: this was an initial design constraint. The published application now uses the Next UI as the supported frontend.
 
 ## Routing
 

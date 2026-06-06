@@ -4,13 +4,13 @@
 
 ### Summary
 
-This release completes the V3 feature set and introduces the Next UI as the primary web interface. The legacy UI remains available for compatibility.
+This release completes the V3 feature set and makes the Next UI the primary and default web interface.
 
 ---
 
 ### New UI — Next UI (React + Vite + TypeScript)
 
-The Next UI is a fully rebuilt frontend served under `/next`, now the primary interface for Link2NAS. It replaces the legacy Vanilla JS interface for day-to-day use while keeping the legacy UI available at its existing routes.
+The Next UI is a fully rebuilt frontend served under `/next`, now the primary interface for Link2NAS. It replaces the previous Vanilla JS interface in the published application.
 
 Key characteristics:
 
@@ -105,7 +105,7 @@ Previously, provider and destination type sets were duplicated across 7+ backend
 
 ### Compatibility
 
-- The legacy UI and all its routes remain available and unmodified.
+- The previous Vanilla JS frontend has been removed from the published application; the Next UI is now the supported web interface.
 - All `/api/v2/` endpoints are unchanged.
 - The Prowlarr / qBittorrent compatibility endpoint is unchanged.
 - SQLite and PostgreSQL are both supported and validated.
@@ -123,9 +123,8 @@ The recommended production pattern is to set `APP_VERSION` from the GitHub relea
 
 ### Migration from legacy UI
 
-No migration is required. The Next UI is additive:
+No manual data migration is required:
 
 - The app serves the Next UI as the default interface.
-- The legacy UI remains accessible and fully functional.
-- All user data, provider profiles, destination profiles, jobs, and settings are shared between both interfaces via the same API.
+- User data, provider profiles, destination profiles, jobs, and settings continue to use the same backend API and database model.
 - No manual migration step is required. The application applies its database schema automatically on startup.
