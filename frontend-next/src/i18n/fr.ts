@@ -95,6 +95,9 @@ export const fr: Translations = {
   viewAll:   'Voir tout',
   notConfigured: 'Non configuré',
   cancel:    'Annuler',
+  unitDays:    'jours',
+  unitHours:   'heures',
+  unitMinutes: 'minutes',
   close:     'Fermer',
   copy:      'Copier',
   yes:       'Oui',
@@ -879,6 +882,7 @@ export const fr: Translations = {
   adminCleanupCancelledJobs:  'Jobs annulés',
   adminCleanupExpiredTokens:  'Jetons expirés',
   adminCleanupTempTorrents:   'Fichiers torrent temporaires',
+  adminCleanupRemoved:        'supprimés',
   // Admin system events
   adminEventsTitle:           'Événements système',
   adminLoadingEvents:         'Chargement des événements…',

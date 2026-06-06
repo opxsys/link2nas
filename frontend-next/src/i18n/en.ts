@@ -93,6 +93,9 @@ export const en = {
   viewAll:   'View all',
   notConfigured: 'Not configured',
   cancel:    'Cancel',
+  unitDays:    'days',
+  unitHours:   'hours',
+  unitMinutes: 'minutes',
   close:     'Close',
   copy:      'Copy',
   yes:       'Yes',
@@ -877,6 +880,7 @@ export const en = {
   adminCleanupCancelledJobs:  'Cancelled jobs',
   adminCleanupExpiredTokens:  'Expired tokens',
   adminCleanupTempTorrents:   'Temp torrent files',
+  adminCleanupRemoved:        'removed',
   // Admin system events
   adminEventsTitle:           'System Events',
   adminLoadingEvents:         'Loading events…',

@@ -21,12 +21,12 @@ interface Props {
 export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled, onTokenTtl, onPasswordPolicy }: Props) {
   const { t } = useI18n()
 
-  const TTL_FIELDS: { key: keyof SecurityTokenTtl; labelKey: TranslationKey; unit: string; min: number; max: number }[] = [
-    { key: 'invitation_ttl_hours',         labelKey: 'adminInvitationTtl',    unit: 'hours',   min: 1,  max: 336  },
-    { key: 'password_reset_ttl_hours',     labelKey: 'adminPwResetTtl',       unit: 'hours',   min: 1,  max: 24   },
-    { key: 'magic_login_ttl_minutes',      labelKey: 'adminMagicLoginTtl',    unit: 'minutes', min: 5,  max: 120  },
-    { key: 'email_verification_ttl_hours', labelKey: 'adminEmailVerifTtl',    unit: 'hours',   min: 1,  max: 168  },
-    { key: 'session_inactivity_minutes',   labelKey: 'adminSessionInactivity',unit: 'minutes', min: 5,  max: 1440 },
+  const TTL_FIELDS: { key: keyof SecurityTokenTtl; labelKey: TranslationKey; unitKey: TranslationKey; min: number; max: number }[] = [
+    { key: 'invitation_ttl_hours',         labelKey: 'adminInvitationTtl',    unitKey: 'unitHours',   min: 1,  max: 336  },
+    { key: 'password_reset_ttl_hours',     labelKey: 'adminPwResetTtl',       unitKey: 'unitHours',   min: 1,  max: 24   },
+    { key: 'magic_login_ttl_minutes',      labelKey: 'adminMagicLoginTtl',    unitKey: 'unitMinutes', min: 5,  max: 120  },
+    { key: 'email_verification_ttl_hours', labelKey: 'adminEmailVerifTtl',    unitKey: 'unitHours',   min: 1,  max: 168  },
+    { key: 'session_inactivity_minutes',   labelKey: 'adminSessionInactivity',unitKey: 'unitMinutes', min: 5,  max: 1440 },
   ]
 
   const POLICY_CHECKS: { key: keyof SecurityPasswordPolicy; labelKey: TranslationKey }[] = [
@@ -40,11 +40,11 @@ export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled
     <div className="flex flex-col gap-4">
       <SectionCard title={t('adminTtlTitle')} description={t('adminTtlDesc')}>
         <div className="flex flex-col gap-4">
-          {TTL_FIELDS.map(({ key, labelKey, unit, min, max }) => (
+          {TTL_FIELDS.map(({ key, labelKey, unitKey, min, max }) => (
             <div key={key} className={ROW}>
               <label htmlFor={`sec-ttl-${key}`} className={FIELD_LABEL}>
                 {t(labelKey)}
-                <span className="ml-1.5 text-xs text-muted-foreground">({min}–{max} {unit})</span>
+                <span className="ml-1.5 text-xs text-muted-foreground">({min}–{max} {t(unitKey)})</span>
               </label>
               <div className="flex shrink-0 items-center gap-2">
                 <input
@@ -57,7 +57,7 @@ export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled
                   max={max}
                   onChange={(e) => onTokenTtl(key, Number(e.target.value))}
                 />
-                <span className={UNIT}>{unit}</span>
+                <span className={UNIT}>{t(unitKey)}</span>
               </div>
             </div>
           ))}

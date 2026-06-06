@@ -134,7 +134,7 @@ export default function AdminCleanup() {
             <div key={key} className="flex items-center justify-between gap-4">
               <label htmlFor={`cleanup-${key}`} className="text-sm text-foreground">
                 {t(labelKey)}
-                <span className="ml-1.5 text-xs text-muted-foreground">({hint} days)</span>
+                <span className="ml-1.5 text-xs text-muted-foreground">({hint} {t('unitDays')})</span>
               </label>
               <div className="flex shrink-0 items-center gap-2">
                 <input
@@ -147,7 +147,7 @@ export default function AdminCleanup() {
                   max={max}
                   onChange={(e) => handleChange(key, Number(e.target.value))}
                 />
-                <span className="text-xs text-muted-foreground">days</span>
+                <span className="text-xs text-muted-foreground">{t('unitDays')}</span>
               </div>
             </div>
           ))}
@@ -220,11 +220,11 @@ export default function AdminCleanup() {
                   </button>
                 </div>
                 <ul className="mt-2 space-y-0.5 text-xs text-emerald-700 dark:text-emerald-400">
-                  <li>{t('adminCleanupCompletedJobs')}: {runResult.completed_jobs_deleted} removed</li>
-                  <li>{t('adminCleanupFailedJobs')}: {runResult.failed_jobs_deleted} removed</li>
-                  <li>{t('adminCleanupCancelledJobs')}: {runResult.cancelled_jobs_deleted} removed</li>
-                  <li>{t('adminCleanupExpiredTokens')}: {runResult.tokens_deleted} removed</li>
-                  <li>{t('adminCleanupTempTorrents')}: {runResult.temp_files_deleted} removed</li>
+                  <li>{t('adminCleanupCompletedJobs')}: {runResult.completed_jobs_deleted} {t('adminCleanupRemoved')}</li>
+                  <li>{t('adminCleanupFailedJobs')}: {runResult.failed_jobs_deleted} {t('adminCleanupRemoved')}</li>
+                  <li>{t('adminCleanupCancelledJobs')}: {runResult.cancelled_jobs_deleted} {t('adminCleanupRemoved')}</li>
+                  <li>{t('adminCleanupExpiredTokens')}: {runResult.tokens_deleted} {t('adminCleanupRemoved')}</li>
+                  <li>{t('adminCleanupTempTorrents')}: {runResult.temp_files_deleted} {t('adminCleanupRemoved')}</li>
                 </ul>
                 {runResult.temp_files_errors.length > 0 && (
                   <ul className="mt-2 space-y-0.5 text-xs text-amber-700 dark:text-amber-400">
