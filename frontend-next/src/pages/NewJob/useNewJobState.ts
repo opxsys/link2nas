@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useI18n } from '@/i18n'
 import { listProviderConfigs } from '@/api/provider-configs'
 import { listDestinationConfigs } from '@/api/destination-configs'
 import { createBulkJobs, createTorrentJob } from '@/api/jobs'
@@ -8,6 +9,7 @@ import type { DestinationConfig } from '@/api/destination-configs'
 import type { NewJobTab, NewJobResult, NewJobResultItem } from './newJob.types'
 
 export function useNewJobState() {
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<NewJobTab>('magnet')
   const [magnetLinks, setMagnetLinks] = useState('')
   // torrent: multiple files
@@ -43,7 +45,7 @@ export function useNewJobState() {
         if (defDest) { setDestinationId(defDest.id); setLinksOnly(false) }
         else { setDestinationId(''); setLinksOnly(true) }
       } catch (err) {
-        if (!cancelled) setConfigsError(err instanceof ApiError ? err.message : 'Failed to load providers/destinations.')
+        if (!cancelled) setConfigsError(err instanceof ApiError ? err.message : t('configsLoadFailed'))
       } finally {
         if (!cancelled) setConfigsLoading(false)
       }

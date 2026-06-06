@@ -63,7 +63,7 @@ export default function AdminAnnouncementTracking({ id, onBack }: Props) {
     try {
       setData(await getAnnouncementTracking(id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tracking data.')
+      setError(err instanceof Error ? err.message : t('adminTrackLoadFailed'))
     } finally {
       setLoading(false)
     }

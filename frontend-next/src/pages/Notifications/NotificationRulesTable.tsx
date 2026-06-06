@@ -8,10 +8,6 @@ const CHANNEL_LABEL: Record<string, string> = {
   email: 'Email', gotify: 'Gotify', webhook: 'Webhook',
 }
 
-const SEVERITY_LABEL: Record<string, string> = {
-  info: 'Info+', warning: 'Warning+', error: 'Error+', critical: 'Critical only',
-}
-
 interface Props {
   rules: NotificationRule[]
   configs: NotificationConfig[]
@@ -28,6 +24,12 @@ function RuleRow({
   onToggle: () => void
 }) {
   const { t } = useI18n()
+  const severityLabel: Record<string, string> = {
+    info: t('sevThresholdInfo'),
+    warning: t('sevThresholdWarning'),
+    error: t('sevThresholdError'),
+    critical: t('sevThresholdCritical'),
+  }
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30">
       <td className="px-4 py-2.5 text-sm text-foreground">{rule.name}</td>
@@ -38,7 +40,7 @@ function RuleRow({
       </td>
       <td className="px-4 py-2.5 text-sm text-muted-foreground">{configName}</td>
       <td className="px-4 py-2.5 text-xs text-muted-foreground">
-        {SEVERITY_LABEL[rule.severity_min] ?? rule.severity_min}
+        {severityLabel[rule.severity_min] ?? rule.severity_min}
       </td>
       <td className="px-4 py-2.5">
         <label className="flex cursor-pointer items-center gap-2">

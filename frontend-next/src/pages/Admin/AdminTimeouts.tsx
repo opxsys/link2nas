@@ -40,7 +40,7 @@ export default function AdminTimeouts() {
     try {
       setValues(await getRestartCooldowns())
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load timeout settings.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadTimeoutsFailed'))
     } finally {
       setLoading(false)
     }
@@ -88,7 +88,7 @@ export default function AdminTimeouts() {
       }, 4000)
     } catch (err) {
       setSaveStatus('error')
-      setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 

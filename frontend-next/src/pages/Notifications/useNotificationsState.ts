@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useI18n } from '@/i18n'
 import type {
   NotificationConfig,
   NotificationRule,
@@ -31,6 +32,7 @@ export interface NotificationsState {
 }
 
 export function useNotificationsState(): NotificationsState {
+  const { t } = useI18n()
   const [configs, setConfigs] = useState<NotificationConfig[]>([])
   const [rules, setRules] = useState<NotificationRule[]>([])
   const [events, setEvents] = useState<NotificationEvent[]>([])
@@ -61,7 +63,7 @@ export function useNotificationsState(): NotificationsState {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Failed to load notifications')
+          setError(err instanceof ApiError ? err.message : t('notificationsLoadFailed'))
         }
       } finally {
         if (!cancelled) setLoading(false)

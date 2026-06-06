@@ -42,7 +42,7 @@ export default function AdminRuntime() {
       setOrchestrator(data.jobs.orchestrator)
       setLocalWorker(data.downloads.local_worker)
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load runtime settings.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadRuntimeFailed'))
     } finally {
       setLoading(false)
     }
@@ -86,7 +86,7 @@ export default function AdminRuntime() {
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
-      setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 

@@ -37,7 +37,7 @@ export default function AdminUsers() {
     setLoading(true)
     setFetchError(null)
     try { setUsers(await listUsers()) }
-    catch (err) { setFetchError(err instanceof Error ? err.message : 'Failed to load users.') }
+    catch (err) { setFetchError(err instanceof Error ? err.message : t('adminLoadUsersFailed')) }
     finally { setLoading(false) }
   }, [])
 

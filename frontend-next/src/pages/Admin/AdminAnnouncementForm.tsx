@@ -91,7 +91,7 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
         : await createAnnouncement(payload)
       onSave(saved)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed.')
+      setError(err instanceof Error ? err.message : t('saveFailed'))
       setSaving(false)
     }
   }

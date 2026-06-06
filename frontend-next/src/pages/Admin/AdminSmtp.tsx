@@ -48,7 +48,7 @@ export default function AdminSmtp() {
       const data = await getSmtpSettings()
       setFields(settingsToFields(data))
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load SMTP settings.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadSmtpFailed'))
     } finally {
       setLoading(false)
     }
@@ -88,7 +88,7 @@ export default function AdminSmtp() {
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
-      setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 
@@ -104,11 +104,11 @@ export default function AdminSmtp() {
         setTestMessage(result.message ?? 'Test email sent — check your inbox.')
       } else {
         setTestStatus('failed')
-        setTestMessage(result.error ?? 'Test delivery failed.')
+        setTestMessage(result.error ?? t('testFailed'))
       }
     } catch (err) {
       setTestStatus('failed')
-      setTestMessage(err instanceof Error ? err.message : 'Test delivery failed.')
+      setTestMessage(err instanceof Error ? err.message : t('testFailed'))
     }
   }
 

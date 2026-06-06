@@ -77,7 +77,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
     setSaving(true)
     setSaveError('')
     try { onSave(await updateUser(user.id, patch)) }
-    catch (err) { setSaveError(err instanceof Error ? err.message : 'Save failed.'); setSaving(false) }
+    catch (err) { setSaveError(err instanceof Error ? err.message : t('saveFailed')); setSaving(false) }
   }
 
   async function handlePasswordReset(e: React.FormEvent) {
@@ -90,7 +90,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
       setResetMsg({ ok: true, text: t('adminPasswordResetNote') })
       resetSuccessTimer.current = setTimeout(() => setResetMsg(null), 4000)
     } catch (err) {
-      setResetMsg({ ok: false, text: err instanceof Error ? err.message : 'Reset failed.' })
+      setResetMsg({ ok: false, text: err instanceof Error ? err.message : t('resetFailed') })
     } finally { setResetSaving(false) }
   }
 

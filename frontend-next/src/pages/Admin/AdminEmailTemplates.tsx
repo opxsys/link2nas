@@ -67,7 +67,7 @@ export default function AdminEmailTemplates() {
       setSubject(tpl.subject_template)
       setBody(tpl.body_template)
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load template.')
+      setLoadError(err instanceof ApiError ? err.message : t('adminTplLoadFailed'))
       setTemplate(null)
     } finally {
       setLoading(false)
@@ -98,7 +98,7 @@ export default function AdminEmailTemplates() {
       })
       setPreview(result)
     } catch (err) {
-      setPreviewError(err instanceof ApiError ? err.message : 'Preview failed.')
+      setPreviewError(err instanceof ApiError ? err.message : t('previewFailed'))
     } finally {
       setPreviewing(false)
     }
@@ -122,7 +122,7 @@ export default function AdminEmailTemplates() {
       setSuccessMsg(t('adminTplSaved'))
       saveTimer.current = setTimeout(() => setSuccessMsg(null), 4000)
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Save failed.')
+      setSaveError(err instanceof ApiError ? err.message : t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -142,7 +142,7 @@ export default function AdminEmailTemplates() {
       setSuccessMsg(t('adminTplResetDone'))
       saveTimer.current = setTimeout(() => setSuccessMsg(null), 4000)
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Reset failed.')
+      setSaveError(err instanceof ApiError ? err.message : t('resetFailed'))
     } finally {
       setResetting(false)
     }

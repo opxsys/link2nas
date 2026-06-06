@@ -119,7 +119,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
     try {
       setItems(await listAnnouncements())
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load announcements.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadAnnouncements'))
     } finally {
       setLoading(false)
     }

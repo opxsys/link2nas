@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useI18n } from '@/i18n'
 import {
   listJobs, getJob, deleteJob as apiDeleteJob,
   startJob, cancelJob, restartJob, refreshJob,
@@ -67,6 +68,7 @@ function shouldRefreshSelectedJobDetail(
 }
 
 export function useJobsState() {
+  const { t } = useI18n()
   const [jobs, setJobs] = useState<RealJob[]>([])
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [selectedJob, setSelectedJob] = useState<RealJob | null>(null)
@@ -144,7 +146,7 @@ export function useJobsState() {
       }
     } catch (err) {
       if (!silent) {
-        setError(err instanceof ApiError ? err.message : 'Failed to load jobs.')
+        setError(err instanceof ApiError ? err.message : t('jobsLoadFailed'))
       }
     } finally {
       if (!silent) {

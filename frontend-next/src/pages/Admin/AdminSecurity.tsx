@@ -43,7 +43,7 @@ export default function AdminSecurity() {
       setTokenTtl(data.token_ttl)
       setPasswordPolicy(data.password_policy)
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load security settings.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadSecFailed'))
     } finally {
       setLoading(false)
     }
@@ -75,7 +75,7 @@ export default function AdminSecurity() {
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
-      setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 

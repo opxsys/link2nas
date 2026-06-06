@@ -49,7 +49,7 @@ export default function AdminCleanup() {
       const data = await getCleanupSettings()
       setRetention(data.retention)
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load cleanup settings.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadCleanupFailed'))
     } finally {
       setLoading(false)
     }
@@ -75,7 +75,7 @@ export default function AdminCleanup() {
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
-      setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 
@@ -89,7 +89,7 @@ export default function AdminCleanup() {
       setRunStatus('done')
     } catch (err) {
       setRunStatus('failed')
-      setRunError(err instanceof Error ? err.message : 'Cleanup run failed.')
+      setRunError(err instanceof Error ? err.message : t('cleanupFailed'))
     }
   }
 

@@ -94,7 +94,7 @@ export default function AdminSystemEvents() {
       })
       setEvents(all.filter(isSystemNotificationEvent))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load events.')
+      setError(err instanceof Error ? err.message : t('adminLoadEventsFailed'))
     } finally {
       setLoading(false)
     }

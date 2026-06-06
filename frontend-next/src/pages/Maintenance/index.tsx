@@ -21,7 +21,7 @@ export default function Maintenance() {
     try {
       setStatus(await getMaintenanceStatus())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load system status.')
+      setError(err instanceof Error ? err.message : t('maintLoadFailed'))
     } finally {
       setLoading(false)
     }

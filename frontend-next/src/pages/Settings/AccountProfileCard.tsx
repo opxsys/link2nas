@@ -137,13 +137,14 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
         </div>
 
         {me.email_sending_available && (
-          <div className="flex items-center gap-3 sm:col-span-1">
+          <div className="sm:col-span-1">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
               <input type="checkbox" checked={receiveEmails} disabled={saving}
                 onChange={(e) => setReceiveEmails(e.target.checked)}
-                className="h-4 w-4 rounded border-input accent-primary disabled:opacity-50" />
+                className="h-4 w-4 shrink-0 rounded border-input accent-primary disabled:opacity-50" />
               {t('labelReceiveEmails')}
             </label>
+            <p className="mt-1 text-xs text-muted-foreground">{t('hintReceiveEmails')}</p>
           </div>
         )}
 

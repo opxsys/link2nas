@@ -46,7 +46,7 @@ export default function AnnouncementsUserView() {
         }
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load announcements.')
+      setError(err instanceof ApiError ? err.message : t('adminLoadAnnouncements'))
     } finally {
       setLoading(false)
     }

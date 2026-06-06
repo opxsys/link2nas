@@ -39,7 +39,7 @@ export default function AdminMaintenance() {
     try {
       setStatus(await getMaintenanceStatus())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load maintenance status.')
+      setError(err instanceof Error ? err.message : t('adminLoadMaintFailed'))
     } finally {
       setLoading(false)
     }

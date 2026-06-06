@@ -41,7 +41,7 @@ export default function AdminSecurityAntiAbuse() {
     try {
       setData(await getAntiAbuse())
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load anti-abuse data.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadAntiAbuse'))
     } finally {
       setLoading(false)
     }
@@ -61,7 +61,7 @@ export default function AdminSecurityAntiAbuse() {
       await load()
     } catch (err) {
       setActionStatus('error')
-      setActionMessage(err instanceof Error ? err.message : 'Reset failed.')
+      setActionMessage(err instanceof Error ? err.message : t('resetFailed'))
     } finally {
       setResettingKind(null)
     }
@@ -79,7 +79,7 @@ export default function AdminSecurityAntiAbuse() {
       await load()
     } catch (err) {
       setActionStatus('error')
-      setActionMessage(err instanceof Error ? err.message : 'Reset all failed.')
+      setActionMessage(err instanceof Error ? err.message : t('resetFailed'))
     } finally {
       setResettingAll(false)
     }

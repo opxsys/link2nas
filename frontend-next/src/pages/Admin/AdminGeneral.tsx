@@ -40,7 +40,7 @@ export default function AdminGeneral() {
       setAppTagline(data.app_tagline)
       setPublicBaseUrl(data.public_base_url)
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load settings.')
+      setFetchError(err instanceof Error ? err.message : t('adminLoadGeneralFailed'))
     } finally {
       setLoading(false)
     }
@@ -68,7 +68,7 @@ export default function AdminGeneral() {
       successTimer.current = setTimeout(() => { setSaveStatus('idle'); setSaveMessage('') }, 4000)
     } catch (err) {
       setSaveStatus('error')
-      setSaveMessage(err instanceof Error ? err.message : 'Save failed.')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 
