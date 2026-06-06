@@ -12,6 +12,7 @@ from backend.routes_v2.destinations_support.validation import (
     _validate_destination_config,
 )
 from backend.services_v2.destination_config_service import DestinationConfigService
+from backend.services_v2.destination_registry import DESTINATION_KEYS
 
 from backend.services_v2.destination_factory import (
     DestinationConfigDisabledError,
@@ -44,7 +45,7 @@ def save_destination_config_v2():
 
     destination_type = _normalize_destination_type(destination_type)
 
-    if destination_type not in {"synology", "local"}:
+    if destination_type not in DESTINATION_KEYS:
         return _error("invalid destination_type")
 
     if destination_type == "local":
@@ -101,7 +102,7 @@ def get_destination_config_v2(config_ref):
     )
 
     # Temporary V2 compatibility: allow /synology, /nas, /local.
-    if not config and _normalize_destination_type(config_ref) in {"synology", "local"}:
+    if not config and _normalize_destination_type(config_ref) in DESTINATION_KEYS:
         config = service.get_destination_config(
             ctx,
             destination_name=config_ref,
@@ -173,7 +174,7 @@ def delete_destination_config_v2(config_ref):
     )
 
     # Temporary V2 compatibility: allow DELETE /synology, /nas, /local.
-    if not config and _normalize_destination_type(config_ref) in {"synology", "local"}:
+    if not config and _normalize_destination_type(config_ref) in DESTINATION_KEYS:
         config = service.get_destination_config(
             ctx,
             destination_name=config_ref,

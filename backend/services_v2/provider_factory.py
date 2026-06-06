@@ -3,11 +3,8 @@ from dataclasses import dataclass
 from flask import current_app
 
 from backend.models.provider_config import ProviderConfig
-from backend.services_v2.providers.alldebrid_client import AllDebridClient
-from backend.services_v2.providers.alldebrid_provider import AllDebridProvider
+from backend.services_v2.provider_registry import build_provider
 from backend.services_v2.providers.base import Provider
-from backend.services_v2.providers.realdebrid_client import RealDebridClient
-from backend.services_v2.providers.realdebrid_provider import RealDebridProvider
 
 
 class ProviderConfigNotFoundError(Exception):
@@ -88,24 +85,10 @@ class UserProviderFactory:
 
         provider_type = config.provider_type
 
-        if provider_type == "realdebrid":
-            client = RealDebridClient(
-                base_url=self.settings.REALDEBRID_BASE_URL,
-                token=token,
-                timeout=self.settings.REALDEBRID_TIMEOUT,
-            )
-            provider = RealDebridProvider(client)
-
-        elif provider_type == "alldebrid":
-            client = AllDebridClient(
-                base_url=self.settings.ALLDEBRID_BASE_URL,
-                token=token,
-                timeout=self.settings.ALLDEBRID_TIMEOUT,
-            )
-            provider = AllDebridProvider(client)
-
-        else:
-            raise UnknownProviderError(f"Unknown provider: {provider_type}")
+        try:
+            provider = build_provider(provider_type, token, self.settings)
+        except ValueError as exc:
+            raise UnknownProviderError(str(exc)) from exc
 
         # Keep legacy attribute expected by existing provider/job code.
         provider.provider_name = provider_type

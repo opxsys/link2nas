@@ -7,11 +7,7 @@ import type { DestinationConfig } from '@/api/destination-configs'
 import { getMe } from '@/api/me'
 import { useAppInfo } from '@/lib/useAppInfo'
 import { useI18n } from '@/i18n'
-
-const ALL_DEST_TYPES = [
-  { value: 'synology', label: 'Synology NAS' },
-  { value: 'local',    label: 'Local'         },
-]
+import { DESTINATION_TYPES as ALL_DEST_TYPES } from '@/lib/destination-types'
 
 const INPUT  = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const LABEL  = 'mb-1.5 block text-xs font-medium text-foreground'

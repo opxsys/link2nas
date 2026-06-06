@@ -1,24 +1,14 @@
 import { useState } from 'react'
 import {
-  Cloud, Zap, Loader2, Star, PowerOff, Power, Trash2, KeyRound, Pencil,
+  Cloud, Loader2, Star, PowerOff, Power, Trash2, KeyRound, Pencil,
   FlaskConical, CheckCircle2, XCircle, AlertTriangle,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { testProviderConfig } from '@/api/provider-configs'
 import { ApiError } from '@/api/client'
 import type { ProviderConfig } from '@/api/provider-configs'
 import { useI18n } from '@/i18n'
-
-const TYPE_ICON: Record<string, LucideIcon> = {
-  realdebrid: Zap,
-  alldebrid: Cloud,
-}
-
-const TYPE_LABEL: Record<string, string> = {
-  realdebrid: 'Real-Debrid',
-  alldebrid: 'AllDebrid',
-}
+import { PROVIDER_ICON as TYPE_ICON, PROVIDER_LABEL as TYPE_LABEL } from '@/lib/provider-types'
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error'
 

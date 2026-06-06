@@ -4,11 +4,10 @@ from flask import Blueprint, jsonify, request, current_app
 
 from backend.routes_v2._context import get_user_context
 from backend.services_v2.provider_config_service import ProviderConfigService
+from backend.services_v2.provider_registry import PROVIDER_KEYS
 
 
 providers_v2_bp = Blueprint("providers_v2", __name__, url_prefix="/api/v2/providers")
-
-ALLOWED_PROVIDERS = {"realdebrid", "alldebrid"}
 
 
 def _is_unique_constraint_error(exc: Exception) -> bool:
@@ -63,7 +62,7 @@ def save_provider_config_v2():
 
     provider_type = str(provider_type).strip().lower()
 
-    if provider_type not in ALLOWED_PROVIDERS:
+    if provider_type not in PROVIDER_KEYS:
         return _error("invalid provider_type")
 
     if api_key is not None and not str(api_key).strip():
@@ -110,7 +109,7 @@ def get_provider_config_v2(config_ref):
     )
 
     # Temporary V2 compatibility: allow /realdebrid or /alldebrid.
-    if not config and config_ref in ALLOWED_PROVIDERS:
+    if not config and config_ref in PROVIDER_KEYS:
         config = service.get_provider_config(
             ctx,
             provider_name=config_ref,
@@ -133,7 +132,7 @@ def delete_provider_config_v2(config_ref):
     )
 
     # Temporary V2 compatibility: allow DELETE /realdebrid or /alldebrid.
-    if not config and config_ref in ALLOWED_PROVIDERS:
+    if not config and config_ref in PROVIDER_KEYS:
         config = service.get_provider_config(
             ctx,
             provider_name=config_ref,

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from flask import current_app
 
 from backend.models.destination_config import DestinationConfig
+from backend.services_v2.destination_registry import DESTINATION_ALIAS_KEYS, DESTINATION_KEYS
 from backend.services_v2.destinations.base import Destination
 from backend.services_v2.destinations.links_only_destination import LinksOnlyDestination
 from backend.services_v2.destinations.local_destination import LocalDestination
@@ -87,7 +88,9 @@ class UserDestinationFactory:
         if not config.is_enabled:
             raise DestinationConfigDisabledError("Destination config is disabled")
 
-        destination_type = config.destination_type
+        destination_type = DESTINATION_ALIAS_KEYS.get(
+            config.destination_type, config.destination_type
+        )
 
         if destination_type == "local":
             try:
@@ -109,7 +112,7 @@ class UserDestinationFactory:
                 config=config,
             )
 
-        if destination_type in {"synology", "nas"}:
+        if destination_type == "synology":
             try:
                 cfg = json.loads(config.config_json or "{}")
             except Exception:
@@ -157,7 +160,7 @@ class UserDestinationFactory:
 
         values = []
         for config in configs:
-            if config.is_enabled and config.destination_type in {"synology", "local"}:
+            if config.is_enabled and config.destination_type in DESTINATION_KEYS:
                 if config.destination_type not in values:
                     values.append(config.destination_type)
 
@@ -193,8 +196,7 @@ class UserDestinationFactory:
 
         if destination_name:
             destination_type = str(destination_name or "").strip().lower()
-            if destination_type == "nas":
-                destination_type = "synology"
+            destination_type = DESTINATION_ALIAS_KEYS.get(destination_type, destination_type)
 
             if destination_type == "links_only":
                 if allow_links_only:

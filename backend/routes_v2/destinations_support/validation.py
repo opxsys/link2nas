@@ -1,7 +1,7 @@
 import json
 import sqlite3
 
-ALLOWED_DESTINATION_TYPES = {"synology", "nas", "local"}
+from backend.services_v2.destination_registry import DESTINATION_ALIAS_KEYS
 
 
 def _is_unique_constraint_error(exc: Exception) -> bool:
@@ -16,11 +16,7 @@ def _is_unique_constraint_error(exc: Exception) -> bool:
 
 def _normalize_destination_type(value: str | None) -> str:
     destination_type = str(value or "").strip().lower()
-
-    if destination_type == "nas":
-        destination_type = "synology"
-
-    return destination_type
+    return DESTINATION_ALIAS_KEYS.get(destination_type, destination_type)
 
 
 def _parse_config_json(raw: str | None) -> dict:

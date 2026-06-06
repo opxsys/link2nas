@@ -5,11 +5,7 @@ import { saveProviderConfig } from '@/api/provider-configs'
 import { ApiError } from '@/api/client'
 import type { ProviderConfig } from '@/api/provider-configs'
 import { useI18n } from '@/i18n'
-
-const PROVIDER_TYPES = [
-  { value: 'realdebrid', label: 'Real-Debrid' },
-  { value: 'alldebrid',  label: 'AllDebrid'   },
-]
+import { PROVIDER_TYPES } from '@/lib/provider-types'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'

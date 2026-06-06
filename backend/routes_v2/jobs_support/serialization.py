@@ -5,6 +5,7 @@ from flask import current_app
 from backend.routes_v2._context import get_user_context
 from backend.routes_v2.jobs_support.helpers import _parse_json_object, _filename_from_path
 from backend.routes_v2.jobs_support.display_path import local_display_path
+from backend.services_v2.destination_registry import DESTINATION_ALIAS_KEYS, DESTINATION_KEYS
 
 
 def _parse_output_links(job) -> list[dict]:
@@ -92,9 +93,9 @@ def _active_real_destination_configs(ctx) -> list[dict]:
     result = []
 
     for config in configs:
-        destination_type = "synology" if config.destination_type == "nas" else config.destination_type
+        destination_type = DESTINATION_ALIAS_KEYS.get(config.destination_type, config.destination_type)
 
-        if destination_type not in {"synology", "local"}:
+        if destination_type not in DESTINATION_KEYS:
             continue
 
         result.append({

@@ -26,8 +26,9 @@ class DestinationConfigRepository(ABC):
     # Resolves by technical destination type only when it is unambiguous.
     def get(self, user_id: str, destination_name: str) -> DestinationConfig | None:
         destination_type = str(destination_name or "").strip().lower()
-        if destination_type == "nas":
-            destination_type = "synology"
+        from backend.services_v2.destination_registry import DESTINATION_ALIAS_KEYS
+
+        destination_type = DESTINATION_ALIAS_KEYS.get(destination_type, destination_type)
 
         matches = [
             item

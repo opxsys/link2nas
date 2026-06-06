@@ -1,11 +1,13 @@
 from flask import current_app
 
 from backend.services_v2.destination_factory import DestinationConfigNotFoundError
+from backend.services_v2.destination_registry import DESTINATION_ALL_KEYS
+from backend.services_v2.provider_registry import PROVIDER_KEYS
 from backend.routes_v2.jobs_support.errors import _error
 
 ALLOWED_SOURCE_TYPES = {"magnet", "torrent_file", "direct_link"}
-ALLOWED_PROVIDERS = {"realdebrid", "alldebrid"}
-ALLOWED_DESTINATIONS = {"synology", "nas", "local", "links_only"}
+ALLOWED_PROVIDERS = PROVIDER_KEYS
+ALLOWED_DESTINATIONS = DESTINATION_ALL_KEYS | {"links_only"}
 
 
 def validate_provider_name(provider_name):

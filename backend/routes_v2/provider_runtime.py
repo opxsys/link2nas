@@ -10,6 +10,7 @@ from backend.services_v2.provider_factory import (
     ProviderConfigNotFoundError,
     UnknownProviderError,
 )
+from backend.services_v2.provider_registry import PROVIDER_KEYS
 from backend.services_v2.providers.realdebrid_client import (
     RealDebridApiError,
     RealDebridClientError,
@@ -127,7 +128,7 @@ def test_provider_by_name_v2(config_ref):
 
     except ProviderConfigNotFoundError:
         # Temporary V2 compatibility: allow /test/realdebrid or /test/alldebrid.
-        if config_ref not in {"realdebrid", "alldebrid"}:
+        if config_ref not in PROVIDER_KEYS:
             return jsonify({"error": "Provider config not found"}), 404
 
         try:

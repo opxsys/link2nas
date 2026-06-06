@@ -5,11 +5,7 @@ import { testDestinationConfig } from '@/api/destination-configs'
 import { ApiError } from '@/api/client'
 import type { DestinationConfig } from '@/api/destination-configs'
 import { useI18n } from '@/i18n'
-
-const TYPE_LABEL: Record<string, string> = {
-  synology: 'Synology NAS',
-  local:    'Local',
-}
+import { DESTINATION_LABEL as TYPE_LABEL } from '@/lib/destination-types'
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error'
 

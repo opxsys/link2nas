@@ -93,8 +93,9 @@ class DestinationConfigRepository:
 
     def get(self, user_id: str, destination_name: str) -> DestinationConfig | None:
         destination_type = str(destination_name or "").strip().lower()
-        if destination_type == "nas":
-            destination_type = "synology"
+        from backend.services_v2.destination_registry import DESTINATION_ALIAS_KEYS
+
+        destination_type = DESTINATION_ALIAS_KEYS.get(destination_type, destination_type)
 
         with self.db.connect() as conn:
             row = conn.execute(

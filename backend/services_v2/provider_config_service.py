@@ -4,6 +4,7 @@ from backend.utils.time import utc_now_iso
 from flask import current_app
 
 from backend.models.provider_config import ProviderConfig
+from backend.services_v2.provider_registry import PROVIDER_DISPLAY_NAMES, PROVIDER_KEYS
 from backend.services_v2.user_context import UserContext
 
 
@@ -13,7 +14,7 @@ now = utc_now_iso
 def normalize_provider_type(value: str | None) -> str:
     provider_type = str(value or "").strip().lower()
 
-    if provider_type not in {"realdebrid", "alldebrid"}:
+    if provider_type not in PROVIDER_KEYS:
         raise ValueError("Unsupported provider type")
 
     return provider_type
@@ -49,10 +50,9 @@ class ProviderConfigService:
 
         if not resolved_name:
             # Compatibility default. This keeps old frontend/routes usable during the refactor.
-            resolved_name = (
-                "RealDebrid"
-                if resolved_provider_type == "realdebrid"
-                else "AllDebrid"
+            resolved_name = PROVIDER_DISPLAY_NAMES.get(
+                resolved_provider_type,
+                resolved_provider_type,
             )
 
         crypto = current_app.config["CRYPTO_SERVICE_V2"]

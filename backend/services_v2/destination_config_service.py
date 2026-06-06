@@ -5,6 +5,7 @@ from backend.utils.time import utc_now_iso
 from flask import current_app
 
 from backend.models.destination_config import DestinationConfig
+from backend.services_v2.destination_registry import DESTINATION_ALIAS_KEYS, DESTINATION_KEYS
 from backend.services_v2.user_context import UserContext
 
 
@@ -14,10 +15,9 @@ now = utc_now_iso
 def normalize_destination_type(value: str | None) -> str:
     destination_type = str(value or "").strip().lower()
 
-    if destination_type == "nas":
-        destination_type = "synology"
+    destination_type = DESTINATION_ALIAS_KEYS.get(destination_type, destination_type)
 
-    if destination_type not in {"synology", "local"}:
+    if destination_type not in DESTINATION_KEYS:
         raise ValueError("Unsupported destination type")
 
     return destination_type
