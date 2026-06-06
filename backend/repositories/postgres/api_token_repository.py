@@ -61,7 +61,7 @@ class ApiTokenRepository:
             conn.execute(
                 """
                 UPDATE api_tokens
-                SET is_active = 0,
+                SET is_active = false,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s AND user_id = %s
                 """,
