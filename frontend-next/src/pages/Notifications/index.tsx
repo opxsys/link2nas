@@ -6,6 +6,7 @@ import NotificationRulesTable from './NotificationRulesTable'
 import NotificationEventsTimeline from './NotificationEventsTimeline'
 import NotificationChannelsPanel from './NotificationChannelsPanel'
 import NotificationTestPanel from './NotificationTestPanel'
+import { useI18n } from '@/i18n'
 
 function isToday(isoStr: string): boolean {
   const d = new Date(isoStr)
@@ -18,6 +19,7 @@ function isToday(isoStr: string): boolean {
 }
 
 export default function Notifications() {
+  const { t } = useI18n()
   const state = useNotificationsState()
 
   const summary = useMemo(
@@ -33,8 +35,8 @@ export default function Notifications() {
   return (
     <>
       <PageHeader
-        title="My Notifications"
-        description="Manage your notification rules, channels, and recent user events."
+        title={t('notifPageTitle')}
+        description={t('notifPageDesc')}
       />
       <div className="flex flex-col gap-6">
         <NotificationSummaryCards {...summary} loading={state.loading} />

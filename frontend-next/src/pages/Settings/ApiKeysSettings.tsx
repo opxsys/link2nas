@@ -161,7 +161,7 @@ export default function ApiKeysSettings() {
                   <th className={TH}>{t('colStatus')}</th>
                   <th className={`${TH} hidden sm:table-cell`}>{t('colCreated')}</th>
                   <th className={`${TH} hidden sm:table-cell`}>{t('colLastUsed')}</th>
-                  <th className={TH}><span className="sr-only">Actions</span></th>
+                  <th className={TH}><span className="sr-only">{t('colActions')}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

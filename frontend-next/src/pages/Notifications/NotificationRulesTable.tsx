@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Settings } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
+import { useI18n } from '@/i18n'
 import type { NotificationRule, NotificationConfig } from './notifications.types'
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -26,13 +27,14 @@ function RuleRow({
   configName: string
   onToggle: () => void
 }) {
+  const { t } = useI18n()
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30">
       <td className="px-4 py-2.5 text-sm text-foreground">{rule.name}</td>
       <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">
         {rule.event_types.length
           ? rule.event_types.join(', ')
-          : <span className="italic">All events</span>}
+          : <span className="italic">{t('allEvents')}</span>}
       </td>
       <td className="px-4 py-2.5 text-sm text-muted-foreground">{configName}</td>
       <td className="px-4 py-2.5 text-xs text-muted-foreground">
@@ -45,9 +47,11 @@ function RuleRow({
             checked={rule.is_enabled}
             onChange={onToggle}
             className="h-4 w-4 rounded border-input accent-primary"
-            aria-label={`${rule.is_enabled ? 'Disable' : 'Enable'} rule: ${rule.name}`}
+            aria-label={`${rule.is_enabled ? t('ruleDisablePrefix') : t('ruleEnablePrefix')} ${rule.name}`}
           />
-          <span className="text-xs text-muted-foreground">{rule.is_enabled ? 'On' : 'Off'}</span>
+          <span className="text-xs text-muted-foreground">
+            {rule.is_enabled ? t('toggleOn') : t('toggleOff')}
+          </span>
         </label>
       </td>
     </tr>
@@ -55,6 +59,8 @@ function RuleRow({
 }
 
 export default function NotificationRulesTable({ rules, configs, loading, error, onToggle }: Props) {
+  const { t } = useI18n()
+
   function configName(configId: string): string {
     const cfg = configs.find(c => c.id === configId)
     return cfg ? `${cfg.name} (${CHANNEL_LABEL[cfg.channel] ?? cfg.channel})` : '—'
@@ -62,27 +68,30 @@ export default function NotificationRulesTable({ rules, configs, loading, error,
 
   return (
     <SectionCard
-      title="Notification Rules"
-      description="Active rules that trigger notifications."
+      title={t('notifRulesTitle')}
+      description={t('notifRulesDesc')}
       actions={
         <Link
           to="/settings?section=notifications"
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Settings size={12} aria-hidden="true" />
-          Manage in Settings
+          {t('notifManageSettings')}
         </Link>
       }
     >
       {loading && (
-        <p className="py-6 text-sm text-muted-foreground">Loading rules…</p>
+        <p className="py-6 text-sm text-muted-foreground">{t('notifLoadingRules')}</p>
       )}
       {!loading && error && (
         <p className="py-4 text-sm text-destructive">{error}</p>
       )}
       {!loading && !error && rules.length === 0 && (
         <p className="py-4 text-sm italic text-muted-foreground">
-          No notification rules configured. <Link to="/settings?section=notifications" className="underline hover:text-foreground">Add one in Settings → Notifications.</Link>
+          {t('notifNoRulesText')}{' '}
+          <Link to="/settings?section=notifications" className="underline hover:text-foreground">
+            {t('notifAddSettingsLink')}
+          </Link>
         </p>
       )}
       {!loading && !error && rules.length > 0 && (
@@ -90,11 +99,11 @@ export default function NotificationRulesTable({ rules, configs, loading, error,
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Name</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Events</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Channel</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Min severity</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">Enabled</th>
+                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">{t('colRuleName')}</th>
+                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">{t('colRuleEvents')}</th>
+                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">{t('labelChannel')}</th>
+                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">{t('colRuleMinSev')}</th>
+                <th className="px-4 py-2 text-xs font-medium text-muted-foreground">{t('colRuleEnabled')}</th>
               </tr>
             </thead>
             <tbody>

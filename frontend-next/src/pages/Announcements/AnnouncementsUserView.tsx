@@ -12,6 +12,7 @@ import { ApiError } from '@/api/client'
 import type { UserAnnouncement } from '@/api/announcements'
 import { emitAnnouncementsChanged } from '@/lib/announcementEvents'
 import { useMe } from '@/lib/useMe'
+import { useI18n } from '@/i18n'
 
 const TYPE_CLASS: Record<string, string> = {
   news:        'border-border bg-muted text-muted-foreground',
@@ -22,6 +23,7 @@ const TYPE_CLASS: Record<string, string> = {
 const BADGE = 'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize'
 
 export default function AnnouncementsUserView() {
+  const { t } = useI18n()
   const { me } = useMe()
   const [items, setItems] = useState<UserAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,8 +56,8 @@ export default function AnnouncementsUserView() {
 
   if (disabled) {
     return (
-      <SectionCard title="Announcements" description="Messages from administrators.">
-        <p className="py-4 text-sm text-muted-foreground">Announcements are disabled.</p>
+      <SectionCard title={t('navAnnouncements')} description={t('announcementsDesc')}>
+        <p className="py-4 text-sm text-muted-foreground">{t('announcementsDisabled')}</p>
       </SectionCard>
     )
   }
@@ -94,11 +96,11 @@ export default function AnnouncementsUserView() {
   }
 
   return (
-    <SectionCard title="Announcements" description="Messages from administrators.">
+    <SectionCard title={t('navAnnouncements')} description={t('announcementsDesc')}>
       {loading && (
         <div className="flex items-center gap-2 py-6 text-muted-foreground">
           <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-          <span className="text-sm">Loading…</span>
+          <span className="text-sm">{t('loading')}</span>
         </div>
       )}
       {!loading && error && (
@@ -108,7 +110,7 @@ export default function AnnouncementsUserView() {
         </div>
       )}
       {!loading && !error && items.length === 0 && (
-        <p className="py-4 text-sm text-muted-foreground">No announcements.</p>
+        <p className="py-4 text-sm text-muted-foreground">{t('noAnnouncements')}</p>
       )}
       {!loading && !error && items.length > 0 && (
         <ul className="divide-y divide-border">
@@ -120,10 +122,10 @@ export default function AnnouncementsUserView() {
                   <span className="text-sm font-medium text-foreground">{ann.title}</span>
                   <span className={`${BADGE} ${TYPE_CLASS[ann.type] ?? TYPE_CLASS.news}`}>{ann.type}</span>
                   {ann.user_status.read_at && (
-                    <span className="text-xs text-muted-foreground">Read</span>
+                    <span className="text-xs text-muted-foreground">{t('labelRead')}</span>
                   )}
                   {ann.user_status.acknowledged_at && (
-                    <span className="text-xs text-muted-foreground">Acknowledged</span>
+                    <span className="text-xs text-muted-foreground">{t('labelAcknowledged')}</span>
                   )}
                 </div>
                 <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{ann.body}</p>
@@ -132,14 +134,14 @@ export default function AnnouncementsUserView() {
                     <Button variant="outline" size="sm" className="h-7 text-xs" disabled={busy}
                       onClick={() => handleRead(ann.id)}>
                       {busy ? <Loader2 size={11} className="animate-spin" aria-hidden="true" /> : <BookOpen size={11} aria-hidden="true" />}
-                      Mark as read
+                      {t('annMarkRead')}
                     </Button>
                   )}
                   {ann.require_acknowledgement && !ann.user_status.acknowledged_at && (
                     <Button variant="outline" size="sm" className="h-7 text-xs" disabled={busy}
                       onClick={() => handleAcknowledge(ann.id)}>
                       {busy ? <Loader2 size={11} className="animate-spin" aria-hidden="true" /> : <CheckSquare size={11} aria-hidden="true" />}
-                      Acknowledge
+                      {t('annAcknowledge')}
                     </Button>
                   )}
                 </div>

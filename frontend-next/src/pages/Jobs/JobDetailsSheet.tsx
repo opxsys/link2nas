@@ -421,7 +421,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
                                         disabled={busy}
                                         onClick={() => onAction('unrestrict_file', job.id, { file_id: l.file_id })}
                                         className="shrink-0 rounded text-muted-foreground hover:text-primary disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                        title="Regenerate this file link."
+                                        title={t('regenerateFileLink')}
                                         aria-label={`${t('regenerate')} ${filename}`}
                                       >
                                         {busy ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />}

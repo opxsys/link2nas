@@ -1,5 +1,6 @@
 import { CheckCircle2, MinusCircle, Mail, Bell, Webhook, AlertTriangle, Loader2 } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
+import { useI18n } from '@/i18n'
 import type { NotificationConfig, NotificationChannel } from './notifications.types'
 
 const CHANNEL_ICON: Record<NotificationChannel, React.ReactNode> = {
@@ -43,6 +44,7 @@ function ConfigCard({
   cfg: NotificationConfig
   smtpDisabled: boolean
 }) {
+  const { t } = useI18n()
   const target = configTarget(cfg)
   const configured = isConfigured(cfg)
   const emailWarning = cfg.channel === 'email' && smtpDisabled
@@ -59,12 +61,12 @@ function ConfigCard({
           {configured && cfg.is_enabled ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-xs text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
               <CheckCircle2 size={10} aria-hidden="true" />
-              Active
+              {t('badgeActive')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
               <MinusCircle size={10} aria-hidden="true" />
-              {!configured ? 'Not configured' : 'Disabled'}
+              {!configured ? t('notConfigured') : t('badgeDisabled')}
             </span>
           )}
         </div>
@@ -75,7 +77,7 @@ function ConfigCard({
         {emailWarning && (
           <div className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
             <AlertTriangle size={12} className="mt-0.5 shrink-0" aria-hidden="true" />
-            SMTP is not configured or disabled. Email sending is unavailable.
+            {t('adminSmtpNotTestable')}
           </div>
         )}
       </div>
@@ -91,17 +93,18 @@ interface Props {
 }
 
 export default function NotificationChannelsPanel({ configs, smtpEnabled, loading, error }: Props) {
+  const { t } = useI18n()
   const smtpDisabled = smtpEnabled === false
 
   return (
     <SectionCard
-      title="Channels"
-      description="Delivery channels available for notification rules."
+      title={t('notifChannelsTitle')}
+      description={t('notifChannelsDesc')}
     >
       {loading && (
         <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
           <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-          Loading channels…
+          {t('notifLoadingChannels')}
         </div>
       )}
       {!loading && error && (
@@ -109,7 +112,7 @@ export default function NotificationChannelsPanel({ configs, smtpEnabled, loadin
       )}
       {!loading && !error && configs.length === 0 && (
         <p className="py-4 text-sm text-muted-foreground italic">
-          No notification channels configured. Add one in Settings → Notifications.
+          {t('notifNoChannels')}
         </p>
       )}
       {!loading && !error && configs.length > 0 && (

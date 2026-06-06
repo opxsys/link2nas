@@ -13,9 +13,11 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { JobStatus } from '@/lib/types'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 
 interface StatusConfig {
-  label: string
+  labelKey: TranslationKey
   icon: LucideIcon
   className: string
 }
@@ -25,100 +27,108 @@ const NEUTRAL_CLASS =
 
 const STATUS_CONFIG: Partial<Record<JobStatus | string, StatusConfig>> = {
   created: {
-    label: 'Created',
+    labelKey: 'statusFilterCreated',
     icon: Timer,
     className: NEUTRAL_CLASS,
   },
   waiting: {
-    label: 'Waiting',
+    labelKey: 'statusFilterWaiting',
     icon: Clock,
     className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   },
   queued: {
-    label: 'Queued',
+    labelKey: 'statusFilterQueued',
     icon: Clock,
     className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   },
   starting: {
-    label: 'Starting',
+    labelKey: 'statusFilterStarting',
     icon: Play,
     className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   },
   running: {
-    label: 'Running',
+    labelKey: 'statusFilterRunning',
     icon: Play,
     className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   },
   downloading: {
-    label: 'Downloading',
+    labelKey: 'statusFilterDownloading',
     icon: CloudDownload,
     className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   },
   downloaded: {
-    label: 'Downloaded',
+    labelKey: 'statusFilterDownloaded',
     icon: CloudDownload,
     className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   },
   waiting_files_selection: {
-    label: 'Waiting files selection',
+    labelKey: 'statusFilterWaitingFiles',
     icon: Clock,
     className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   },
   partially_ready: {
-    label: 'Partially ready',
+    labelKey: 'statusFilterPartiallyReady',
     icon: CircleCheck,
     className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
   ready: {
-    label: 'Ready',
+    labelKey: 'statusFilterReady',
     icon: CircleCheck,
     className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
   completed: {
-    label: 'Completed',
+    labelKey: 'statusFilterCompleted',
     icon: CircleCheck,
     className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
   failed: {
-    label: 'Failed',
+    labelKey: 'statusFilterFailed',
     icon: CircleX,
     className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
   },
   provider_error: {
-    label: 'Provider error',
+    labelKey: 'statusFilterProviderError',
     icon: CircleX,
     className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
   },
   destination_error: {
-    label: 'Destination error',
+    labelKey: 'statusFilterDestinationError',
     icon: CircleX,
     className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
   },
   cancelled: {
-    label: 'Cancelled',
+    labelKey: 'statusFilterCancelled',
     icon: CircleMinus,
     className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
   },
   cancel_requested: {
-    label: 'Cancel requested',
+    labelKey: 'statusFilterCancelRequested',
     icon: CircleMinus,
     className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
   },
   sending: {
-    label: 'Sending',
+    labelKey: 'statusFilterSending',
     icon: Send,
     className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
   },
   sent: {
-    label: 'Sent',
+    labelKey: 'statusFilterSent',
     icon: Send,
     className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
   },
   links_only: {
-    label: 'Links only',
+    labelKey: 'statusFilterLinksOnly',
     icon: Link,
     className: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
   },
+}
+
+function toReadableLabel(value: string): string {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/^\w/, (char) => char.toUpperCase())
 }
 
 interface StatusBadgeProps {
@@ -126,44 +136,31 @@ interface StatusBadgeProps {
   className?: string
 }
 
-function toReadableLabel(value: string): string {
-  const normalized = value.trim()
-
-  if (!normalized) {
-    return 'Unknown'
-  }
-
-  return normalized
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .toLowerCase()
-    .replace(/^\w/, (char) => char.toUpperCase())
-}
-
 export default function StatusBadge({ status, className }: StatusBadgeProps) {
+  const { t } = useI18n()
   const normalizedStatus = String(status ?? '').trim().toLowerCase()
   const knownConfig = normalizedStatus ? STATUS_CONFIG[normalizedStatus] : undefined
 
-  const config: StatusConfig = knownConfig ?? {
-    label: toReadableLabel(normalizedStatus),
-    icon: CircleHelp,
-    className: NEUTRAL_CLASS,
-  }
-
-  const Icon = config.icon
+  const label = knownConfig
+    ? t(knownConfig.labelKey)
+    : normalizedStatus
+      ? toReadableLabel(normalizedStatus)
+      : t('statusUnknown')
+  const Icon = knownConfig?.icon ?? CircleHelp
+  const badgeClass = knownConfig?.className ?? NEUTRAL_CLASS
 
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-        config.className,
+        badgeClass,
         className,
       )}
-      aria-label={`Status: ${config.label}`}
+      aria-label={`${t('labelStatus')}: ${label}`}
       title={normalizedStatus || 'unknown'}
     >
       <Icon size={12} aria-hidden="true" />
-      {config.label}
+      {label}
     </span>
   )
 }

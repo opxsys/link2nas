@@ -10,38 +10,40 @@ import {
 } from '@/api/announcements'
 import type { UserAnnouncement } from '@/api/announcements'
 import { subscribeAnnouncementsChanged, emitAnnouncementsChanged } from '@/lib/announcementEvents'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 
 // ── Severity display config ────────────────────────────────────────────────
 
 interface SevStyle {
-  wrapper: string
-  text: string
-  muted: string
-  label: string
-  Icon: LucideIcon
+  wrapper:  string
+  text:     string
+  muted:    string
+  labelKey: TranslationKey
+  Icon:     LucideIcon
 }
 
 const SEV: Record<string, SevStyle> = {
   critical: {
-    wrapper: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
-    text:    'text-red-900 dark:text-red-100',
-    muted:   'text-red-700 dark:text-red-300',
-    label:   'Critical',
-    Icon:    AlertCircle,
+    wrapper:  'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
+    text:     'text-red-900 dark:text-red-100',
+    muted:    'text-red-700 dark:text-red-300',
+    labelKey: 'sevCritical',
+    Icon:     AlertCircle,
   },
   warning: {
-    wrapper: 'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800',
-    text:    'text-amber-900 dark:text-amber-100',
-    muted:   'text-amber-700 dark:text-amber-300',
-    label:   'Warning',
-    Icon:    AlertTriangle,
+    wrapper:  'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800',
+    text:     'text-amber-900 dark:text-amber-100',
+    muted:    'text-amber-700 dark:text-amber-300',
+    labelKey: 'sevWarning',
+    Icon:     AlertTriangle,
   },
   info: {
-    wrapper: 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800',
-    text:    'text-blue-900 dark:text-blue-100',
-    muted:   'text-blue-700 dark:text-blue-300',
-    label:   'Info',
-    Icon:    Info,
+    wrapper:  'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800',
+    text:     'text-blue-900 dark:text-blue-100',
+    muted:    'text-blue-700 dark:text-blue-300',
+    labelKey: 'sevInfo',
+    Icon:     Info,
   },
 }
 
@@ -68,6 +70,7 @@ function pickBanner(items: UserAnnouncement[], dismissed: Set<string>): UserAnno
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function AnnouncementBanner() {
+  const { t } = useI18n()
   const { pathname } = useLocation()
   const { me } = useMe()
   const [items, setItems] = useState<UserAnnouncement[]>([])
@@ -150,7 +153,7 @@ export default function AnnouncementBanner() {
   return (
     <div
       role="region"
-      aria-label="Announcement banner"
+      aria-label={t('ariaAnnouncementBanner')}
       className={`shrink-0 border-b ${style.wrapper}`}
     >
       <div className="flex items-start gap-3 px-4 py-2.5">
@@ -159,7 +162,7 @@ export default function AnnouncementBanner() {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className={`text-[10px] font-semibold uppercase tracking-widest ${style.muted}`}>
-              {style.label}
+              {t(style.labelKey)}
             </span>
             <span className={`text-sm font-medium break-words ${style.text}`}>
               {banner.title}
@@ -183,7 +186,7 @@ export default function AnnouncementBanner() {
               {acting
                 ? <Loader2 size={11} className="animate-spin" aria-hidden="true" />
                 : <CheckSquare size={11} aria-hidden="true" />}
-              Acknowledge
+              {t('annAcknowledge')}
             </button>
           )}
           {!needsAck && needsRead && (
@@ -196,7 +199,7 @@ export default function AnnouncementBanner() {
               {acting
                 ? <Loader2 size={11} className="animate-spin" aria-hidden="true" />
                 : <BookOpen size={11} aria-hidden="true" />}
-              <span className="hidden sm:inline">Mark read</span>
+              <span className="hidden sm:inline">{t('annMarkRead')}</span>
             </button>
           )}
           <button

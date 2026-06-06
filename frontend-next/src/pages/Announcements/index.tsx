@@ -4,9 +4,11 @@ import { Plus } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { getMe } from '@/api/me'
+import { useI18n } from '@/i18n'
 import AnnouncementsUserView from './AnnouncementsUserView'
 
 export default function AnnouncementsPage() {
+  const { t } = useI18n()
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const navigate = useNavigate()
 
@@ -19,8 +21,8 @@ export default function AnnouncementsPage() {
   return (
     <>
       <PageHeader
-        title="Announcements"
-        description="Messages from administrators."
+        title={t('navAnnouncements')}
+        description={t('announcementsDesc')}
         actions={
           isSuperAdmin ? (
             <Button
@@ -29,7 +31,7 @@ export default function AnnouncementsPage() {
               onClick={() => navigate('/admin?section=announcements&action=create')}
             >
               <Plus size={13} className="mr-1.5" aria-hidden="true" />
-              Create announcement
+              {t('createAnnouncement')}
             </Button>
           ) : undefined
         }

@@ -107,7 +107,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               onClick={() => navigate('/settings')}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/50"
-              aria-label="Go to account settings"
+              aria-label={t('ariaAccountSettings')}
             >
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary select-none">
                 {initials}

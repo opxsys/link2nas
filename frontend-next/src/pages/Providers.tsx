@@ -1,14 +1,16 @@
 import PageHeader from '@/components/layout/PageHeader'
+import { useI18n } from '@/i18n'
 
 export default function Providers() {
+  const { t } = useI18n()
   return (
     <>
       <PageHeader
-        title="Providers"
-        description="Manage download provider profiles."
+        title={t('navProviders')}
+        description={t('providersPageDesc')}
       />
       <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-        Providers — coming in next step.
+        {t('providersComingSoon')}
       </div>
     </>
   )
