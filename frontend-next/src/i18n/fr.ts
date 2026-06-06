@@ -48,6 +48,7 @@ export const fr: Translations = {
   ariaCloseNav:        'Fermer la navigation',
   ariaSelectTheme:        'Sélectionner le thème',
   ariaAnnouncementBanner: "Bannière d'annonce",
+  ariaAnnDismiss:         "Ignorer l'annonce",
   ariaOpenDatePicker:     'Ouvrir le sélecteur de date',
   ariaClearDate:          'Effacer la date',
   // Accessible labels — auth shell

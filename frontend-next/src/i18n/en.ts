@@ -46,6 +46,7 @@ export const en = {
   ariaCloseNav:        'Close navigation',
   ariaSelectTheme:        'Select theme',
   ariaAnnouncementBanner: 'Announcement banner',
+  ariaAnnDismiss:         'Dismiss announcement',
   ariaOpenDatePicker:     'Open date picker',
   ariaClearDate:          'Clear date',
   // Accessible labels — auth shell
