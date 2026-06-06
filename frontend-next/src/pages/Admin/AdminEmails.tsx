@@ -2,21 +2,26 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import AdminSmtp from './AdminSmtp'
 import AdminEmailTemplates from './AdminEmailTemplates'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 
 type EmailTab = 'smtp' | 'templates'
 
-const TABS: { id: EmailTab; label: string }[] = [
-  { id: 'smtp',      label: 'SMTP'            },
-  { id: 'templates', label: 'Email Templates' },
+interface TabDef { id: EmailTab; labelKey: TranslationKey }
+
+const TABS: TabDef[] = [
+  { id: 'smtp',      labelKey: 'adminEmailTabSmtp'      },
+  { id: 'templates', labelKey: 'adminEmailTabTemplates' },
 ]
 
 export default function AdminEmails() {
+  const { t } = useI18n()
   const [tab, setTab] = useState<EmailTab>('smtp')
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-1 rounded-md border border-border bg-muted/40 p-1 w-fit">
-        {TABS.map(({ id, label }) => (
+        {TABS.map(({ id, labelKey }) => (
           <button
             key={id}
             type="button"
@@ -29,7 +34,7 @@ export default function AdminEmails() {
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>

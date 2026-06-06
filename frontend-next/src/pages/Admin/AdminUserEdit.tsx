@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button'
 import DateTimeField from '@/components/common/DateTimeField'
 import { updateUser, resetUserPassword } from '@/api/admin-users'
 import type { RealUser, EditUserPayload } from './admin.types'
+import { useI18n } from '@/i18n'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const SELECT = INPUT
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
 const CHECK = 'h-4 w-4 rounded border-input accent-primary disabled:opacity-50'
-const HINT = 'text-xs text-muted-foreground'
 
 interface Props {
   user: RealUser
@@ -19,6 +19,7 @@ interface Props {
 }
 
 export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
+  const { t } = useI18n()
   const [email, setEmail] = useState(user.email)
   const [displayName, setDisplayName] = useState(user.display_name ?? '')
   const [language, setLanguage] = useState(user.preferred_language ?? '')
@@ -72,7 +73,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     const patch = buildPatch()
-    if (Object.keys(patch).length === 0) { setSaveError('No changes to save.'); return }
+    if (Object.keys(patch).length === 0) { setSaveError(t('adminNoChanges')); return }
     setSaving(true)
     setSaveError('')
     try { onSave(await updateUser(user.id, patch)) }
@@ -86,7 +87,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
     try {
       await resetUserPassword(user.id, resetPw)
       setResetPw('')
-      setResetMsg({ ok: true, text: 'Password reset. User must change it at next login.' })
+      setResetMsg({ ok: true, text: t('adminPasswordResetNote') })
       resetSuccessTimer.current = setTimeout(() => setResetMsg(null), 4000)
     } catch (err) {
       setResetMsg({ ok: false, text: err instanceof Error ? err.message : 'Reset failed.' })
@@ -96,19 +97,19 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <Button size="sm" variant="outline" className="w-fit" onClick={onCancel}>
-        <ArrowLeft size={13} className="mr-1.5" aria-hidden="true" /> Back to users
+        <ArrowLeft size={13} className="mr-1.5" aria-hidden="true" /> {t('adminBackToUsers')}
       </Button>
 
       <SectionCard title={`Edit: ${user.display_name || user.email}`}>
         <form onSubmit={handleSave} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
-              <label htmlFor="eu-email" className={LABEL}>Email</label>
+              <label htmlFor="eu-email" className={LABEL}>{t('email')}</label>
               <input id="eu-email" type="email" className={INPUT} value={email} disabled={saving}
                 required onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="eu-name" className={LABEL}>Display name</label>
+              <label htmlFor="eu-name" className={LABEL}>{t('labelDisplayName')}</label>
               <input id="eu-name" type="text" className={INPUT} value={displayName} disabled={saving}
                 onChange={(e) => setDisplayName(e.target.value)} />
             </div>
@@ -116,29 +117,29 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
-              <label htmlFor="eu-lang" className={LABEL}>Language</label>
+              <label htmlFor="eu-lang" className={LABEL}>{t('language')}</label>
               <select id="eu-lang" className={SELECT} value={language} disabled={saving}
                 onChange={(e) => setLanguage(e.target.value)}>
-                <option value="">Default (en)</option>
-                <option value="en">English</option>
-                <option value="fr">Français</option>
+                <option value="">{t('adminDefaultLang')}</option>
+                <option value="en">{t('langEnglish')}</option>
+                <option value="fr">{t('langFrench')}</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <DateTimeField id="eu-vf" label="Valid from" hint="(clear to remove)"
+            <DateTimeField id="eu-vf" label={t('adminValidFrom')} hint={t('adminClearToRemove')}
               value={validFrom} disabled={saving} onChange={setValidFrom} />
-            <DateTimeField id="eu-ea" label="Account expires" hint="(clear to remove)"
+            <DateTimeField id="eu-ea" label={t('adminAccountExpires')} hint={t('adminClearToRemove')}
               value={expiresAt} disabled={saving} onChange={setExpiresAt} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {([
-              [isSuperAdmin, setIsSuperAdmin, 'eu-super', 'Super admin'],
-              [isActive, setIsActive, 'eu-active', 'Active'],
-              [emailVerified, setEmailVerified, 'eu-verified', 'Email verified'],
-              [canUseLocalSpace, setCanUseLocalSpace, 'eu-space', 'Local space'],
+              [isSuperAdmin, setIsSuperAdmin, 'eu-super', t('adminRoleSuperAdmin')],
+              [isActive, setIsActive, 'eu-active', t('adminActiveChk')],
+              [emailVerified, setEmailVerified, 'eu-verified', t('adminEmailVerifiedChk')],
+              [canUseLocalSpace, setCanUseLocalSpace, 'eu-space', t('adminLocalSpaceChk')],
             ] as [boolean, (v: boolean) => void, string, string][]).map(([val, setter, id, label]) => (
               <label key={id} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
                 <input id={id} type="checkbox" className={CHECK} checked={val} disabled={saving}
@@ -151,7 +152,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="sm" disabled={saving}>
               {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-              Save changes
+              {t('saveChanges')}
             </Button>
           </div>
           {saveError && (
@@ -162,7 +163,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
                 type="button"
                 onClick={() => setSaveError('')}
                 className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="Dismiss"
+                aria-label={t('dismiss')}
               >
                 <X size={13} aria-hidden="true" />
               </button>
@@ -171,17 +172,17 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
         </form>
       </SectionCard>
 
-      <SectionCard title="Reset Password" description="Set a temporary password. The user will be required to change it at next login.">
+      <SectionCard title={t('adminResetPwSectionTitle')} description={t('adminResetPwSectionDesc')}>
         <form onSubmit={handlePasswordReset} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="eu-pw" className={LABEL}>New password <span className="text-destructive">*</span></label>
+            <label htmlFor="eu-pw" className={LABEL}>{t('newPassword')} <span className="text-destructive">*</span></label>
             <input id="eu-pw" type="password" className={INPUT} value={resetPw} disabled={resetSaving}
               required autoComplete="new-password" onChange={(e) => setResetPw(e.target.value)} />
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="sm" disabled={resetSaving || !resetPw}>
               {resetSaving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-              Reset password
+              {t('adminResetPasswordBtn')}
             </Button>
           </div>
           {resetMsg && (
@@ -198,7 +199,7 @@ export default function AdminUserEdit({ user, onSave, onCancel }: Props) {
                 type="button"
                 onClick={() => { if (resetSuccessTimer.current) clearTimeout(resetSuccessTimer.current); setResetMsg(null) }}
                 className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="Dismiss"
+                aria-label={t('dismiss')}
               >
                 <X size={13} aria-hidden="true" />
               </button>

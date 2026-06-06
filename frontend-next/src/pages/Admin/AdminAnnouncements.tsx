@@ -3,6 +3,7 @@ import { Loader2, AlertCircle, Pencil, Trash2, BarChart2, Plus, CheckSquare, Mai
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 import {
   listAnnouncements, deleteAnnouncement,
   getAnnouncementSystemSettings, saveAnnouncementSystemSettings,
@@ -36,6 +37,7 @@ function AnnRow({
   onDeleteConfirm: () => void
   onDeleteCancel: () => void
 }) {
+  const { t } = useI18n()
   const isPending = pendingDeleteId === ann.id
   return (
     <li className="flex items-start justify-between gap-4 border-b border-border py-3 last:border-0">
@@ -46,11 +48,11 @@ function AnnRow({
           <span className={`${BADGE} ${ann.is_active
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
             : 'border-border bg-muted text-muted-foreground'}`}>
-            {ann.is_active ? 'Active' : 'Inactive'}
+            {ann.is_active ? t('badgeActive') : t('adminAnnInactive')}
           </span>
           {ann.require_acknowledgement && (
             <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400">
-              <CheckSquare size={10} aria-hidden="true" /> Requires ack
+              <CheckSquare size={10} aria-hidden="true" /> {t('adminAnnRequiresAck')}
             </span>
           )}
           {ann.send_email && (
@@ -68,9 +70,9 @@ function AnnRow({
         {isPending ? (
           <>
             <Button size="sm" variant="destructive" className="h-7 text-xs" disabled={deleting} onClick={onDeleteConfirm}>
-              {deleting ? <Loader2 size={11} className="animate-spin" aria-hidden="true" /> : 'Confirm'}
+              {deleting ? <Loader2 size={11} className="animate-spin" aria-hidden="true" /> : t('confirm')}
             </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={deleting} onClick={onDeleteCancel}>Cancel</Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={deleting} onClick={onDeleteCancel}>{t('cancel')}</Button>
           </>
         ) : (
           <>
@@ -89,6 +91,7 @@ interface Props {
 }
 
 export default function AdminAnnouncements({ openCreate }: Props) {
+  const { t } = useI18n()
   const [systemEnabled, setSystemEnabled] = useState<boolean | null>(null)
   const [savingToggle, setSavingToggle] = useState(false)
 
@@ -147,7 +150,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
       setPendingDeleteId(null)
       emitAnnouncementsChanged()
       if (successTimer.current) clearTimeout(successTimer.current)
-      setBanner('Announcement deleted.')
+      setBanner(t('adminAnnDeleted'))
       successTimer.current = setTimeout(() => setBanner(null), 4000)
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Delete failed.')
@@ -182,8 +185,8 @@ export default function AdminAnnouncements({ openCreate }: Props) {
     <div className="flex flex-col gap-4">
       {/* Global system toggle */}
       <SectionCard
-        title="Announcements system"
-        description="When disabled, users will not see announcement pages, banners, badges, or announcement emails."
+        title={t('adminAnnSystemTitle')}
+        description={t('adminAnnSystemDesc')}
       >
         <div className="flex items-center gap-3">
           <button
@@ -191,7 +194,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
             aria-checked={systemEnabled ?? false}
             onClick={handleToggleSystem}
             disabled={systemEnabled === null || savingToggle}
-            aria-label="Toggle announcements system"
+            aria-label={t('adminToggleAnnouncementsSystem')}
             className={cn(
               'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -209,7 +212,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
           <span className="text-sm font-medium text-foreground">
             {systemEnabled === null
               ? <Loader2 size={13} className="inline animate-spin" aria-hidden="true" />
-              : systemEnabled ? 'Enabled' : 'Disabled'}
+              : systemEnabled ? t('badgeActive') : t('badgeDisabled')}
           </span>
         </div>
       </SectionCard>
@@ -219,8 +222,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
         <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
           <AlertTriangle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
           <p>
-            Announcements are globally disabled. Users will not see announcements, banners, badges, or announcement emails.
-            Existing announcements are preserved and will reappear when the system is re-enabled.
+            {t('adminAnnSystemDisabledWarn')}
           </p>
         </div>
       )}
@@ -228,18 +230,18 @@ export default function AdminAnnouncements({ openCreate }: Props) {
       {/* List — only when enabled */}
       {systemEnabled === true && (
         <SectionCard
-          title="Announcements"
-          description="Broadcast messages to users."
+          title={t('adminAnnListTitle')}
+          description={t('adminAnnListDesc')}
           actions={
             <Button size="sm" variant="outline" onClick={() => { setEditingAnn(null); setView('form') }}>
-              <Plus size={13} className="mr-1.5" aria-hidden="true" /> New announcement
+              <Plus size={13} className="mr-1.5" aria-hidden="true" /> {t('adminNewAnnouncement')}
             </Button>
           }
         >
           {loading && (
             <div className="flex items-center gap-2 py-6 text-muted-foreground">
               <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-              <span className="text-sm">Loading…</span>
+              <span className="text-sm">{t('loading')}</span>
             </div>
           )}
           {banner && (
@@ -249,7 +251,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
               <button
                 className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 onClick={() => { if (successTimer.current) clearTimeout(successTimer.current); setBanner(null) }}
-                aria-label="Dismiss"
+                aria-label={t('dismiss')}
               >
                 <X size={13} aria-hidden="true" />
               </button>
@@ -259,9 +261,9 @@ export default function AdminAnnouncements({ openCreate }: Props) {
             <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
               <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
               <div>
-                <p className="font-medium">Failed to load announcements</p>
+                <p className="font-medium">{t('adminLoadAnnouncements')}</p>
                 <p className="mt-0.5 text-xs">{fetchError}</p>
-                <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+                <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
               </div>
             </div>
           )}
@@ -272,14 +274,14 @@ export default function AdminAnnouncements({ openCreate }: Props) {
               <button
                 className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 onClick={() => setDeleteError(null)}
-                aria-label="Dismiss"
+                aria-label={t('dismiss')}
               >
                 <X size={13} aria-hidden="true" />
               </button>
             </div>
           )}
           {!loading && !fetchError && items.length === 0 && (
-            <p className="py-4 text-sm text-muted-foreground">No announcements yet.</p>
+            <p className="py-4 text-sm text-muted-foreground">{t('adminNoAnnouncements')}</p>
           )}
           {items.length > 0 && (
             <ul>

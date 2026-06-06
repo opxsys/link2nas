@@ -4,6 +4,7 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getMaintenanceStatus } from '@/api/admin-maintenance'
 import type { MaintenanceStatus, MaintenancePath } from './admin.types'
+import { useI18n } from '@/i18n'
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -27,6 +28,7 @@ function CheckItem({ label, ok, detail }: { label: string; ok: boolean; detail: 
 }
 
 export default function AdminMaintenance() {
+  const { t } = useI18n()
   const [status, setStatus] = useState<MaintenanceStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +51,7 @@ export default function AdminMaintenance() {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
         <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-        <span className="ml-2 text-sm">Loading…</span>
+        <span className="ml-2 text-sm">{t('loading')}</span>
       </div>
     )
   }
@@ -59,9 +61,9 @@ export default function AdminMaintenance() {
       <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
         <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div>
-          <p className="font-medium">Failed to load maintenance status</p>
+          <p className="font-medium">{t('adminLoadMaintFailed')}</p>
           <p className="mt-0.5 text-xs">{error}</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+          <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
         </div>
       </div>
     )
@@ -77,58 +79,58 @@ export default function AdminMaintenance() {
         <div className="flex flex-wrap items-center gap-2">
           <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${status.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'}`}>
             {status.ok ? <CheckCircle2 size={12} aria-hidden="true" /> : <XCircle size={12} aria-hidden="true" />}
-            {status.ok ? 'All systems OK' : 'Issues detected'}
+            {status.ok ? t('adminMaintAllOk') : t('adminMaintIssuesDetected')}
           </span>
-          <span className="text-xs text-muted-foreground">Checked at {checkedAt}</span>
+          <span className="text-xs text-muted-foreground">{t('adminMaintCheckedAt')} {checkedAt}</span>
         </div>
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           {loading
             ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
             : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
-          Refresh
+          {t('refresh')}
         </Button>
       </div>
 
-      <SectionCard title="Application">
+      <SectionCard title={t('adminMaintSectionApp')}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <CheckItem label="Global status" ok={status.ok} detail={`Checked at ${checkedAt}`} />
+          <CheckItem label={t('adminMaintGlobalStatus')} ok={status.ok} detail={`${t('adminMaintCheckedAt')} ${checkedAt}`} />
           <CheckItem
             label={`${status.app.name} ${status.app.version}`}
             ok={true}
             detail={`Debug: ${status.app.debug ? 'on' : 'off'}${status.app.tagline ? ` — ${status.app.tagline}` : ''}`}
           />
           <CheckItem
-            label="Public URL"
+            label={t('adminMaintPublicUrl')}
             ok={Boolean(status.app.public_base_url)}
-            detail={status.app.public_base_url || 'Not configured'}
+            detail={status.app.public_base_url || t('notConfigured')}
           />
         </div>
       </SectionCard>
 
-      <SectionCard title="Infrastructure">
+      <SectionCard title={t('adminMaintSectionInfra')}>
         <div className="grid gap-3 sm:grid-cols-2">
           <CheckItem
-            label="Database"
+            label={t('adminMaintDatabase')}
             ok={status.database.ok}
             detail={`${status.database.backend} — ${status.database.message}`}
           />
           <CheckItem
-            label="Disk space"
+            label={t('adminMaintDiskSpace')}
             ok={status.disk.ok}
             detail={`${formatBytes(status.disk.free_bytes)} free / ${formatBytes(status.disk.total_bytes)} total — ${status.disk.percent_free}% free`}
           />
         </div>
       </SectionCard>
 
-      <SectionCard title="Directories">
+      <SectionCard title={t('adminMaintSectionDirs')}>
         {status.paths.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No directory checks configured.</p>
+          <p className="text-sm text-muted-foreground">{t('adminMaintNoDirs')}</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {status.paths.map((p: MaintenancePath) => (
               <CheckItem
                 key={p.name}
-                label={`${p.name}${p.required ? '' : ' (optional)'}`}
+                label={`${p.name}${p.required ? '' : ` ${t('adminMaintOptional')}`}`}
                 ok={p.ok}
                 detail={`${p.path ?? '—'} — ${p.message}`}
               />

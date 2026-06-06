@@ -1,3 +1,5 @@
+import { useI18n } from '@/i18n'
+
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const CHECK_ROW = 'flex items-center gap-2.5'
@@ -23,6 +25,7 @@ interface Props {
 }
 
 export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
+  const { t } = useI18n()
   return (
     <div className="flex flex-col gap-5">
       <div className={CHECK_ROW}>
@@ -35,13 +38,13 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
           onChange={(e) => onChange('enabled', e.target.checked)}
         />
         <label htmlFor="smtp-enabled" className="text-sm text-foreground">
-          Enable SMTP email delivery
+          {t('adminSmtpEnableLabel')}
         </label>
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
-          <label htmlFor="smtp-host" className={LABEL}>Host</label>
+          <label htmlFor="smtp-host" className={LABEL}>{t('adminSmtpHostLabel')}</label>
           <input
             id="smtp-host"
             type="text"
@@ -53,7 +56,7 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
           />
         </div>
         <div>
-          <label htmlFor="smtp-port" className={LABEL}>Port</label>
+          <label htmlFor="smtp-port" className={LABEL}>{t('adminSmtpPortLabel')}</label>
           <input
             id="smtp-port"
             type="number"
@@ -69,7 +72,7 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
-          <label htmlFor="smtp-username" className={LABEL}>Username</label>
+          <label htmlFor="smtp-username" className={LABEL}>{t('labelUsername')}</label>
           <input
             id="smtp-username"
             type="text"
@@ -81,7 +84,7 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
           />
         </div>
         <div>
-          <label htmlFor="smtp-password" className={LABEL}>Password</label>
+          <label htmlFor="smtp-password" className={LABEL}>{t('password')}</label>
           <input
             id="smtp-password"
             type="password"
@@ -89,7 +92,7 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
             value={fields.password}
             disabled={disabled}
             autoComplete="new-password"
-            placeholder={fields.hasPassword ? 'Leave blank to keep saved password' : ''}
+            placeholder={fields.hasPassword ? t('adminSmtpPasswordHint') : ''}
             onChange={(e) => onChange('password', e.target.value)}
           />
         </div>
@@ -97,7 +100,7 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
-          <label htmlFor="smtp-from-email" className={LABEL}>From email</label>
+          <label htmlFor="smtp-from-email" className={LABEL}>{t('adminSmtpFromEmailLabel')}</label>
           <input
             id="smtp-from-email"
             type="email"
@@ -109,7 +112,7 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
           />
         </div>
         <div>
-          <label htmlFor="smtp-from-name" className={LABEL}>From name</label>
+          <label htmlFor="smtp-from-name" className={LABEL}>{t('adminSmtpFromNameLabel')}</label>
           <input
             id="smtp-from-name"
             type="text"
@@ -135,7 +138,7 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
               if (e.target.checked) onChange('useSsl', false)
             }}
           />
-          <label htmlFor="smtp-use-tls" className="text-sm text-foreground">Use STARTTLS</label>
+          <label htmlFor="smtp-use-tls" className="text-sm text-foreground">{t('adminSmtpStarttls')}</label>
         </div>
         <div className={CHECK_ROW}>
           <input
@@ -149,10 +152,10 @@ export default function AdminSmtpFields({ fields, disabled, onChange }: Props) {
               if (e.target.checked) onChange('useTls', false)
             }}
           />
-          <label htmlFor="smtp-use-ssl" className="text-sm text-foreground">Use SSL/TLS</label>
+          <label htmlFor="smtp-use-ssl" className="text-sm text-foreground">{t('adminSmtpSslLabel')}</label>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">STARTTLS and SSL/TLS are mutually exclusive.</p>
+      <p className="text-xs text-muted-foreground">{t('adminSmtpTlsExclusive')}</p>
     </div>
   )
 }

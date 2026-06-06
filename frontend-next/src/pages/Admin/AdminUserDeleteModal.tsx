@@ -3,6 +3,7 @@ import { Trash2, X, Loader2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { deleteUser } from '@/api/admin-users'
 import type { RealUser } from './admin.types'
+import { useI18n } from '@/i18n'
 
 interface Props {
   user: RealUser
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function AdminUserDeleteModal({ user, onDeleted, onClose }: Props) {
+  const { t } = useI18n()
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,8 +37,8 @@ export default function AdminUserDeleteModal({ user, onDeleted, onClose }: Props
     >
       <div className="w-full max-w-sm rounded-lg border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground">Delete user</h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} disabled={deleting} aria-label="Close">
+          <h2 className="text-sm font-semibold text-foreground">{t('adminDeleteUserTitle')}</h2>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} disabled={deleting} aria-label={t('close')}>
             <X size={14} aria-hidden="true" />
           </Button>
         </div>
@@ -44,13 +46,13 @@ export default function AdminUserDeleteModal({ user, onDeleted, onClose }: Props
         <div className="flex flex-col gap-4 p-5">
           <div>
             <p className="text-sm text-foreground">
-              Delete <span className="font-semibold">{user.display_name || user.email}</span>?
+              {t('delete')} <span className="font-semibold">{user.display_name || user.email}</span>?
             </p>
             {user.display_name && (
               <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p>
             )}
             <p className="mt-1.5 text-xs text-muted-foreground">
-              This action is permanent and cannot be undone.
+              {t('adminDeleteUserPermanent')}
             </p>
           </div>
 
@@ -62,7 +64,7 @@ export default function AdminUserDeleteModal({ user, onDeleted, onClose }: Props
                 type="button"
                 onClick={() => setError(null)}
                 className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="Dismiss"
+                aria-label={t('dismiss')}
               >
                 <X size={13} aria-hidden="true" />
               </button>
@@ -71,13 +73,13 @@ export default function AdminUserDeleteModal({ user, onDeleted, onClose }: Props
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={deleting}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button type="button" variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
               {deleting
                 ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
                 : <Trash2 size={13} className="mr-1.5" aria-hidden="true" />}
-              Delete user
+              {t('adminDeleteUserTitle')}
             </Button>
           </div>
         </div>

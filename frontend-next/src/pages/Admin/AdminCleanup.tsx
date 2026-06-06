@@ -4,19 +4,13 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getCleanupSettings, saveCleanupSettings, runCleanupNow } from '@/api/admin-cleanup'
 import type { CleanupRetention, CleanupRunResult } from './admin.types'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 
 const INPUT = 'h-9 w-24 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type RunStatus = 'idle' | 'running' | 'done' | 'failed'
-
-const RETENTION_FIELDS: { key: keyof CleanupRetention; label: string; hint: string; max: number }[] = [
-  { key: 'completed_jobs_days',  label: 'Completed jobs',     hint: '1–3650', max: 3650 },
-  { key: 'failed_jobs_days',     label: 'Failed jobs',        hint: '1–3650', max: 3650 },
-  { key: 'cancelled_jobs_days',  label: 'Cancelled jobs',     hint: '1–3650', max: 3650 },
-  { key: 'expired_tokens_days',  label: 'Expired tokens',     hint: '1–365',  max: 365  },
-  { key: 'torrent_tmp_days',     label: 'Temp torrent files', hint: '1–365',  max: 365  },
-]
 
 const DEFAULT_RETENTION: CleanupRetention = {
   torrent_tmp_days: 7,
@@ -27,6 +21,16 @@ const DEFAULT_RETENTION: CleanupRetention = {
 }
 
 export default function AdminCleanup() {
+  const { t } = useI18n()
+
+  const RETENTION_FIELDS: { key: keyof CleanupRetention; labelKey: TranslationKey; hint: string; max: number }[] = [
+    { key: 'completed_jobs_days',  labelKey: 'adminCleanupCompletedJobs',  hint: '1–3650', max: 3650 },
+    { key: 'failed_jobs_days',     labelKey: 'adminCleanupFailedJobs',     hint: '1–3650', max: 3650 },
+    { key: 'cancelled_jobs_days',  labelKey: 'adminCleanupCancelledJobs',  hint: '1–3650', max: 3650 },
+    { key: 'expired_tokens_days',  labelKey: 'adminCleanupExpiredTokens',  hint: '1–365',  max: 365  },
+    { key: 'torrent_tmp_days',     labelKey: 'adminCleanupTempTorrents',   hint: '1–365',  max: 365  },
+  ]
+
   const [retention, setRetention] = useState<CleanupRetention>(DEFAULT_RETENTION)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -67,7 +71,7 @@ export default function AdminCleanup() {
       const updated = await saveCleanupSettings({ retention })
       setRetention(updated.retention)
       setSaveStatus('saved')
-      setSaveMessage('Cleanup settings saved.')
+      setSaveMessage(t('adminCleanupSaved'))
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
@@ -99,7 +103,7 @@ export default function AdminCleanup() {
     return (
       <div className="flex items-center gap-2 py-12 text-muted-foreground">
         <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-        <span className="text-sm">Loading…</span>
+        <span className="text-sm">{t('loading')}</span>
       </div>
     )
   }
@@ -109,9 +113,9 @@ export default function AdminCleanup() {
       <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
         <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div>
-          <p className="font-medium">Failed to load cleanup settings</p>
+          <p className="font-medium">{t('adminLoadCleanupFailed')}</p>
           <p className="mt-0.5 text-xs">{fetchError}</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+          <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
         </div>
       </div>
     )
@@ -122,14 +126,14 @@ export default function AdminCleanup() {
   return (
     <div className="flex flex-col gap-4">
       <SectionCard
-        title="Retention Settings"
-        description="Records older than these thresholds are removed during cleanup runs."
+        title={t('adminRetentionTitle')}
+        description={t('adminRetentionDesc')}
       >
         <form onSubmit={handleSave} className="flex flex-col gap-5">
-          {RETENTION_FIELDS.map(({ key, label, hint, max }) => (
+          {RETENTION_FIELDS.map(({ key, labelKey, hint, max }) => (
             <div key={key} className="flex items-center justify-between gap-4">
               <label htmlFor={`cleanup-${key}`} className="text-sm text-foreground">
-                {label}
+                {t(labelKey)}
                 <span className="ml-1.5 text-xs text-muted-foreground">({hint} days)</span>
               </label>
               <div className="flex shrink-0 items-center gap-2">
@@ -152,7 +156,7 @@ export default function AdminCleanup() {
             <div>
               <Button type="submit" size="sm" disabled={busy}>
                 {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-                Save settings
+                {t('adminSaveSettings')}
               </Button>
             </div>
             {saveStatus === 'saved' && (
@@ -163,7 +167,7 @@ export default function AdminCleanup() {
                   type="button"
                   onClick={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }}
                   className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  aria-label="Dismiss"
+                  aria-label={t('dismiss')}
                 >
                   <X size={13} aria-hidden="true" />
                 </button>
@@ -177,7 +181,7 @@ export default function AdminCleanup() {
                   type="button"
                   onClick={() => setSaveStatus('idle')}
                   className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  aria-label="Dismiss"
+                  aria-label={t('dismiss')}
                 >
                   <X size={13} aria-hidden="true" />
                 </button>
@@ -187,14 +191,14 @@ export default function AdminCleanup() {
         </form>
       </SectionCard>
 
-      <SectionCard title="Manual Cleanup" description="Trigger an immediate cleanup run using the current retention settings.">
+      <SectionCard title={t('adminManualCleanupTitle')} description={t('adminManualCleanupDesc')}>
         <div className="flex flex-col gap-3">
           <div>
             <Button size="sm" variant="outline" onClick={handleRun} disabled={runStatus === 'running'}>
               {runStatus === 'running'
                 ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
                 : <Play size={13} className="mr-1.5" aria-hidden="true" />}
-              Run cleanup now
+              {t('adminRunCleanup')}
             </Button>
           </div>
 
@@ -204,23 +208,23 @@ export default function AdminCleanup() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                     <CheckCircle2 size={15} aria-hidden="true" />
-                    Cleanup completed
+                    {t('adminCleanupDone')}
                   </div>
                   <button
                     type="button"
                     onClick={dismissRun}
                     className="shrink-0 rounded text-emerald-700 hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:text-emerald-400"
-                    aria-label="Dismiss"
+                    aria-label={t('dismiss')}
                   >
                     <X size={13} aria-hidden="true" />
                   </button>
                 </div>
                 <ul className="mt-2 space-y-0.5 text-xs text-emerald-700 dark:text-emerald-400">
-                  <li>Completed jobs: {runResult.completed_jobs_deleted} removed</li>
-                  <li>Failed jobs: {runResult.failed_jobs_deleted} removed</li>
-                  <li>Cancelled jobs: {runResult.cancelled_jobs_deleted} removed</li>
-                  <li>Expired tokens: {runResult.tokens_deleted} removed</li>
-                  <li>Temp torrent files: {runResult.temp_files_deleted} removed</li>
+                  <li>{t('adminCleanupCompletedJobs')}: {runResult.completed_jobs_deleted} removed</li>
+                  <li>{t('adminCleanupFailedJobs')}: {runResult.failed_jobs_deleted} removed</li>
+                  <li>{t('adminCleanupCancelledJobs')}: {runResult.cancelled_jobs_deleted} removed</li>
+                  <li>{t('adminCleanupExpiredTokens')}: {runResult.tokens_deleted} removed</li>
+                  <li>{t('adminCleanupTempTorrents')}: {runResult.temp_files_deleted} removed</li>
                 </ul>
                 {runResult.temp_files_errors.length > 0 && (
                   <ul className="mt-2 space-y-0.5 text-xs text-amber-700 dark:text-amber-400">
@@ -233,12 +237,12 @@ export default function AdminCleanup() {
             ) : (
               <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
                 <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
-                <span className="flex-1">Cleanup is currently disabled — no records were removed.</span>
+                <span className="flex-1">{t('adminCleanupIsDisabled')}</span>
                 <button
                   type="button"
                   onClick={dismissRun}
                   className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  aria-label="Dismiss"
+                  aria-label={t('dismiss')}
                 >
                   <X size={13} aria-hidden="true" />
                 </button>
@@ -254,7 +258,7 @@ export default function AdminCleanup() {
                 type="button"
                 onClick={dismissRun}
                 className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="Dismiss"
+                aria-label={t('dismiss')}
               >
                 <X size={13} aria-hidden="true" />
               </button>

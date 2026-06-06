@@ -4,6 +4,7 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getGeneralSettings, saveGeneralSettings } from '@/api/admin-settings'
 import type { GeneralSettings } from './admin.types'
+import { useI18n } from '@/i18n'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -11,6 +12,7 @@ const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 
 export default function AdminGeneral() {
+  const { t } = useI18n()
   const [settings, setSettings] = useState<GeneralSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -62,7 +64,7 @@ export default function AdminGeneral() {
       setAppTagline(updated.app_tagline)
       setPublicBaseUrl(updated.public_base_url)
       setSaveStatus('saved')
-      setSaveMessage('Settings saved.')
+      setSaveMessage(t('adminSettingsSaved'))
       successTimer.current = setTimeout(() => { setSaveStatus('idle'); setSaveMessage('') }, 4000)
     } catch (err) {
       setSaveStatus('error')
@@ -74,7 +76,7 @@ export default function AdminGeneral() {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
         <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-        <span className="ml-2 text-sm">Loading…</span>
+        <span className="ml-2 text-sm">{t('loading')}</span>
       </div>
     )
   }
@@ -84,19 +86,19 @@ export default function AdminGeneral() {
       <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
         <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div>
-          <p className="font-medium">Failed to load general settings</p>
+          <p className="font-medium">{t('adminLoadGeneralFailed')}</p>
           <p className="mt-0.5 text-xs">{fetchError}</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+          <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
         </div>
       </div>
     )
   }
 
   return (
-    <SectionCard title="General" description="Application name, tagline, and public URL.">
+    <SectionCard title={t('adminGeneralTitle')} description={t('adminGeneralDesc')}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <label htmlFor="general-app-name" className={LABEL}>App name</label>
+          <label htmlFor="general-app-name" className={LABEL}>{t('adminAppNameLabel')}</label>
           <input
             id="general-app-name"
             type="text"
@@ -109,20 +111,20 @@ export default function AdminGeneral() {
         </div>
 
         <div>
-          <label htmlFor="general-app-tagline" className={LABEL}>Tagline</label>
+          <label htmlFor="general-app-tagline" className={LABEL}>{t('adminTaglineLabel')}</label>
           <input
             id="general-app-tagline"
             type="text"
             value={appTagline}
             onChange={(e) => { clearFeedback(); setAppTagline(e.target.value) }}
-            placeholder="Self-hosted download manager"
+            placeholder={t('adminTaglinePlaceholder')}
             disabled={busy}
             className={INPUT}
           />
         </div>
 
         <div>
-          <label htmlFor="general-public-url" className={LABEL}>Public base URL</label>
+          <label htmlFor="general-public-url" className={LABEL}>{t('adminPublicBaseUrlLabel')}</label>
           <input
             id="general-public-url"
             type="url"
@@ -132,12 +134,10 @@ export default function AdminGeneral() {
             disabled={busy}
             className={INPUT}
           />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Used for invitation links and email URLs. Leave blank to use the request origin.
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('adminPublicBaseUrlHint')}</p>
           {settings?.effective_public_base_url && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Effective URL: <span className="font-mono">{settings.effective_public_base_url}</span>
+              {t('adminEffectiveUrl')} <span className="font-mono">{settings.effective_public_base_url}</span>
             </p>
           )}
         </div>
@@ -145,7 +145,7 @@ export default function AdminGeneral() {
         <div>
           <Button type="submit" size="sm" disabled={busy}>
             {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            Save changes
+            {t('saveChanges')}
           </Button>
         </div>
 
@@ -157,7 +157,7 @@ export default function AdminGeneral() {
               type="button"
               onClick={() => { if (successTimer.current) clearTimeout(successTimer.current); setSaveStatus('idle'); setSaveMessage('') }}
               className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              aria-label="Dismiss"
+              aria-label={t('dismiss')}
             >
               <X size={13} aria-hidden="true" />
             </button>
@@ -171,7 +171,7 @@ export default function AdminGeneral() {
               type="button"
               onClick={() => { setSaveStatus('idle'); setSaveMessage('') }}
               className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              aria-label="Dismiss"
+              aria-label={t('dismiss')}
             >
               <X size={13} aria-hidden="true" />
             </button>

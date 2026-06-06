@@ -3,6 +3,7 @@ import { Users, UserCheck, HardDrive, Mail, CheckCircle2, XCircle, Loader2, Refr
 import MetricCard from '@/components/common/MetricCard'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n'
 import { getMaintenanceStatus } from '@/api/admin-maintenance'
 import { getSmtpSettings } from '@/api/admin-smtp'
 import { getGeneralSettings } from '@/api/admin-settings'
@@ -37,6 +38,7 @@ function ConfigRow({ label, value, bad, mono }: { label: string; value: string; 
 }
 
 export default function AdminOverview() {
+  const { t } = useI18n()
   const [maintenance, setMaintenance] = useState<MaintenanceStatus | null>(null)
   const [smtp, setSmtp] = useState<RealSmtpSettings | null>(null)
   const [general, setGeneral] = useState<GeneralSettings | null>(null)
@@ -90,7 +92,7 @@ export default function AdminOverview() {
     return (
       <div className="flex items-center gap-2 py-12 text-muted-foreground">
         <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-        <span className="text-sm">Loading overview…</span>
+        <span className="text-sm">{t('adminLoadingOverview')}</span>
       </div>
     )
   }
@@ -107,47 +109,47 @@ export default function AdminOverview() {
             <span className={`text-sm font-medium ${maintenance.ok
               ? 'text-emerald-700 dark:text-emerald-400'
               : 'text-red-700 dark:text-red-400'}`}>
-              {maintenance.ok ? 'All systems operational' : 'Issues detected'}
+              {maintenance.ok ? t('adminAllSystemsOk') : t('adminIssuesDetected')}
             </span>
             <span className="text-xs text-muted-foreground">
-              · checked {new Date(maintenance.generated_at).toLocaleTimeString()}
+              · {t('adminCheckedWord')} {new Date(maintenance.generated_at).toLocaleTimeString()}
             </span>
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">System status unavailable</span>
+          <span className="text-sm text-muted-foreground">{t('adminStatusUnavailable')}</span>
         )}
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           {loading
             ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
             : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
-          Refresh
+          {t('refresh')}
         </Button>
       </div>
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <MetricCard
-          label="Total Users"
+          label={t('adminTotalUsers')}
           value={userStats?.total ?? '—'}
           icon={Users}
           description={userStats ? `${userStats.active} active` : undefined}
         />
         <MetricCard
-          label="Active Users"
+          label={t('adminActiveUsersLabel')}
           value={userStats?.active ?? '—'}
           icon={UserCheck}
           description={userStats ? `${userStats.disabled} disabled` : undefined}
           iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
         />
         <MetricCard
-          label="SMTP"
-          value={smtpReady === null ? '—' : smtpReady ? 'Ready' : (smtp && smtp.host.trim() !== '') ? 'Disabled' : 'Not configured'}
+          label={t('adminSmtpLabel')}
+          value={smtpReady === null ? '—' : smtpReady ? t('adminSmtpReady') : (smtp && smtp.host.trim() !== '') ? t('badgeDisabled') : t('notConfigured')}
           icon={Mail}
           description={smtpReady && smtp?.host ? smtp.host : undefined}
           iconClassName={smtpReady === false ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : undefined}
         />
         <MetricCard
-          label="Disk free"
+          label={t('adminDiskFreeLabel')}
           value={maintenance ? `${maintenance.disk.percent_free.toFixed(1)}%` : '—'}
           icon={HardDrive}
           description={maintenance ? `${fmtBytes(maintenance.disk.free_bytes)} available` : undefined}
@@ -157,16 +159,16 @@ export default function AdminOverview() {
 
       {/* Lower two-column grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SectionCard title="User Accounts">
+        <SectionCard title={t('adminUserAccounts')}>
           {userStats ? (
             <div className="grid grid-cols-3 gap-3">
               {([
-                ['Active',      userStats.active,      false],
-                ['Disabled',    userStats.disabled,    userStats.disabled > 0],
-                ['Unverified',  userStats.unverified,  userStats.unverified > 0],
-                ['Expired',     userStats.expired,     userStats.expired > 0],
-                ['Super admins', userStats.superAdmins, false],
-                ['Total',       userStats.total,       false],
+                [t('badgeActive'),          userStats.active,      false],
+                [t('badgeDisabled'),        userStats.disabled,    userStats.disabled > 0],
+                [t('adminStatUnverified'),  userStats.unverified,  userStats.unverified > 0],
+                [t('badgeExpired'),         userStats.expired,     userStats.expired > 0],
+                [t('adminStatSuperAdmins'), userStats.superAdmins, false],
+                [t('adminStatTotal'),       userStats.total,       false],
               ] as [string, number, boolean][]).map(([label, value, warn]) => (
                 <div key={label} className="rounded-md border border-border bg-muted/20 p-2.5 text-center">
                   <p className={`text-lg font-semibold ${warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
@@ -177,13 +179,13 @@ export default function AdminOverview() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">User data unavailable.</p>
+            <p className="text-sm text-muted-foreground">{t('adminUserDataUnavailable')}</p>
           )}
         </SectionCard>
 
-        <SectionCard title="Configuration">
+        <SectionCard title={t('adminConfiguration')}>
           {!general && !maintenance && !smtp && runtimeEnabled === null && announcements === null ? (
-            <p className="text-sm text-muted-foreground">Configuration data unavailable.</p>
+            <p className="text-sm text-muted-foreground">{t('adminConfigUnavailable')}</p>
           ) : (
           <dl className="divide-y divide-border">
             {general && (
@@ -211,7 +213,7 @@ export default function AdminOverview() {
             )}
             {runtimeEnabled !== null && (
               <ConfigRow
-                label="Runtime"
+                label={t('adminNavRuntime')}
                 value={`${runtimeEnabled}/3 services enabled`}
                 bad={runtimeEnabled < 3}
               />

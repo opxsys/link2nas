@@ -4,6 +4,7 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getAntiAbuse, resetAntiAbuseAll, resetAntiAbuseKind } from '@/api/admin-security'
 import type { AntiAbuseStatus, AntiAbuseCounter } from './admin.types'
+import { useI18n } from '@/i18n'
 
 type ActionStatus = 'idle' | 'ok' | 'error'
 
@@ -24,6 +25,7 @@ function StatusBadge({ status }: { status: AntiAbuseCounter['status'] }) {
 }
 
 export default function AdminSecurityAntiAbuse() {
+  const { t } = useI18n()
   const [data, setData] = useState<AntiAbuseStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -72,7 +74,7 @@ export default function AdminSecurityAntiAbuse() {
     try {
       await resetAntiAbuseAll()
       setActionStatus('ok')
-      setActionMessage('All anti-abuse counters reset.')
+      setActionMessage(t('adminAAAllReset'))
       actionTimer.current = setTimeout(() => setActionStatus('idle'), 4000)
       await load()
     } catch (err) {
@@ -86,11 +88,11 @@ export default function AdminSecurityAntiAbuse() {
   const busy = resettingAll || resettingKind !== null
 
   return (
-    <SectionCard title="Anti-Abuse / Rate Limits" description="Live rate-limit counters. Reset to unblock locked identities.">
+    <SectionCard title={t('adminAntiAbuseTitle')} description={t('adminAntiAbuseDesc')}>
       <div className="flex flex-col gap-4">
         {loading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 size={15} className="animate-spin" aria-hidden="true" /> Loading…
+            <Loader2 size={15} className="animate-spin" aria-hidden="true" /> {t('loading')}
           </div>
         )}
 
@@ -98,9 +100,9 @@ export default function AdminSecurityAntiAbuse() {
           <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
             <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-medium">Failed to load anti-abuse data</p>
+              <p className="font-medium">{t('adminLoadAntiAbuse')}</p>
               <p className="mt-0.5 text-xs">{fetchError}</p>
-              <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+              <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
             </div>
           </div>
         )}
@@ -118,7 +120,7 @@ export default function AdminSecurityAntiAbuse() {
                 {loading
                   ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
                   : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
-                Refresh
+                {t('refresh')}
               </Button>
             </div>
 
@@ -130,7 +132,7 @@ export default function AdminSecurityAntiAbuse() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Kind', 'Limit', 'Window', 'Active IDs', 'Est. Hits', 'Status', ''].map((h) => (
+                    {[t('adminAAKind'), t('adminAALimit'), t('adminAAWindow'), t('adminAAActiveIds'), t('adminAAEstHits'), t('colStatus'), ''].map((h) => (
                       <th key={h} className="px-3 pb-2 pt-2 text-left text-xs font-medium text-muted-foreground">{h}</th>
                     ))}
                   </tr>
@@ -154,7 +156,7 @@ export default function AdminSecurityAntiAbuse() {
                         >
                           {resettingKind === c.kind
                             ? <Loader2 size={11} className="animate-spin" aria-hidden="true" />
-                            : 'Reset'}
+                            : t('adminAAReset')}
                         </Button>
                       </td>
                     </tr>
@@ -169,7 +171,7 @@ export default function AdminSecurityAntiAbuse() {
                   {resettingAll
                     ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
                     : <RotateCcw size={13} className="mr-1.5" aria-hidden="true" />}
-                  Reset all counters
+                  {t('adminAAResetAll')}
                 </Button>
               </div>
               {actionStatus === 'ok' && (
@@ -177,7 +179,7 @@ export default function AdminSecurityAntiAbuse() {
                   <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
                   <span className="flex-1">{actionMessage}</span>
                   <button type="button" onClick={() => { if (actionTimer.current) clearTimeout(actionTimer.current); setActionStatus('idle') }}
-                    className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+                    className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
                     <X size={13} aria-hidden="true" />
                   </button>
                 </div>
@@ -187,7 +189,7 @@ export default function AdminSecurityAntiAbuse() {
                   <XCircle size={15} className="shrink-0" aria-hidden="true" />
                   <span className="flex-1">{actionMessage}</span>
                   <button type="button" onClick={() => setActionStatus('idle')}
-                    className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+                    className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
                     <X size={13} aria-hidden="true" />
                   </button>
                 </div>

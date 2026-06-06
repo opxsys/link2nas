@@ -4,6 +4,7 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getAnnouncementTracking } from '@/api/admin-announcements'
 import type { AnnouncementTracking, AnnouncementTrackingRead } from './admin.types'
+import { useI18n } from '@/i18n'
 
 function fmt(iso: string | null | undefined): string {
   return iso ? new Date(iso).toLocaleString() : '—'
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export default function AdminAnnouncementTracking({ id, onBack }: Props) {
+  const { t } = useI18n()
   const [data, setData] = useState<AnnouncementTracking | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -77,20 +79,20 @@ export default function AdminAnnouncementTracking({ id, onBack }: Props) {
       data.reads.some((r) => r.email_sent_at || r.email_status)
     : false
 
-  const headers = ['Email', 'Name', 'Opened', 'Read', 'Acknowledged',
-    ...(showEmail ? ['Email sent', 'Email status'] : []),
+  const headers = [t('email'), t('labelDisplayName'), t('adminStatOpened'), t('adminStatRead'), t('adminStatAcknowledged'),
+    ...(showEmail ? [t('adminStatEmailSent'), t('adminTrackColEmailStatus')] : []),
   ]
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" className="w-fit" onClick={onBack}>
-          <ArrowLeft size={13} className="mr-1.5" aria-hidden="true" /> Back to list
+          <ArrowLeft size={13} className="mr-1.5" aria-hidden="true" /> {t('adminBackToList')}
         </Button>
         {data && (
           <Button size="sm" variant="outline" disabled={loading} onClick={load}>
             <RefreshCw size={13} className={`mr-1.5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-            Refresh
+            {t('refresh')}
           </Button>
         )}
       </div>
@@ -98,7 +100,7 @@ export default function AdminAnnouncementTracking({ id, onBack }: Props) {
       {loading && !data && (
         <div className="flex items-center gap-2 py-8 text-muted-foreground">
           <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-          <span className="text-sm">Loading tracking data…</span>
+          <span className="text-sm">{t('adminLoadingTracking')}</span>
         </div>
       )}
 
@@ -106,33 +108,33 @@ export default function AdminAnnouncementTracking({ id, onBack }: Props) {
         <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
           <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
           <div>
-            <p className="font-medium">Failed to load tracking data</p>
+            <p className="font-medium">{t('adminTrackLoadFailed')}</p>
             <p className="mt-0.5 text-xs">{error}</p>
-            <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+            <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
           </div>
         </div>
       )}
 
       {data && (
         <>
-          <SectionCard title={data.announcement.title} description="Delivery and engagement statistics.">
+          <SectionCard title={data.announcement.title} description={t('adminDeliveryStats')}>
             <div className={`grid gap-3 ${showEmail ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-3'}`}>
-              <StatBox label="Opened"       value={data.stats.opened} />
-              <StatBox label="Read"         value={data.stats.read} />
-              <StatBox label="Acknowledged" value={data.stats.acknowledged} />
+              <StatBox label={t('adminStatOpened')}       value={data.stats.opened} />
+              <StatBox label={t('adminStatRead')}         value={data.stats.read} />
+              <StatBox label={t('adminStatAcknowledged')} value={data.stats.acknowledged} />
               {showEmail && (
                 <>
-                  <StatBox label="Email sent"    value={data.stats.email_sent} />
-                  <StatBox label="Email failed"  value={data.stats.email_failed} />
-                  <StatBox label="Email targets" value={data.stats.targeted_email_recipients} />
+                  <StatBox label={t('adminStatEmailSent')}    value={data.stats.email_sent} />
+                  <StatBox label={t('adminStatEmailFailed')}  value={data.stats.email_failed} />
+                  <StatBox label={t('adminStatEmailTargets')} value={data.stats.targeted_email_recipients} />
                 </>
               )}
             </div>
           </SectionCard>
 
-          <SectionCard title="Per-User Activity" bodyClassName="p-0">
+          <SectionCard title={t('adminPerUserActivity')} bodyClassName="p-0">
             {data.reads.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-muted-foreground">No activity recorded yet.</p>
+              <p className="px-4 py-4 text-sm text-muted-foreground">{t('adminNoActivity')}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

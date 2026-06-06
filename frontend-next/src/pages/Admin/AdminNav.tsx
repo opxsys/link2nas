@@ -14,25 +14,27 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AdminSection } from './admin.types'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 
 interface NavItem {
   id: AdminSection
-  label: string
+  labelKey: TranslationKey
   icon: LucideIcon
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'overview',      label: 'Overview',       icon: LayoutDashboard },
-  { id: 'general',       label: 'General',        icon: Settings2 },
-  { id: 'users',         label: 'Users',          icon: Users },
-  { id: 'announcements', label: 'Announcements',  icon: Megaphone },
-  { id: 'emails',        label: 'Emails',         icon: Mail },
-  { id: 'security',      label: 'Security',       icon: ShieldCheck },
-  { id: 'timeouts',      label: 'Timeouts',       icon: Timer },
-  { id: 'runtime',       label: 'Runtime',        icon: Cpu },
-  { id: 'cleanup',       label: 'Cleanup',        icon: Trash2 },
-  { id: 'system-events', label: 'System Events',  icon: AlertTriangle },
-  { id: 'maintenance',   label: 'Maintenance',    icon: Wrench },
+  { id: 'overview',      labelKey: 'adminNavOverview',      icon: LayoutDashboard },
+  { id: 'general',       labelKey: 'adminNavGeneral',       icon: Settings2 },
+  { id: 'users',         labelKey: 'adminNavUsers',         icon: Users },
+  { id: 'announcements', labelKey: 'adminNavAnnouncements', icon: Megaphone },
+  { id: 'emails',        labelKey: 'adminNavEmails',        icon: Mail },
+  { id: 'security',      labelKey: 'adminNavSecurity',      icon: ShieldCheck },
+  { id: 'timeouts',      labelKey: 'adminNavTimeouts',      icon: Timer },
+  { id: 'runtime',       labelKey: 'adminNavRuntime',       icon: Cpu },
+  { id: 'cleanup',       labelKey: 'adminNavCleanup',       icon: Trash2 },
+  { id: 'system-events', labelKey: 'adminNavSystemEvents',  icon: AlertTriangle },
+  { id: 'maintenance',   labelKey: 'adminNavMaintenance',   icon: Wrench },
 ]
 
 interface Props {
@@ -41,10 +43,11 @@ interface Props {
 }
 
 export default function AdminNav({ activeSection, onSelect }: Props) {
+  const { t } = useI18n()
   return (
-    <nav aria-label="Admin sections" className="rounded-lg border border-border bg-card shadow-sm lg:w-48 lg:shrink-0">
+    <nav aria-label={t('ariaAdminSections')} className="rounded-lg border border-border bg-card shadow-sm lg:w-48 lg:shrink-0">
       <ul className="py-1">
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ id, labelKey, icon: Icon }) => {
           const active = activeSection === id
           return (
             <li key={id}>
@@ -60,7 +63,7 @@ export default function AdminNav({ activeSection, onSelect }: Props) {
                 )}
               >
                 <Icon size={15} aria-hidden="true" className="shrink-0" />
-                {label}
+                {t(labelKey)}
               </button>
             </li>
           )

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { createAnnouncement, updateAnnouncement } from '@/api/admin-announcements'
 import { useSmtpStatus } from '@/lib/useSmtpStatus'
 import type { RealAnnouncement, AnnouncementPayload, AnnouncementType, AnnouncementSeverityLevel } from './admin.types'
+import { useI18n } from '@/i18n'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const SELECT = INPUT
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) {
+  const { t } = useI18n()
   const { smtpAvailable, smtpLoading } = useSmtpStatus()
   const [fields, setFields] = useState<AnnouncementPayload>(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -67,11 +69,11 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
     const startsAt = fields.starts_at || null
     const endsAt = fields.ends_at || null
     if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
-      setError('End date must be after start date.')
+      setError(t('adminAnnEndDateError'))
       return
     }
     if (endsAt && fields.is_active && new Date(endsAt) <= new Date()) {
-      setError('End date must be in the future for an active announcement.')
+      setError(t('adminAnnEndDateFutureError'))
       return
     }
     setSaving(true)
@@ -94,54 +96,54 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
     }
   }
 
-  const title = ann ? 'Edit Announcement' : 'New Announcement'
+  const title = ann ? t('adminAnnFormEdit') : t('adminAnnFormNew')
 
   return (
     <SectionCard title={title}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div>
-          <label htmlFor="ann-title" className={LABEL}>Title <span className="text-destructive">*</span></label>
+          <label htmlFor="ann-title" className={LABEL}>{t('adminAnnTitleLabel')} <span className="text-destructive">*</span></label>
           <input id="ann-title" type="text" className={INPUT} value={fields.title} disabled={saving}
             required onChange={(e) => set('title', e.target.value)} />
         </div>
 
         <div>
-          <label htmlFor="ann-body" className={LABEL}>Body <span className="text-destructive">*</span></label>
+          <label htmlFor="ann-body" className={LABEL}>{t('adminAnnBodyLabel')} <span className="text-destructive">*</span></label>
           <textarea id="ann-body" className={TEXTAREA} rows={5} value={fields.body} disabled={saving}
             required onChange={(e) => set('body', e.target.value)} />
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="ann-type" className={LABEL}>Type</label>
+            <label htmlFor="ann-type" className={LABEL}>{t('adminAnnTypeLabel')}</label>
             <select id="ann-type" className={SELECT} value={fields.type} disabled={saving}
               onChange={(e) => set('type', e.target.value as AnnouncementType)}>
-              <option value="news">News</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="incident">Incident</option>
-              <option value="security">Security</option>
+              <option value="news">{t('adminAnnTypeNews')}</option>
+              <option value="maintenance">{t('adminAnnTypeMaintenance')}</option>
+              <option value="incident">{t('adminAnnTypeIncident')}</option>
+              <option value="security">{t('adminAnnTypeSecurity')}</option>
             </select>
           </div>
           <div>
-            <label htmlFor="ann-severity" className={LABEL}>Severity</label>
+            <label htmlFor="ann-severity" className={LABEL}>{t('adminAnnSeverityLabel')}</label>
             <select id="ann-severity" className={SELECT} value={fields.severity} disabled={saving}
               onChange={(e) => set('severity', e.target.value as AnnouncementSeverityLevel)}>
-              <option value="info">Info</option>
-              <option value="warning">Warning</option>
-              <option value="critical">Critical</option>
+              <option value="info">{t('adminAnnSeverityInfo')}</option>
+              <option value="warning">{t('adminAnnSeverityWarn')}</option>
+              <option value="critical">{t('adminAnnSeverityCritical')}</option>
             </select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="ann-starts" className={LABEL}>Starts at <span className="text-muted-foreground">(optional)</span></label>
+            <label htmlFor="ann-starts" className={LABEL}>{t('adminAnnStartsAt')} <span className="text-muted-foreground">{t('adminMaintOptional')}</span></label>
             <input id="ann-starts" type="datetime-local" className={INPUT}
               value={toDatetimeLocal(fields.starts_at)} disabled={saving}
               onChange={(e) => set('starts_at', e.target.value || null)} />
           </div>
           <div>
-            <label htmlFor="ann-ends" className={LABEL}>Ends at <span className="text-muted-foreground">(optional)</span></label>
+            <label htmlFor="ann-ends" className={LABEL}>{t('adminAnnEndsAt')} <span className="text-muted-foreground">{t('adminMaintOptional')}</span></label>
             <input id="ann-ends" type="datetime-local" className={INPUT}
               value={toDatetimeLocal(fields.ends_at)} disabled={saving}
               onChange={(e) => set('ends_at', e.target.value || null)} />
@@ -150,10 +152,10 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
 
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {([
-            ['is_active',              'Active (visible to users)'],
-            ['show_as_banner',         'Show as banner'],
-            ['require_acknowledgement','Require acknowledgement'],
-            ['track_open',             'Track opens'],
+            ['is_active',               t('adminAnnActiveChk')],
+            ['show_as_banner',          t('adminAnnBannerChk')],
+            ['require_acknowledgement', t('adminAnnAckChk')],
+            ['track_open',              t('adminAnnTrackChk')],
           ] as [keyof AnnouncementPayload, string][]).map(([key, label]) => (
             <div key={key} className={CHECK_ROW}>
               <input id={`ann-${key}`} type="checkbox" className={CHECK}
@@ -175,12 +177,12 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
               onChange={(e) => set('send_email', e.target.checked)}
             />
             <label htmlFor="ann-send_email" className={!smtpLoading && !smtpAvailable ? 'text-sm text-muted-foreground' : CHECK_LABEL}>
-              Send email notification
+              {t('adminAnnEmailChk')}
             </label>
           </div>
           {!smtpLoading && !smtpAvailable && (
             <p className="ml-6 text-xs text-amber-700 dark:text-amber-400">
-              SMTP is not configured or disabled. Email sending is unavailable.
+              {t('adminAnnSmtpWarning')}
             </p>
           )}
         </div>
@@ -188,10 +190,10 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={saving}>
             {saving && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            {ann ? 'Save changes' : 'Create'}
+            {ann ? t('saveChanges') : t('create')}
           </Button>
           <Button type="button" size="sm" variant="outline" disabled={saving} onClick={onCancel}>
-            Cancel
+            {t('cancel')}
           </Button>
         </div>
         {error && (
@@ -202,7 +204,7 @@ export default function AdminAnnouncementForm({ ann, onSave, onCancel }: Props) 
               type="button"
               onClick={() => setError('')}
               className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              aria-label="Dismiss"
+              aria-label={t('dismiss')}
             >
               <X size={13} aria-hidden="true" />
             </button>

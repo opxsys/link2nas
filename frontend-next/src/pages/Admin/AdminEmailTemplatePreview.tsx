@@ -1,5 +1,6 @@
 import { Loader2, XCircle, X } from 'lucide-react'
 import type { EmailTemplatePreview } from '@/api/admin-email-templates'
+import { useI18n } from '@/i18n'
 
 interface Props {
   preview: EmailTemplatePreview | null
@@ -9,15 +10,16 @@ interface Props {
 }
 
 export default function AdminEmailTemplatePreview({ preview, loading, error, onDismiss }: Props) {
+  const { t } = useI18n()
   return (
     <div className="rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h3 className="text-sm font-semibold text-foreground">Preview</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t('adminTplPreviewTitle')}</h3>
         <button
           type="button"
           onClick={onDismiss}
           className="rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          aria-label="Close preview"
+          aria-label={t('adminClosePreview')}
         >
           <X size={14} aria-hidden="true" />
         </button>
@@ -27,7 +29,7 @@ export default function AdminEmailTemplatePreview({ preview, loading, error, onD
         {loading && (
           <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
             <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-            Generating preview…
+            {t('adminTplGenerating')}
           </div>
         )}
 
@@ -41,14 +43,14 @@ export default function AdminEmailTemplatePreview({ preview, loading, error, onD
         {!loading && preview && (
           <>
             <div>
-              <p className="mb-1 text-xs font-medium text-foreground">Subject</p>
+              <p className="mb-1 text-xs font-medium text-foreground">{t('adminTplSubjectLabel')}</p>
               <p className="break-words rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
                 {preview.subject}
               </p>
             </div>
 
             <div>
-              <p className="mb-1 text-xs font-medium text-foreground">Body</p>
+              <p className="mb-1 text-xs font-medium text-foreground">{t('adminTplBodyLabel')}</p>
               <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs text-foreground">
                 {preview.body}
               </pre>
@@ -56,7 +58,7 @@ export default function AdminEmailTemplatePreview({ preview, loading, error, onD
 
             {Object.keys(preview.sample_values).length > 0 && (
               <div>
-                <p className="mb-1.5 text-xs font-medium text-foreground">Sample values used</p>
+                <p className="mb-1.5 text-xs font-medium text-foreground">{t('adminTplSampleValues')}</p>
                 <div className="flex flex-col gap-1">
                   {Object.entries(preview.sample_values).map(([k, v]) => (
                     <div key={k} className="flex gap-2 text-xs text-muted-foreground">

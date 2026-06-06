@@ -2,6 +2,7 @@ import { CircleCheck, CircleX, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SectionCard from '@/components/common/SectionCard'
 import type { MaintenanceStatus } from '@/pages/Admin/admin.types'
+import { useI18n } from '@/i18n'
 
 type DirStatus = 'ok' | 'error' | 'unknown'
 
@@ -17,39 +18,41 @@ const STATUS_CLASS: Record<DirStatus, string> = {
   unknown: 'text-amber-600 dark:text-amber-400',
 }
 
-const STATUS_LABEL: Record<DirStatus, string> = {
-  ok: 'OK',
-  error: 'Error',
-  unknown: 'Unknown',
-}
-
 interface Props {
   status: MaintenanceStatus
 }
 
 export default function MaintenanceDirs({ status }: Props) {
+  const { t } = useI18n()
+
+  const STATUS_LABEL: Record<DirStatus, string> = {
+    ok: t('maintStatusOk'),
+    error: t('maintStatusError'),
+    unknown: t('maintStatusUnknown'),
+  }
+
   if (status.paths.length === 0) {
     return (
-      <SectionCard title="Directory Checks">
-        <p className="text-sm text-muted-foreground">No directory checks configured.</p>
+      <SectionCard title={t('maintDirsTitle')}>
+        <p className="text-sm text-muted-foreground">{t('maintNoDirs')}</p>
       </SectionCard>
     )
   }
 
   return (
-    <SectionCard title="Directory Checks" bodyClassName="p-0">
+    <SectionCard title={t('maintDirsTitle')} bodyClassName="p-0">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
               <th className="px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground">
-                Directory
+                {t('maintColDirectory')}
               </th>
               <th className="px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground">
-                Path
+                {t('maintColPath')}
               </th>
               <th className="px-4 pb-2.5 pt-3 text-left text-xs font-medium text-muted-foreground">
-                Status
+                {t('colStatus')}
               </th>
             </tr>
           </thead>
@@ -60,7 +63,7 @@ export default function MaintenanceDirs({ status }: Props) {
               return (
                 <tr key={p.name} className="hover:bg-muted/40">
                   <td className="px-4 py-2.5 font-medium text-foreground">
-                    {p.name}{!p.required && <span className="ml-1 text-xs text-muted-foreground">(opt)</span>}
+                    {p.name}{!p.required && <span className="ml-1 text-xs text-muted-foreground">{t('maintDirOpt')}</span>}
                   </td>
                   <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                     {p.path ?? '—'}

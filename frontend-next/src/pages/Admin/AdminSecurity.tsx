@@ -5,6 +5,7 @@ import { getSecuritySettings, saveSecuritySettings } from '@/api/admin-security'
 import type { SecurityTokenTtl, SecurityPasswordPolicy } from './admin.types'
 import AdminSecurityFields from './AdminSecurityFields'
 import AdminSecurityAntiAbuse from './AdminSecurityAntiAbuse'
+import { useI18n } from '@/i18n'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -25,6 +26,7 @@ const DEFAULT_POLICY: SecurityPasswordPolicy = {
 }
 
 export default function AdminSecurity() {
+  const { t } = useI18n()
   const [tokenTtl, setTokenTtl] = useState<SecurityTokenTtl>(DEFAULT_TTL)
   const [passwordPolicy, setPasswordPolicy] = useState<SecurityPasswordPolicy>(DEFAULT_POLICY)
   const [loading, setLoading] = useState(true)
@@ -69,7 +71,7 @@ export default function AdminSecurity() {
       setTokenTtl(updated.token_ttl)
       setPasswordPolicy(updated.password_policy)
       setSaveStatus('saved')
-      setSaveMessage('Security settings saved.')
+      setSaveMessage(t('adminSecSaved'))
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
@@ -81,7 +83,7 @@ export default function AdminSecurity() {
     return (
       <div className="flex items-center gap-2 py-12 text-muted-foreground">
         <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-        <span className="text-sm">Loading…</span>
+        <span className="text-sm">{t('loading')}</span>
       </div>
     )
   }
@@ -91,9 +93,9 @@ export default function AdminSecurity() {
       <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
         <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div>
-          <p className="font-medium">Failed to load security settings</p>
+          <p className="font-medium">{t('adminLoadSecFailed')}</p>
           <p className="mt-0.5 text-xs">{fetchError}</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+          <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
         </div>
       </div>
     )
@@ -115,7 +117,7 @@ export default function AdminSecurity() {
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={busy}>
             {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            Save settings
+            {t('adminSaveSettings')}
           </Button>
         </div>
         {saveStatus === 'saved' && (
@@ -123,7 +125,7 @@ export default function AdminSecurity() {
             <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
             <span className="flex-1">{saveMessage}</span>
             <button type="button" onClick={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }}
-              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
               <X size={13} aria-hidden="true" />
             </button>
           </div>
@@ -133,7 +135,7 @@ export default function AdminSecurity() {
             <XCircle size={15} className="shrink-0" aria-hidden="true" />
             <span className="flex-1">{saveMessage}</span>
             <button type="button" onClick={() => setSaveStatus('idle')}
-              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
               <X size={13} aria-hidden="true" />
             </button>
           </div>

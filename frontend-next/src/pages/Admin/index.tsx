@@ -4,6 +4,7 @@ import { Loader2, ShieldOff } from 'lucide-react'
 import PageHeader from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { getMe } from '@/api/me'
+import { useI18n } from '@/i18n'
 import AdminNav from './AdminNav'
 import AdminOverview from './AdminOverview'
 import AdminUsers from './AdminUsers'
@@ -30,6 +31,7 @@ function toSection(raw: string | null): AdminSection {
 type AuthState = 'loading' | 'allowed' | 'denied'
 
 export default function Admin() {
+  const { t } = useI18n()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
@@ -49,7 +51,7 @@ export default function Admin() {
     return (
       <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
         <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-        Verifying access…
+        {t('adminVerifyingAccess')}
       </div>
     )
   }
@@ -59,13 +61,11 @@ export default function Admin() {
       <div className="flex flex-col items-center gap-4 py-20 text-center">
         <ShieldOff size={36} className="text-muted-foreground" aria-hidden="true" />
         <div>
-          <p className="text-base font-medium text-foreground">Access denied</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            This section is restricted to super administrators.
-          </p>
+          <p className="text-base font-medium text-foreground">{t('adminAccessDenied')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t('adminAccessDeniedDesc')}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => navigate('/announcements')}>
-          Back to Announcements
+          {t('adminBackToAnnouncements')}
         </Button>
       </div>
     )
@@ -73,7 +73,7 @@ export default function Admin() {
 
   return (
     <>
-      <PageHeader title="Admin" description="User management and system administration." />
+      <PageHeader title={t('navAdmin')} description={t('adminDesc')} />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <AdminNav activeSection={activeSection} onSelect={setActiveSection} />
         <div className="min-w-0 flex-1">

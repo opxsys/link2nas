@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { getRuntimeSettings, saveRuntimeSettings } from '@/api/admin-runtime'
 import type { DispatcherSettings, OrchestratorSettings, LocalWorkerSettings } from './admin.types'
 import AdminRuntimeFields from './AdminRuntimeFields'
+import { useI18n } from '@/i18n'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -18,6 +19,7 @@ const DEFAULT_ORCHESTRATOR: OrchestratorSettings = {
 const DEFAULT_LOCAL_WORKER: LocalWorkerSettings = { enabled: true, poll_interval_seconds: 5, max_concurrent_downloads: 1 }
 
 export default function AdminRuntime() {
+  const { t } = useI18n()
   const [dispatcher, setDispatcher] = useState<DispatcherFields>(DEFAULT_DISPATCHER)
   const [dispatcherRuntime, setDispatcherRuntime] = useState<DispatcherRuntime>({})
   const [orchestrator, setOrchestrator] = useState<OrchestratorSettings>(DEFAULT_ORCHESTRATOR)
@@ -80,7 +82,7 @@ export default function AdminRuntime() {
       setOrchestrator(updated.jobs.orchestrator)
       setLocalWorker(updated.downloads.local_worker)
       setSaveStatus('saved')
-      setSaveMessage('Runtime settings saved.')
+      setSaveMessage(t('adminRuntimeSaved'))
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')
@@ -92,7 +94,7 @@ export default function AdminRuntime() {
     return (
       <div className="flex items-center gap-2 py-12 text-muted-foreground">
         <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-        <span className="text-sm">Loading…</span>
+        <span className="text-sm">{t('loading')}</span>
       </div>
     )
   }
@@ -102,9 +104,9 @@ export default function AdminRuntime() {
       <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
         <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div>
-          <p className="font-medium">Failed to load runtime settings</p>
+          <p className="font-medium">{t('adminLoadRuntimeFailed')}</p>
           <p className="mt-0.5 text-xs">{fetchError}</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+          <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
         </div>
       </div>
     )
@@ -131,7 +133,7 @@ export default function AdminRuntime() {
             <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
             <span className="flex-1">{saveMessage}</span>
             <button type="button" onClick={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }}
-              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
               <X size={13} aria-hidden="true" />
             </button>
           </div>
@@ -141,7 +143,7 @@ export default function AdminRuntime() {
             <XCircle size={15} className="shrink-0" aria-hidden="true" />
             <span className="flex-1">{saveMessage}</span>
             <button type="button" onClick={() => setSaveStatus('idle')}
-              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label="Dismiss">
+              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
               <X size={13} aria-hidden="true" />
             </button>
           </div>
@@ -149,13 +151,13 @@ export default function AdminRuntime() {
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={busy}>
             {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            Save settings
+            {t('adminSaveSettings')}
           </Button>
           <Button type="button" size="sm" variant="outline" disabled={busy || loading} onClick={load}>
             {loading
               ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
               : <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />}
-            Refresh
+            {t('refresh')}
           </Button>
         </div>
       </div>

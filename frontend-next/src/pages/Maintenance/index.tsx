@@ -7,8 +7,10 @@ import MaintenanceInfo from './MaintenanceInfo'
 import MaintenanceDirs from './MaintenanceDirs'
 import { getMaintenanceStatus } from '@/api/admin-maintenance'
 import type { MaintenanceStatus } from '@/pages/Admin/admin.types'
+import { useI18n } from '@/i18n'
 
 export default function Maintenance() {
+  const { t } = useI18n()
   const [status, setStatus] = useState<MaintenanceStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,23 +32,23 @@ export default function Maintenance() {
   return (
     <>
       <PageHeader
-        title="System Status"
-        description="Quick operational health check — infrastructure, services, and directories at a glance."
+        title={t('maintTitle')}
+        description={t('maintDesc')}
       />
       <div className="space-y-6">
         {loading && (
           <div className="flex items-center gap-2 py-12 text-muted-foreground">
             <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-            <span className="text-sm">Loading system status…</span>
+            <span className="text-sm">{t('maintLoadingStatus')}</span>
           </div>
         )}
         {error && (
           <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
             <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-medium">Failed to load system status</p>
+              <p className="font-medium">{t('maintLoadFailed')}</p>
               <p className="mt-0.5 text-xs">{error}</p>
-              <Button size="sm" variant="outline" className="mt-3" onClick={load}>Retry</Button>
+              <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
             </div>
           </div>
         )}
@@ -54,11 +56,11 @@ export default function Maintenance() {
           <>
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                Checked at {new Date(status.generated_at).toLocaleString()}
+                {t('maintCheckedAt')} {new Date(status.generated_at).toLocaleString()}
               </span>
               <Button size="sm" variant="outline" onClick={load}>
                 <RefreshCw size={13} className="mr-1.5" aria-hidden="true" />
-                Refresh
+                {t('refresh')}
               </Button>
             </div>
             <MaintenanceHealth status={status} />

@@ -1,5 +1,7 @@
 import SectionCard from '@/components/common/SectionCard'
 import type { DispatcherSettings, OrchestratorSettings, LocalWorkerSettings } from './admin.types'
+import { useI18n } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 
 const LABEL = 'text-sm text-foreground'
 const HINT = 'ml-1.5 text-xs text-muted-foreground'
@@ -23,19 +25,27 @@ export default function AdminRuntimeFields({
   dispatcher, dispatcherRuntime, orchestrator, localWorker, disabled,
   onDispatcher, onOrchestrator, onLocalWorker,
 }: Props) {
+  const { t } = useI18n()
+
+  const ORCH_CHECKS: { key: keyof OrchestratorSettings; labelKey: TranslationKey }[] = [
+    { key: 'auto_refresh_enabled',          labelKey: 'adminRtAutoRefresh'   },
+    { key: 'auto_unrestrict_enabled',       labelKey: 'adminRtAutoUnrestrict' },
+    { key: 'auto_send_destination_enabled', labelKey: 'adminRtAutoSendDest'  },
+  ]
+
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       {/* Row 1 col 1 — Dispatcher */}
-      <SectionCard title="Notification Dispatcher" description="Delivers queued notifications to configured channels.">
+      <SectionCard title={t('adminDispTitle')} description={t('adminDispDesc')}>
         <div className="flex flex-col gap-4">
           <div className={CHECK_ROW}>
             <input id="rt-disp-enabled" type="checkbox" className={CHECK} checked={dispatcher.enabled}
               disabled={disabled} onChange={(e) => onDispatcher('enabled', e.target.checked)} />
-            <label htmlFor="rt-disp-enabled" className={LABEL}>Enabled</label>
+            <label htmlFor="rt-disp-enabled" className={LABEL}>{t('labelEnabled')}</label>
           </div>
           <div className={ROW}>
             <label htmlFor="rt-disp-interval" className={LABEL}>
-              Interval<span className={HINT}>(5–86400 s)</span>
+              {t('adminRtIntervalLabel')}<span className={HINT}>(5–86400 s)</span>
             </label>
             <div className="flex shrink-0 items-center gap-2">
               <input id="rt-disp-interval" type="number" className={NUM} value={dispatcher.interval_seconds}
@@ -46,7 +56,7 @@ export default function AdminRuntimeFields({
           </div>
           <div className={ROW}>
             <label htmlFor="rt-disp-limit" className={LABEL}>
-              Batch limit<span className={HINT}>(1–200)</span>
+              {t('adminRtBatchLimit')}<span className={HINT}>(1–200)</span>
             </label>
             <input id="rt-disp-limit" type="number" className={NUM} value={dispatcher.limit}
               disabled={disabled} min={1} max={200}
@@ -55,11 +65,11 @@ export default function AdminRuntimeFields({
           {(dispatcherRuntime.last_run_at || dispatcherRuntime.last_error) && (
             <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
               {dispatcherRuntime.last_run_at && (
-                <p>Last run: {new Date(dispatcherRuntime.last_run_at).toLocaleString()}</p>
+                <p>{t('adminRtLastRun')} {new Date(dispatcherRuntime.last_run_at).toLocaleString()}</p>
               )}
               {dispatcherRuntime.last_error && (
                 <p className="mt-0.5 text-amber-700 dark:text-amber-400">
-                  Last error: {dispatcherRuntime.last_error}
+                  {t('adminRtLastError')} {dispatcherRuntime.last_error}
                 </p>
               )}
             </div>
@@ -68,16 +78,16 @@ export default function AdminRuntimeFields({
       </SectionCard>
 
       {/* Row 1 col 2 — Local Worker */}
-      <SectionCard title="Local Download Worker" description="Downloads files directly to the server filesystem.">
+      <SectionCard title={t('adminLwTitle')} description={t('adminLwDesc')}>
         <div className="flex flex-col gap-4">
           <div className={CHECK_ROW}>
             <input id="rt-lw-enabled" type="checkbox" className={CHECK} checked={localWorker.enabled}
               disabled={disabled} onChange={(e) => onLocalWorker('enabled', e.target.checked)} />
-            <label htmlFor="rt-lw-enabled" className={LABEL}>Enabled</label>
+            <label htmlFor="rt-lw-enabled" className={LABEL}>{t('labelEnabled')}</label>
           </div>
           <div className={ROW}>
             <label htmlFor="rt-lw-poll" className={LABEL}>
-              Poll interval<span className={HINT}>(1–3600 s)</span>
+              {t('adminRtPollInterval')}<span className={HINT}>(1–3600 s)</span>
             </label>
             <div className="flex shrink-0 items-center gap-2">
               <input id="rt-lw-poll" type="number" className={NUM} value={localWorker.poll_interval_seconds}
@@ -88,7 +98,7 @@ export default function AdminRuntimeFields({
           </div>
           <div className={ROW}>
             <label htmlFor="rt-lw-max" className={LABEL}>
-              Max concurrent downloads<span className={HINT}>(1–20)</span>
+              {t('adminRtMaxConcurrent')}<span className={HINT}>(1–20)</span>
             </label>
             <input id="rt-lw-max" type="number" className={NUM} value={localWorker.max_concurrent_downloads}
               disabled={disabled} min={1} max={20}
@@ -98,17 +108,17 @@ export default function AdminRuntimeFields({
       </SectionCard>
 
       {/* Row 2 — Orchestrator full width */}
-      <SectionCard className="xl:col-span-2" title="Jobs Orchestrator" description="Drives job state transitions: refresh, unrestrict, and send-to-destination.">
+      <SectionCard className="xl:col-span-2" title={t('adminOrchTitle')} description={t('adminOrchDesc')}>
         <div className="flex flex-col gap-4">
           <div className={CHECK_ROW}>
             <input id="rt-orch-enabled" type="checkbox" className={CHECK} checked={orchestrator.enabled}
               disabled={disabled} onChange={(e) => onOrchestrator('enabled', e.target.checked)} />
-            <label htmlFor="rt-orch-enabled" className={LABEL}>Enabled</label>
+            <label htmlFor="rt-orch-enabled" className={LABEL}>{t('labelEnabled')}</label>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className={ROW}>
               <label htmlFor="rt-orch-interval" className={LABEL}>
-                Interval<span className={HINT}>(1–3600 s)</span>
+                {t('adminRtIntervalLabel')}<span className={HINT}>(1–3600 s)</span>
               </label>
               <div className="flex shrink-0 items-center gap-2">
                 <input id="rt-orch-interval" type="number" className={NUM} value={orchestrator.interval_seconds}
@@ -119,7 +129,7 @@ export default function AdminRuntimeFields({
             </div>
             <div className={ROW}>
               <label htmlFor="rt-orch-max" className={LABEL}>
-                Max jobs / run<span className={HINT}>(1–500)</span>
+                {t('adminRtMaxJobsRun')}<span className={HINT}>(1–500)</span>
               </label>
               <input id="rt-orch-max" type="number" className={NUM} value={orchestrator.max_jobs_per_run}
                 disabled={disabled} min={1} max={500}
@@ -127,17 +137,13 @@ export default function AdminRuntimeFields({
             </div>
           </div>
           <div className="flex flex-wrap gap-x-8 gap-y-2.5">
-            {([
-              ['auto_refresh_enabled',           'Auto-refresh links'],
-              ['auto_unrestrict_enabled',         'Auto-unrestrict links'],
-              ['auto_send_destination_enabled',   'Auto-send to destination'],
-            ] as [keyof OrchestratorSettings, string][]).map(([key, label]) => (
+            {ORCH_CHECKS.map(({ key, labelKey }) => (
               <div key={key} className={CHECK_ROW}>
                 <input id={`rt-orch-${key}`} type="checkbox" className={CHECK}
                   checked={orchestrator[key] as boolean}
                   disabled={disabled}
                   onChange={(e) => onOrchestrator(key, e.target.checked)} />
-                <label htmlFor={`rt-orch-${key}`} className={LABEL}>{label}</label>
+                <label htmlFor={`rt-orch-${key}`} className={LABEL}>{t(labelKey)}</label>
               </div>
             ))}
           </div>
