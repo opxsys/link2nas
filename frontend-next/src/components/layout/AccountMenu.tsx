@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { type ThemePreference, THEME_PREFERENCES } from '@/lib/themes'
 import { useTheme } from '@/lib/useTheme'
 import { updateMe } from '@/api/me'
+import { logout } from '@/api/auth'
 import { useMe, invalidateMe } from '@/lib/useMe'
 import { useI18n, type TranslationKey } from '@/i18n'
 
@@ -65,7 +66,12 @@ export default function AccountMenu() {
     } catch { /* ignore */ }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await logout()
+    } catch {
+      // always clear local state even if the backend call fails
+    }
     localStorage.removeItem('link2nas_token')
     navigate('/login')
   }

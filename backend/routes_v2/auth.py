@@ -119,4 +119,13 @@ def login_v2():
 
 @auth_v2_bp.post("/logout")
 def logout_v2():
-    return "", 204
+    api_key = request.headers.get("X-Api-Key")
+
+    if api_key:
+        token_repo = current_app.config["API_TOKEN_REPO_V2"]
+        token = token_repo.get_active_by_token(api_key)
+
+        if token is not None:
+            token_repo.deactivate(token.user_id, token.id)
+
+    return jsonify({"ok": True}), 200

@@ -6,6 +6,18 @@ This is not exhaustive QA. The goal is to catch regressions in critical flows be
 
 ---
 
+## Authentication / Session
+
+- [ ] Login with valid credentials returns a session token
+- [ ] Login with invalid credentials returns 401
+- [ ] Logout revokes the current session token server-side: after logout, using the same `X-Api-Key` returns `{"error": "Invalid API key"}`
+- [ ] Logout is idempotent: calling logout twice with the same token returns 200 both times (no 500)
+- [ ] Logout with no `X-Api-Key` returns 200 (no crash)
+- [ ] User API Keys created in Settings > API Keys are **not** revoked by logout — they remain valid
+- [ ] Magic login flow creates a session token that is also revoked by logout
+
+---
+
 ## A. Jobs
 
 - [ ] Jobs list loads and displays correctly

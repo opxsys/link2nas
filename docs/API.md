@@ -148,7 +148,11 @@ curl -s -X POST http://localhost:5000/api/v2/auth/login \
 
 ### `POST /api/v2/auth/logout`
 
-Invalidates the current session token. Returns `204 No Content`.
+Revokes the current session token server-side. The token is deactivated in the database immediately and will be rejected by all subsequent authenticated requests. Returns `200 {"ok": true}`.
+
+The call is idempotent: if the token is already revoked or absent, it still returns `200 {"ok": true}`.
+
+**Note:** Only session tokens (created at login or via magic login) are revoked. User API Keys created in Settings > API Keys are stored separately and are not affected.
 
 ```bash
 curl -X POST http://localhost:5000/api/v2/auth/logout \

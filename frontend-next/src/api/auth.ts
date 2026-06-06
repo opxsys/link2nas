@@ -114,3 +114,7 @@ export function confirmEmailVerification(token: string): Promise<{ ok: boolean; 
     body: JSON.stringify({ token }),
   })
 }
+
+export function logout(): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/v2/auth/logout', { method: 'POST' })
+}
