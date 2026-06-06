@@ -95,6 +95,8 @@ Runs Python unit tests discovered in `scripts/tests/unit/` using `python3 -m uni
 
 Current coverage:
 - `test_destination_error.py` — destination failure classification, field assignment, and `error_message` isolation logic
+- `test_provider_registry.py` — `PROVIDER_KEYS`, `PROVIDER_DISPLAY_NAMES`, and `build_provider()` correctness
+- `test_destination_registry.py` — `DESTINATION_KEYS`, `DESTINATION_ALIAS_KEYS`, `DESTINATION_ALL_KEYS`, and display name completeness
 
 To run a single test file directly:
 ```bash

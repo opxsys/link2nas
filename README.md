@@ -37,7 +37,8 @@ It is designed for self-hosted use on a trusted network. Validation on your own 
 | Layer | Technology |
 |---|---|
 | Backend | Python 3, Flask |
-| Frontend | Vanilla JS, no build step |
+| Frontend (primary) | React + Vite + TypeScript (Next UI) |
+| Frontend (legacy) | Vanilla JS, no build step — still available |
 | Database | SQLite or PostgreSQL |
 | Task queues | Redis + RQ |
 | Encryption | Fernet (cryptography) |
@@ -58,7 +59,7 @@ There are two Docker deployment modes:
 
 #### Fresh install from GHCR
 
-Replace `<TAG>` with the release tag you want to deploy (e.g. `v3.1.0`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
+Replace `<TAG>` with the release tag you want to deploy (e.g. `vX.Y.Z`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
 
 ```bash
 mkdir -p /opt/link2nas
@@ -164,6 +165,8 @@ See [docs/SECURITY.md](docs/SECURITY.md) for the full security model, rate limit
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common symptoms and solutions |
 | [docs/PROWLARR.md](docs/PROWLARR.md) | Prowlarr / qBittorrent integration guide |
 | [docs/QBITTORRENT_COMPATIBILITY.md](docs/QBITTORRENT_COMPATIBILITY.md) | qBittorrent Compatibility API — scope, supported endpoints, limitations |
+| [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Release notes — V3 / Next UI changes and decisions |
+| [docs/NON_REGRESSION_CHECKLIST.md](docs/NON_REGRESSION_CHECKLIST.md) | Manual non-regression checklist for pre-release validation |
 
 ---
 

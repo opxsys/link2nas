@@ -4,6 +4,18 @@ This document lists future ideas and technical improvements that are intentional
 
 These items are not required for the current stable release. They may be revisited later if the project grows, if production usage requires them, or if contributors want to work on them.
 
+## V3 / Near-term
+
+### Version number from CI / GitHub release
+
+`APP_VERSION` defaults to `"unknown"` and is currently set manually as an environment variable in production. It is not injected automatically from the GitHub release tag, CI pipeline, or Docker image build.
+
+The recommended future state: `APP_VERSION` should be set at build time from the Git tag or GitHub Actions release context (e.g. `$GITHUB_REF_NAME` or `--build-arg APP_VERSION=...` in the Dockerfile), so the displayed version always matches the published release without requiring manual `.env` changes.
+
+This is not required for the current release. It is tracked here so it is not forgotten.
+
+---
+
 ## V5 / Future Product Backlog
 
 ### Advanced operational dashboard

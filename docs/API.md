@@ -410,7 +410,7 @@ Creates a new job.
 
 | Field | Required | Description |
 |---|---|---|
-| `source_type` | Yes | `magnet`, `url`, `torrent_file` |
+| `source_type` | Yes | `magnet`, `direct_link`, `torrent_file` |
 | `source_value` | Yes | The magnet URI, URL, or base64-encoded torrent |
 | `provider_name` or `provider_config_id` | No | Debrid provider to use (defaults to user default) |
 | `destination_name` or `destination_config_id` | No | Destination config (defaults to user default) |
@@ -859,4 +859,4 @@ On success returns HTTP `200` with body `Ok.`.
    - Category: optional
 3. In Link2NAS, save a default provider and destination under your user settings so submitted jobs are processed automatically.
 
-See [docs/PROWLARR.md](PROWLARR.md) for the full integration guide.
+See [PROWLARR.md](PROWLARR.md) for the full integration guide.

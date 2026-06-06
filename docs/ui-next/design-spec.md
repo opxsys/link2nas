@@ -1,3 +1,5 @@
+> **Historical design document.** This file describes the initial Next UI design direction. The Next UI is now the primary interface; use [README.md](../../README.md), [RELEASE_NOTES.md](../RELEASE_NOTES.md), and [NON_REGRESSION_CHECKLIST.md](../NON_REGRESSION_CHECKLIST.md) for current release validation.
+
 # Link2NAS Next UI Design Specification
 
 ## Purpose

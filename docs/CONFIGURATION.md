@@ -15,7 +15,7 @@ All variables have defaults unless marked **required**.
 |---|---|---|
 | `APP_NAME` | `link2nas` | Application name — used as env fallback. Overridable in Admin UI. |
 | `APP_TAGLINE` | `Job management + debrid provider` | Short tagline — env fallback, overridable in Admin UI. |
-| `APP_VERSION` | `unknown` | Version string shown in system info. Set to the release tag in production (e.g. `v3.1.0`). |
+| `APP_VERSION` | `unknown` | Version string shown in system info. Set to the release tag in production (e.g. `vX.Y.Z`). |
 | `PUBLIC_BASE_URL` | *(empty)* | Public-facing base URL, no trailing slash. **Required** for email links (magic login, invitations, password reset, email verification). Example: `https://link2nas.example.com` |
 
 ---

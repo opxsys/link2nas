@@ -10,7 +10,7 @@ Docker Compose is the recommended way to run Link2NAS. It manages all services (
 
 Use this mode for release-candidate or production-like validation. It pulls the published image instead of building locally.
 
-Replace `<TAG>` with the release tag you want to deploy (e.g. `v3.1.0`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
+Replace `<TAG>` with the release tag you want to deploy (e.g. `vX.Y.Z`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
 
 ```bash
 mkdir -p /opt/link2nas
@@ -204,7 +204,7 @@ ADMIN_EMAIL="admin@example.local" ADMIN_PASSWORD="your-admin-password" bash scri
 
 Expected final output: `=== test_v3_full: OK ===`
 
-For explicit backend targeting (SQLite or PostgreSQL), or for a full release validation covering both backends, use the dedicated wrappers — see [docs/testing.md](testing.md).
+For explicit backend targeting (SQLite or PostgreSQL), or for a full release validation covering both backends, use the dedicated wrappers — see [testing.md](testing.md).
 
 ---
 

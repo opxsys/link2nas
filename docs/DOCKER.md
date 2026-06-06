@@ -24,7 +24,7 @@ Use `docker-compose.ghcr.yml` when validating or deploying a released image. Use
 
 This is the recommended path for a fresh deployment from a released image. It does not build the image locally.
 
-Replace `<TAG>` with the release tag you want to deploy (e.g. `v3.1.0`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
+Replace `<TAG>` with the release tag you want to deploy (e.g. `vX.Y.Z`). Available tags: [github.com/opxsys/link2nas/releases](https://github.com/opxsys/link2nas/releases).
 
 ```bash
 # 1. Create the deployment directory

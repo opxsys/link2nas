@@ -1,3 +1,5 @@
+> **Superseded by [NON_REGRESSION_CHECKLIST.md](NON_REGRESSION_CHECKLIST.md).** This file is kept as historical Next UI refactor checklist.
+
 # Next UI Regression Checklist
 
 Short manual checklist to run after each significant Next UI refactor, and before merge or publication.
