@@ -37,6 +37,10 @@ services:
         condition: service_started
       web:
         condition: service_started
+    # Delay startup so the web container can initialize the PostgreSQL schema first.
+    # LINK2NAS_STARTUP_DELAY_SECONDS defaults to 20. Set to 0 to disable.
+    # See docs/DOCKER.md for the two-step startup alternative.
+    command: ["sh", "-c", "sleep \"$${LINK2NAS_STARTUP_DELAY_SECONDS:-20}\" && exec python worker.py"]
 
   scheduler:
     environment:
@@ -49,6 +53,7 @@ services:
         condition: service_started
       web:
         condition: service_started
+    command: ["sh", "-c", "sleep \"$${LINK2NAS_STARTUP_DELAY_SECONDS:-20}\" && exec python -m backend.services_v2.scheduler_loop"]
 
   local-download-worker:
     environment:
@@ -61,6 +66,7 @@ services:
         condition: service_started
       web:
         condition: service_started
+    command: ["sh", "-c", "sleep \"$${LINK2NAS_STARTUP_DELAY_SECONDS:-20}\" && exec python -m backend.services_v2.local_download_worker"]
 
 volumes:
   postgres_data:

@@ -123,6 +123,33 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml ps
 
 **Important:** The PostgreSQL password is written into the `postgres_data` volume the first time the container starts. See [PostgreSQL password management](#postgresql-password-management) below for what happens if you need to change it after that.
 
+#### PostgreSQL — first startup delay
+
+On a **fresh `postgres_data` volume**, the `web` container initializes the database schema on startup. The background services (`worker`, `scheduler`, `local-download-worker`) also call `create_app()` and can race against `web` before the schema is ready.
+
+`docker-compose.postgres.yml` adds a configurable delay to the three background services:
+
+```
+LINK2NAS_STARTUP_DELAY_SECONDS=20   # default — set in .env
+```
+
+This gives `web` time to complete schema initialization before the background services start. It is a temporary safeguard. The correct long-term fix is a `pg_advisory_xact_lock()` guard in the schema init path — tracked in [BACKLOG.md](BACKLOG.md).
+
+If you prefer not to use the delay, start the services in two steps instead:
+
+```bash
+# Step 1 — start infrastructure and web only
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
+  up -d postgres redis web
+
+# Wait for web to become healthy (check with: docker compose ... ps)
+sleep 20
+
+# Step 2 — start background services
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
+  up -d worker scheduler local-download-worker
+```
+
 To stop:
 
 ```bash

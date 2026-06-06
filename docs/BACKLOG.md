@@ -6,6 +6,23 @@ These items are not required for the current stable release. They may be revisit
 
 ## V3 / Near-term
 
+### PostgreSQL schema initialization lock / migration runner
+
+All four application services (`web`, `worker`, `scheduler`, `local-download-worker`) call `create_app()` on startup. `create_app()` may apply `schema_postgres.sql` to initialize the database. On a fresh `postgres_data` volume, this creates a race condition: multiple processes attempt to create the same PostgreSQL types concurrently, causing a `UniqueViolation` on `pg_type`.
+
+**Current workaround:** `docker-compose.postgres.yml` delays background services by `LINK2NAS_STARTUP_DELAY_SECONDS` (default: 20 seconds). This gives `web` time to complete schema initialization before the other services start.
+
+**Correct fix:** Wrap the schema init path with `pg_advisory_xact_lock()` on the same connection that executes `schema_postgres.sql`. Only one process will hold the lock at a time; others will wait and then no-op because the schema already exists. Requirements:
+
+- The advisory lock and the schema SQL must share the same connection or transaction.
+- Rollback or a clear failure message on error.
+- SQLite path is unaffected.
+- After this is implemented, the startup delay in `docker-compose.postgres.yml` can be reduced to 0 or removed.
+
+**Future extension:** Versioned schema migrations (e.g. a dedicated `schema-init` service or a lightweight migration table) would replace the current single-file apply-on-startup approach and eliminate the race entirely.
+
+---
+
 ### Version number from CI / GitHub release
 
 `APP_VERSION` defaults to `"unknown"` and is currently set manually as an environment variable in production. It is not injected automatically from the GitHub release tag, CI pipeline, or Docker image build.

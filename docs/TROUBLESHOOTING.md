@@ -258,6 +258,40 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
 
 ---
 
+### PostgreSQL fresh install: `duplicate key value violates unique constraint "pg_type_typname_nsp_index"`
+
+**Symptom:** One or more background service containers (`worker`, `scheduler`, or `local-download-worker`) log an error like:
+
+```text
+psycopg.errors.UniqueViolation: duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+DETAIL: Key (typname, typnamespace)=(users, 2200) already exists.
+```
+
+**Cause:** On a fresh `postgres_data` volume, multiple application containers call `create_app()` and attempt to apply the schema concurrently. PostgreSQL rejects the duplicate type creation from whichever process loses the race.
+
+**Immediate check:** If the containers restart automatically (`restart: unless-stopped`) and the `web` service has already completed schema initialization, the affected containers will typically start successfully on their next restart. Check `Admin > Maintenance` — if the app is operational there, the instance is healthy.
+
+**Fix — prevent the race:**
+
+`docker-compose.postgres.yml` applies a startup delay to the background services via `LINK2NAS_STARTUP_DELAY_SECONDS` (default: 20 seconds). If you are not using this override, add it or start services in two steps:
+
+```bash
+# Step 1 — web and infrastructure only
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
+  up -d postgres redis web
+
+# Wait for web to become healthy
+sleep 20
+
+# Step 2 — background services
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
+  up -d worker scheduler local-download-worker
+```
+
+**Future fix:** The correct solution is a `pg_advisory_xact_lock()` guard in the schema init path so only one process applies the schema at a time. This is tracked in the backlog.
+
+---
+
 ### Database schema not applied
 
 **Symptom:** The app starts but API calls fail with table-not-found errors.
