@@ -9,8 +9,6 @@ import VerifyEmailPage from '@/pages/Auth/VerifyEmailPage'
 import Dashboard from '@/pages/Dashboard'
 import Jobs from '@/pages/Jobs'
 import NewJob from '@/pages/NewJob'
-import Providers from '@/pages/Providers'
-import Destinations from '@/pages/Destinations'
 import Prowlarr from '@/pages/Prowlarr'
 import Notifications from '@/pages/Notifications'
 import Settings from '@/pages/Settings'
@@ -51,8 +49,6 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/new" element={<NewJob />} />
-          <Route path="providers" element={<Providers />} />
-          <Route path="destinations" element={<Destinations />} />
           <Route path="prowlarr" element={<Prowlarr />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="notifications" element={<Notifications />} />

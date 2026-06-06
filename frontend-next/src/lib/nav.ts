@@ -36,8 +36,6 @@ export const NAV_ITEMS: NavItem[] = [
 
 const NON_NAV_KEYS: Record<string, TranslationKey> = {
   '/jobs/new':      'navNewJob',
-  '/providers':     'navProviders',
-  '/destinations':  'navDestinations',
 }
 
 /**

@@ -464,8 +464,6 @@ export const en = {
   // Provider settings
   sectionProviders:       'Providers',
   providersDesc:          'Download provider profiles. One default per user.',
-  providersPageDesc:      'Manage download provider profiles.',
-  providersComingSoon:    'Provider management coming soon.',
   addProvider:            'Add provider',
   editProvider:           'Edit provider',
   noProvidersConfigured:  'No provider profiles configured. Add one to start creating jobs.',
@@ -490,8 +488,6 @@ export const en = {
   // Destination settings
   sectionDestinations:      'Destinations',
   destinationsDesc:         'File transfer destinations. Zero active destinations means links-only mode.',
-  destinationsPageDesc:     'Manage file destination profiles.',
-  destinationsComingSoon:   'Destination management coming soon.',
   addDestination:           'Add destination',
   editDestination:          'Edit destination',
   loadingDestinations:      'Loading destinations…',

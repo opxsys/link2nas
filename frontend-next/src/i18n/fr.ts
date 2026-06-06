@@ -466,8 +466,6 @@ export const fr: Translations = {
   // Provider settings
   sectionProviders:       'Fournisseurs',
   providersDesc:          'Profils de fournisseurs de téléchargement. Un fournisseur par défaut par utilisateur.',
-  providersPageDesc:      'Gérez les profils de fournisseurs de téléchargement.',
-  providersComingSoon:    "Gestion des fournisseurs à venir.",
   addProvider:            'Ajouter un fournisseur',
   editProvider:           'Modifier le fournisseur',
   noProvidersConfigured:  'Aucun profil de fournisseur configuré. Ajoutez-en un pour commencer à créer des jobs.',
@@ -492,8 +490,6 @@ export const fr: Translations = {
   // Destination settings
   sectionDestinations:      'Destinations',
   destinationsDesc:         "Destinations de transfert de fichiers. Zéro destination active signifie le mode liens uniquement.",
-  destinationsPageDesc:     'Gérez les profils de destination de fichiers.',
-  destinationsComingSoon:   "Gestion des destinations à venir.",
   addDestination:           'Ajouter une destination',
   editDestination:          'Modifier la destination',
   loadingDestinations:      'Chargement des destinations…',
