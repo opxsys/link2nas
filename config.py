@@ -192,6 +192,7 @@ class Settings:
         for directory in (
             self.DATA_DIR,
             self.USERDATA_DIR,
+            self.TORRENT_DIR,
             self.TEMP_DIR,
             self.LOG_DIR,
         ):
