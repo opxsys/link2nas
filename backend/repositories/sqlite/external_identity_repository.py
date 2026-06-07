@@ -1,0 +1,81 @@
+from backend.models.external_identity import ExternalIdentity
+
+
+class ExternalIdentityRepository:
+    def __init__(self, db):
+        self.db = db
+
+    def get_by_issuer_subject(self, issuer: str, subject: str) -> ExternalIdentity | None:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT *
+                FROM external_identities
+                WHERE issuer = ? AND subject = ?
+                """,
+                (issuer, subject),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._map_row(row)
+
+    def get_by_user_id(self, user_id: str) -> list[ExternalIdentity]:
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM external_identities
+                WHERE user_id = ?
+                ORDER BY linked_at DESC
+                """,
+                (user_id,),
+            ).fetchall()
+
+        return [self._map_row(row) for row in rows]
+
+    def create(self, identity: ExternalIdentity) -> None:
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO external_identities (
+                    id, user_id, provider, issuer, subject,
+                    email, linked_at, last_used_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    identity.id,
+                    identity.user_id,
+                    identity.provider,
+                    identity.issuer,
+                    identity.subject,
+                    identity.email,
+                    identity.linked_at,
+                    identity.last_used_at,
+                ),
+            )
+
+    def update_last_used(self, identity_id: str, last_used_at: str) -> None:
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                UPDATE external_identities
+                SET last_used_at = ?
+                WHERE id = ?
+                """,
+                (last_used_at, identity_id),
+            )
+
+    def _map_row(self, row) -> ExternalIdentity:
+        return ExternalIdentity(
+            id=row["id"],
+            user_id=row["user_id"],
+            provider=row["provider"],
+            issuer=row["issuer"],
+            subject=row["subject"],
+            email=row["email"],
+            linked_at=row["linked_at"],
+            last_used_at=row["last_used_at"],
+        )

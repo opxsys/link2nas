@@ -1,0 +1,112 @@
+from backend.models.oidc_state import OidcState
+
+
+class OidcStateRepository:
+    def __init__(self, db):
+        self.db = db
+
+    def create(self, state: OidcState) -> None:
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO oidc_states (
+                    id, state, nonce, exchange_code, api_token_id,
+                    created_at, expires_at, consumed_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    state.id,
+                    state.state,
+                    state.nonce,
+                    state.exchange_code,
+                    state.api_token_id,
+                    state.created_at,
+                    state.expires_at,
+                    state.consumed_at,
+                ),
+            )
+
+    def get_valid_by_state(self, state: str, now_iso: str) -> OidcState | None:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT *
+                FROM oidc_states
+                WHERE state = ?
+                  AND consumed_at IS NULL
+                  AND expires_at > ?
+                """,
+                (state, now_iso),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._map_row(row)
+
+    def mark_callback_consumed(
+        self,
+        state_id: str,
+        exchange_code: str,
+        api_token_id: str,
+        expires_at: str,
+        consumed_at: str,
+    ) -> None:
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                UPDATE oidc_states
+                SET consumed_at = ?,
+                    exchange_code = ?,
+                    api_token_id = ?,
+                    expires_at = ?
+                WHERE id = ?
+                """,
+                (consumed_at, exchange_code, api_token_id, expires_at, state_id),
+            )
+
+    def get_valid_by_exchange_code(self, exchange_code: str, now_iso: str) -> OidcState | None:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT *
+                FROM oidc_states
+                WHERE exchange_code = ?
+                  AND consumed_at IS NOT NULL
+                  AND api_token_id IS NOT NULL
+                  AND expires_at > ?
+                """,
+                (exchange_code, now_iso),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return self._map_row(row)
+
+    def delete(self, state_id: str) -> None:
+        with self.db.connect() as conn:
+            conn.execute(
+                "DELETE FROM oidc_states WHERE id = ?",
+                (state_id,),
+            )
+
+    def delete_expired(self, now_iso: str) -> None:
+        with self.db.connect() as conn:
+            conn.execute(
+                "DELETE FROM oidc_states WHERE expires_at < ?",
+                (now_iso,),
+            )
+
+    def _map_row(self, row) -> OidcState:
+        return OidcState(
+            id=row["id"],
+            state=row["state"],
+            nonce=row["nonce"],
+            exchange_code=row["exchange_code"],
+            api_token_id=row["api_token_id"],
+            created_at=row["created_at"],
+            expires_at=row["expires_at"],
+            consumed_at=row["consumed_at"],
+        )

@@ -64,6 +64,18 @@ from backend.repositories.sqlite.email_template_repository import (
 from backend.repositories.postgres.email_template_repository import (
     EmailTemplateRepository as PostgresEmailTemplateRepository,
 )
+from backend.repositories.sqlite.external_identity_repository import (
+    ExternalIdentityRepository,
+)
+from backend.repositories.postgres.external_identity_repository import (
+    ExternalIdentityRepository as PostgresExternalIdentityRepository,
+)
+from backend.repositories.sqlite.oidc_state_repository import (
+    OidcStateRepository,
+)
+from backend.repositories.postgres.oidc_state_repository import (
+    OidcStateRepository as PostgresOidcStateRepository,
+)
 
 
 class UnsupportedRepositoryBackendError(Exception):
@@ -89,6 +101,8 @@ class Repositories:
     announcement_repository: object
     announcement_read_repository: object
     email_template_repository: object
+    external_identity_repository: object
+    oidc_state_repository: object
 
 def build_repositories(settings) -> Repositories:
     backend = settings.V2_DATABASE_BACKEND
@@ -117,6 +131,8 @@ def build_repositories(settings) -> Repositories:
             announcement_repository=AnnouncementRepository(db),
             announcement_read_repository=AnnouncementReadRepository(db),
             email_template_repository=EmailTemplateRepository(db),
+            external_identity_repository=ExternalIdentityRepository(db),
+            oidc_state_repository=OidcStateRepository(db),
         )
 
     if backend == "postgres":
@@ -142,6 +158,8 @@ def build_repositories(settings) -> Repositories:
             announcement_repository=PostgresAnnouncementRepository(db),
             announcement_read_repository=PostgresAnnouncementReadRepository(db),
             email_template_repository=PostgresEmailTemplateRepository(db),
+            external_identity_repository=PostgresExternalIdentityRepository(db),
+            oidc_state_repository=PostgresOidcStateRepository(db),
         )
 
 

@@ -3,7 +3,9 @@ from abc import ABC, abstractmethod
 from backend.models.announcement import Announcement
 from backend.models.announcement_read import AnnouncementRead
 from backend.models.destination_config import DestinationConfig
+from backend.models.external_identity import ExternalIdentity
 from backend.models.job import Job
+from backend.models.oidc_state import OidcState
 from backend.models.provider_config import ProviderConfig
 from backend.models.user import User
 
@@ -157,3 +159,44 @@ class AnnouncementReadRepository(ABC):
 
     @abstractmethod
     def count_stats(self, announcement_id: str) -> dict: ...
+
+
+class ExternalIdentityRepository(ABC):
+    @abstractmethod
+    def get_by_issuer_subject(self, issuer: str, subject: str) -> ExternalIdentity | None: ...
+
+    @abstractmethod
+    def get_by_user_id(self, user_id: str) -> list[ExternalIdentity]: ...
+
+    @abstractmethod
+    def create(self, identity: ExternalIdentity) -> None: ...
+
+    @abstractmethod
+    def update_last_used(self, identity_id: str, last_used_at: str) -> None: ...
+
+
+class OidcStateRepository(ABC):
+    @abstractmethod
+    def create(self, state: OidcState) -> None: ...
+
+    @abstractmethod
+    def get_valid_by_state(self, state: str, now_iso: str) -> OidcState | None: ...
+
+    @abstractmethod
+    def mark_callback_consumed(
+        self,
+        state_id: str,
+        exchange_code: str,
+        api_token_id: str,
+        expires_at: str,
+        consumed_at: str,
+    ) -> None: ...
+
+    @abstractmethod
+    def get_valid_by_exchange_code(self, exchange_code: str, now_iso: str) -> OidcState | None: ...
+
+    @abstractmethod
+    def delete(self, state_id: str) -> None: ...
+
+    @abstractmethod
+    def delete_expired(self, now_iso: str) -> None: ...
