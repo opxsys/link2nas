@@ -34,6 +34,18 @@ The frontend authenticates requests using a **session token sent as an HTTP head
 
 **Future improvement:** Moving to `HttpOnly` + `SameSite=Strict` session cookies would remove token access from JavaScript entirely. This would also require adding CSRF protection (see below).
 
+### OIDC / SSO authentication
+
+When OIDC is enabled, the session model is **unchanged**: after a successful SSO login, Link2NAS issues a standard session token stored in `localStorage` and sent as `X-Api-Key` — identical to local login.
+
+The `l2n_oidc_exchange` cookie introduced for the OIDC flow is **not a global session cookie**. It is:
+- Short-lived (default 60 seconds, controlled by `OIDC_EXCHANGE_CODE_TTL_SECONDS`).
+- Scoped to the `/api/v2/auth/oidc/complete` endpoint only (`Path` attribute).
+- `HttpOnly` and `SameSite=Lax`.
+- Deleted immediately after the exchange completes or fails.
+
+The OAuth authorization code, exchange code, and session token are never placed in URLs. The OIDC client secret is never logged or included in API responses.
+
 ---
 
 ## 3. CSRF

@@ -99,6 +99,59 @@ Behaviour:
 
 ---
 
+## OIDC / SSO authentication
+
+Link2NAS supports generic OpenID Connect (OIDC) as an optional login method alongside the existing email + password flow. Local login always remains available.
+
+**OIDC is disabled by default.** It is configured via `.env` only — there is no Admin UI for OIDC in v3.6.
+
+### Prerequisites
+
+- An OIDC provider that exposes a discovery document at `{OIDC_ISSUER}/.well-known/openid-configuration`.
+- An application registered in your provider (client ID + client secret).
+- The callback URL registered in your provider:
+  ```
+  {PUBLIC_BASE_URL}/api/v2/auth/oidc/callback
+  ```
+
+### Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OIDC_ENABLED` | `false` | Enable OIDC login. Automatically disabled when `LINK2NAS_SINGLE_USER_MODE=true`. |
+| `OIDC_ISSUER` | *(empty)* | Provider discovery URL. Example: `https://idp.example.com` |
+| `OIDC_CLIENT_ID` | *(empty)* | Application client ID from your OIDC provider. |
+| `OIDC_CLIENT_SECRET` | *(empty)* | Application client secret. Treated as a secret — never logged or exposed. |
+| `OIDC_SCOPES` | `openid email profile` | Space-separated scopes. Must include `openid` and `email`. |
+| `OIDC_BUTTON_LABEL` | `Sign in with SSO` | Label shown on the SSO button in the login UI. |
+| `OIDC_AUTO_CREATE_USERS` | `false` | If `true`, create a Link2NAS account on first OIDC login when no matching account exists. |
+| `OIDC_ALLOWED_DOMAINS` | *(empty)* | Comma-separated list of allowed email domains for auto-creation. Empty = all domains allowed. Only applies when `OIDC_AUTO_CREATE_USERS=true`. |
+| `OIDC_DEFAULT_ROLE` | `user` | Role assigned to auto-created accounts. Only `user` is accepted — no other role can be assigned via OIDC. |
+| `OIDC_STATE_TTL_SECONDS` | `600` | Lifetime of the OIDC state parameter (seconds). |
+| `OIDC_EXCHANGE_CODE_TTL_SECONDS` | `60` | Lifetime of the temporary exchange code used in the callback → complete flow (seconds). |
+
+### Rate limiting
+
+| Variable | Default | Description |
+|---|---|---|
+| `V2_RATE_LIMIT_OIDC_INITIATE_MAX` | `20` | Max `/initiate` requests per window. |
+| `V2_RATE_LIMIT_OIDC_INITIATE_WINDOW_SECONDS` | `300` | Rate limit window for `/initiate`. |
+| `V2_RATE_LIMIT_OIDC_CALLBACK_MAX` | `30` | Max `/callback` requests per window. |
+| `V2_RATE_LIMIT_OIDC_CALLBACK_WINDOW_SECONDS` | `300` | Rate limit window for `/callback`. |
+| `V2_RATE_LIMIT_OIDC_COMPLETE_MAX` | `20` | Max `/complete` requests per window. |
+| `V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS` | `300` | Rate limit window for `/complete`. |
+
+### Security notes
+
+- **`email_verified` is required.** Tokens without a verified email claim are rejected.
+- **No `super_admin` via OIDC.** Auto-created accounts and externally mapped accounts are always assigned `user` role. Role promotion must be done manually in the Admin UI.
+- **`OIDC_AUTO_CREATE_USERS=false` by default.** If disabled, only users with an existing Link2NAS account whose email matches the OIDC `email` claim can sign in via SSO.
+- **Single-user mode disables OIDC.** When `LINK2NAS_SINGLE_USER_MODE=true`, OIDC is forced off regardless of `OIDC_ENABLED`.
+- **Session model unchanged.** After OIDC login, Link2NAS issues a standard session token stored in `localStorage` and sent as `X-Api-Key` — identical to local login. There is no global session cookie. The `l2n_oidc_exchange` cookie is temporary (short-lived, scoped to a single endpoint) and is deleted immediately after the exchange completes.
+- **No secrets in URLs.** The OAuth authorization code, exchange code, and session token are never placed in URLs.
+
+---
+
 ## Storage paths
 
 | Variable | Default | Description |
