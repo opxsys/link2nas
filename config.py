@@ -178,6 +178,9 @@ class Settings:
         self.V2_RATE_LIMIT_OIDC_COMPLETE_MAX = env_int("V2_RATE_LIMIT_OIDC_COMPLETE_MAX", 20)
         self.V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS = env_int("V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS", 300)
 
+        self.V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_MAX = env_int("V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_MAX", 20)
+        self.V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_WINDOW_SECONDS = env_int("V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_WINDOW_SECONDS", 300)
+
     def _validate_production_secrets(self) -> None:
         _PLACEHOLDERS = frozenset({
             "change-me", "change_me", "changeme",

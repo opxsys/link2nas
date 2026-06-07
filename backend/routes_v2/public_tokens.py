@@ -24,6 +24,7 @@ def get_app_info():
     app_svc = _app_settings_service()
     settings_cfg = current_app.config.get("SETTINGS")
     oidc_provider_svc = current_app.config.get("OIDC_PROVIDER_SERVICE_V2")
+    identity_proxy_auth_svc = current_app.config.get("IDENTITY_PROXY_AUTH_SERVICE_V2")
 
     app_name = app_svc.get_effective_app_name(
         env_fallback=getattr(settings_cfg, "APP_NAME", "")
@@ -42,6 +43,10 @@ def get_app_info():
     oidc_enabled = len(oidc_providers) > 0
     oidc_label = oidc_providers[0]["button_label"] if oidc_providers else ""
 
+    ip_status: dict = {}
+    if identity_proxy_auth_svc:
+        ip_status = identity_proxy_auth_svc.get_public_status(single_user_mode)
+
     return jsonify({
         "app_name": app_name,
         "app_tagline": app_tagline,
@@ -49,6 +54,10 @@ def get_app_info():
         "oidc_enabled": oidc_enabled,
         "oidc_label": oidc_label,
         "oidc_providers": oidc_providers,
+        "identity_proxy_enabled": bool(ip_status.get("enabled", False)),
+        "identity_proxy_label": str(ip_status.get("label", "") or ""),
+        "identity_proxy_auto_login": bool(ip_status.get("auto_login", False)),
+        "identity_proxy_provider_type": str(ip_status.get("provider_type", "") or ""),
     })
 
 

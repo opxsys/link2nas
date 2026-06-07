@@ -135,14 +135,15 @@ class TestOidcRegistryEntries(unittest.TestCase):
                 f"{entry['kind']} should have single_user_hidden=True",
             )
 
-    # 3. Non-OIDC entries do NOT carry single_user_hidden=True
-    def test_non_oidc_entries_not_single_user_hidden(self):
-        non_oidc = [m for m in KNOWN_ANTI_ABUSE_KINDS if m["kind"] not in _OIDC_KINDS]
-        for entry in non_oidc:
-            self.assertFalse(
-                entry.get("single_user_hidden"),
-                f"{entry['kind']} should not have single_user_hidden=True",
-            )
+    # 3. Entries that are always visible (not tied to multi-user auth) must not be hidden
+    def test_non_auth_entries_not_single_user_hidden(self):
+        always_visible = {"login", "qbittorrent_add", "token_status"}
+        for entry in KNOWN_ANTI_ABUSE_KINDS:
+            if entry["kind"] in always_visible:
+                self.assertFalse(
+                    entry.get("single_user_hidden"),
+                    f"{entry['kind']} should not have single_user_hidden=True",
+                )
 
 
 class TestAntiAbuseOidcFiltering(unittest.TestCase):

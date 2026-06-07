@@ -104,6 +104,13 @@ KNOWN_ANTI_ABUSE_KINDS: list[dict] = [
         "window_attr": "V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS",
         "single_user_hidden": True,
     },
+    {
+        "kind": "identity_proxy_login",
+        "label": "Identity Proxy Login",
+        "limit_attr": "V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_MAX",
+        "window_attr": "V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_WINDOW_SECONDS",
+        "single_user_hidden": True,
+    },
 ]
 
 

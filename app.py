@@ -56,6 +56,10 @@ from backend.services_v2.email_template_service import EmailTemplateService
 from backend.routes_v2.admin_email_templates import admin_email_templates_bp
 from backend.routes_v2.admin_security import admin_security_v2_bp
 from backend.routes_v2.public_files import public_files_v2_bp
+from backend.services_v2.identity_proxy_config_service import IdentityProxyConfigService
+from backend.services_v2.identity_proxy_auth_service import IdentityProxyAuthService
+from backend.routes_v2.auth_identity_proxy import auth_identity_proxy_v2_bp
+from backend.routes_v2.admin_identity_proxy import admin_identity_proxy_bp
 
 
 def create_app() -> Flask:
@@ -189,6 +193,17 @@ def create_app() -> Flask:
         crypto_service=crypto_service_v2,
     )
 
+    app.config["IDENTITY_PROXY_CONFIG_SERVICE_V2"] = IdentityProxyConfigService(
+        repositories_v2.identity_proxy_config_repository
+    )
+    app.config["IDENTITY_PROXY_AUTH_SERVICE_V2"] = IdentityProxyAuthService(
+        settings=settings,
+        config_repo=repositories_v2.identity_proxy_config_repository,
+        user_repo=user_repo_v2,
+        external_identity_repo=repositories_v2.external_identity_repository,
+        api_token_repo=api_token_repo_v2,
+    )
+
     app.config["SMTP_SERVICE_V2"] = SmtpService(
         smtp_settings_repo_v2,
         crypto_service_v2,
@@ -294,6 +309,8 @@ def create_app() -> Flask:
     app.register_blueprint(admin_security_v2_bp)
     app.register_blueprint(public_files_v2_bp)
     app.register_blueprint(admin_oidc_providers_bp)
+    app.register_blueprint(auth_identity_proxy_v2_bp)
+    app.register_blueprint(admin_identity_proxy_bp)
 
     if settings.DEBUG and settings.V2_DEV_ROUTES_ENABLED:
         app.register_blueprint(dev_v2_bp)
