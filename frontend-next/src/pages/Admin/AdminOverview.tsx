@@ -3,6 +3,7 @@ import { Users, UserCheck, HardDrive, Mail, CheckCircle2, XCircle, Loader2, Refr
 import MetricCard from '@/components/common/MetricCard'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
 import { getMaintenanceStatus } from '@/api/admin-maintenance'
 import { getSmtpSettings } from '@/api/admin-smtp'
@@ -37,7 +38,11 @@ function ConfigRow({ label, value, bad, mono }: { label: string; value: string; 
   )
 }
 
-export default function AdminOverview() {
+interface Props {
+  singleUserMode?: boolean
+}
+
+export default function AdminOverview({ singleUserMode }: Props) {
   const { t } = useI18n()
   const [maintenance, setMaintenance] = useState<MaintenanceStatus | null>(null)
   const [smtp, setSmtp] = useState<RealSmtpSettings | null>(null)
@@ -127,20 +132,24 @@ export default function AdminOverview() {
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <MetricCard
-          label={t('adminTotalUsers')}
-          value={userStats?.total ?? '—'}
-          icon={Users}
-          description={userStats ? `${userStats.active} ${t('adminCfgActive')}` : undefined}
-        />
-        <MetricCard
-          label={t('adminActiveUsersLabel')}
-          value={userStats?.active ?? '—'}
-          icon={UserCheck}
-          description={userStats ? `${userStats.disabled} ${t('adminCfgDisabled')}` : undefined}
-          iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-        />
+      <div className={cn('grid gap-4', singleUserMode ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4')}>
+        {!singleUserMode && (
+          <>
+            <MetricCard
+              label={t('adminTotalUsers')}
+              value={userStats?.total ?? '—'}
+              icon={Users}
+              description={userStats ? `${userStats.active} ${t('adminCfgActive')}` : undefined}
+            />
+            <MetricCard
+              label={t('adminActiveUsersLabel')}
+              value={userStats?.active ?? '—'}
+              icon={UserCheck}
+              description={userStats ? `${userStats.disabled} ${t('adminCfgDisabled')}` : undefined}
+              iconClassName="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+            />
+          </>
+        )}
         <MetricCard
           label={t('adminSmtpLabel')}
           value={smtpReady === null ? '—' : smtpReady ? t('adminSmtpReady') : (smtp && smtp.host.trim() !== '') ? t('badgeDisabled') : t('notConfigured')}
@@ -157,34 +166,36 @@ export default function AdminOverview() {
         />
       </div>
 
-      {/* Lower two-column grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SectionCard title={t('adminUserAccounts')}>
-          {userStats ? (
-            <div className="grid grid-cols-3 gap-3">
-              {([
-                [t('badgeActive'),          userStats.active,      false],
-                [t('badgeDisabled'),        userStats.disabled,    userStats.disabled > 0],
-                [t('adminStatUnverified'),  userStats.unverified,  userStats.unverified > 0],
-                [t('badgeExpired'),         userStats.expired,     userStats.expired > 0],
-                [t('adminStatSuperAdmins'), userStats.superAdmins, false],
-                [t('adminStatTotal'),       userStats.total,       false],
-              ] as [string, number, boolean][]).map(([label, value, warn]) => (
-                <div key={label} className="rounded-md border border-border bg-muted/20 p-2.5 text-center">
-                  <p className={`text-lg font-semibold ${warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
-                    {value}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t('adminUserDataUnavailable')}</p>
-          )}
-        </SectionCard>
+      {/* Lower grid — two columns in multi-user mode, single column in single-user mode */}
+      <div className={cn('grid grid-cols-1 gap-6', !singleUserMode && 'lg:grid-cols-2')}>
+        {!singleUserMode && (
+          <SectionCard title={t('adminUserAccounts')}>
+            {userStats ? (
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  [t('badgeActive'),          userStats.active,      false],
+                  [t('badgeDisabled'),        userStats.disabled,    userStats.disabled > 0],
+                  [t('adminStatUnverified'),  userStats.unverified,  userStats.unverified > 0],
+                  [t('badgeExpired'),         userStats.expired,     userStats.expired > 0],
+                  [t('adminStatSuperAdmins'), userStats.superAdmins, false],
+                  [t('adminStatTotal'),       userStats.total,       false],
+                ] as [string, number, boolean][]).map(([label, value, warn]) => (
+                  <div key={label} className="rounded-md border border-border bg-muted/20 p-2.5 text-center">
+                    <p className={`text-lg font-semibold ${warn ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
+                      {value}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('adminUserDataUnavailable')}</p>
+            )}
+          </SectionCard>
+        )}
 
         <SectionCard title={t('adminConfiguration')}>
-          {!general && !maintenance && !smtp && runtimeEnabled === null && announcements === null ? (
+          {!general && !maintenance && !smtp && runtimeEnabled === null ? (
             <p className="text-sm text-muted-foreground">{t('adminConfigUnavailable')}</p>
           ) : (
           <dl className="divide-y divide-border">
@@ -218,7 +229,7 @@ export default function AdminOverview() {
                 bad={runtimeEnabled < 3}
               />
             )}
-            {announcements !== null && (
+            {!singleUserMode && announcements !== null && (
               <ConfigRow
                 label={t('adminNavAnnouncements')}
                 value={`${activeAnn} ${t('adminCfgActive')} · ${announcements.length} ${t('adminCfgAnnTotal')}`}

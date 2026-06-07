@@ -24,6 +24,7 @@ export default function MobileNav({ open, onClose }: Props) {
   const { me } = useMe()
   const { t } = useI18n()
   const isSuperAdmin = me?.role === 'super_admin'
+  const singleUserMode = me?.single_user_mode === true
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   const announcementsEnabled = me?.announcements_enabled !== false
@@ -32,6 +33,7 @@ export default function MobileNav({ open, onClose }: Props) {
     if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
     if (item.superAdminOnly && !isSuperAdmin) return false
     if (item.hideWhenAnnouncementsDisabled && !announcementsEnabled) return false
+    if (item.hideInSingleUserMode && singleUserMode) return false
     return true
   })
 

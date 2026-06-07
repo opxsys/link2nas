@@ -10,24 +10,36 @@ const CHECK_ROW = 'flex items-center gap-2.5'
 const FIELD_LABEL = 'text-sm text-foreground'
 const UNIT = 'shrink-0 text-xs text-muted-foreground'
 
+const SINGLE_USER_HIDDEN_TTL = new Set<keyof SecurityTokenTtl>([
+  'invitation_ttl_hours',
+  'password_reset_ttl_hours',
+  'magic_login_ttl_minutes',
+  'email_verification_ttl_hours',
+])
+
 interface Props {
   tokenTtl: SecurityTokenTtl
   passwordPolicy: SecurityPasswordPolicy
   disabled?: boolean
+  singleUserMode?: boolean
   onTokenTtl: (key: keyof SecurityTokenTtl, value: number) => void
   onPasswordPolicy: (key: keyof SecurityPasswordPolicy, value: boolean | number) => void
 }
 
-export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled, onTokenTtl, onPasswordPolicy }: Props) {
+export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled, singleUserMode, onTokenTtl, onPasswordPolicy }: Props) {
   const { t } = useI18n()
 
-  const TTL_FIELDS: { key: keyof SecurityTokenTtl; labelKey: TranslationKey; unitKey: TranslationKey; min: number; max: number }[] = [
+  const ALL_TTL_FIELDS: { key: keyof SecurityTokenTtl; labelKey: TranslationKey; unitKey: TranslationKey; min: number; max: number }[] = [
     { key: 'invitation_ttl_hours',         labelKey: 'adminInvitationTtl',    unitKey: 'unitHours',   min: 1,  max: 336  },
     { key: 'password_reset_ttl_hours',     labelKey: 'adminPwResetTtl',       unitKey: 'unitHours',   min: 1,  max: 24   },
     { key: 'magic_login_ttl_minutes',      labelKey: 'adminMagicLoginTtl',    unitKey: 'unitMinutes', min: 5,  max: 120  },
     { key: 'email_verification_ttl_hours', labelKey: 'adminEmailVerifTtl',    unitKey: 'unitHours',   min: 1,  max: 168  },
     { key: 'session_inactivity_minutes',   labelKey: 'adminSessionInactivity',unitKey: 'unitMinutes', min: 5,  max: 1440 },
   ]
+
+  const TTL_FIELDS = singleUserMode
+    ? ALL_TTL_FIELDS.filter((f) => !SINGLE_USER_HIDDEN_TTL.has(f.key))
+    : ALL_TTL_FIELDS
 
   const POLICY_CHECKS: { key: keyof SecurityPasswordPolicy; labelKey: TranslationKey }[] = [
     { key: 'require_uppercase', labelKey: 'adminReqUppercase' },

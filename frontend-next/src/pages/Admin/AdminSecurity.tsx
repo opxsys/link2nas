@@ -5,6 +5,7 @@ import { getSecuritySettings, saveSecuritySettings } from '@/api/admin-security'
 import type { SecurityTokenTtl, SecurityPasswordPolicy } from './admin.types'
 import AdminSecurityFields from './AdminSecurityFields'
 import AdminSecurityAntiAbuse from './AdminSecurityAntiAbuse'
+import { useMe } from '@/lib/useMe'
 import { useI18n } from '@/i18n'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -27,6 +28,8 @@ const DEFAULT_POLICY: SecurityPasswordPolicy = {
 
 export default function AdminSecurity() {
   const { t } = useI18n()
+  const { me } = useMe()
+  const singleUserMode = Boolean(me?.single_user_mode)
   const [tokenTtl, setTokenTtl] = useState<SecurityTokenTtl>(DEFAULT_TTL)
   const [passwordPolicy, setPasswordPolicy] = useState<SecurityPasswordPolicy>(DEFAULT_POLICY)
   const [loading, setLoading] = useState(true)
@@ -110,6 +113,7 @@ export default function AdminSecurity() {
           tokenTtl={tokenTtl}
           passwordPolicy={passwordPolicy}
           disabled={busy}
+          singleUserMode={singleUserMode}
           onTokenTtl={handleTokenTtl}
           onPasswordPolicy={handlePasswordPolicy}
         />

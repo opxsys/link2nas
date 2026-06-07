@@ -37,17 +37,23 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'maintenance',   labelKey: 'adminNavMaintenance',   icon: Wrench },
 ]
 
+const SINGLE_USER_HIDDEN_SECTIONS = new Set<AdminSection>(['users', 'announcements'])
+
 interface Props {
   activeSection: AdminSection
   onSelect: (section: AdminSection) => void
+  singleUserMode?: boolean
 }
 
-export default function AdminNav({ activeSection, onSelect }: Props) {
+export default function AdminNav({ activeSection, onSelect, singleUserMode }: Props) {
   const { t } = useI18n()
+  const visibleItems = singleUserMode
+    ? NAV_ITEMS.filter((item) => !SINGLE_USER_HIDDEN_SECTIONS.has(item.id))
+    : NAV_ITEMS
   return (
     <nav aria-label={t('ariaAdminSections')} className="rounded-lg border border-border bg-card shadow-sm lg:w-48 lg:shrink-0">
       <ul className="py-1">
-        {NAV_ITEMS.map(({ id, labelKey, icon: Icon }) => {
+        {visibleItems.map(({ id, labelKey, icon: Icon }) => {
           const active = activeSection === id
           return (
             <li key={id}>

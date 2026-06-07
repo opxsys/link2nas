@@ -21,12 +21,14 @@ export interface NavItem {
   superAdminOnly?: boolean
   /** If true, hidden when announcements are globally disabled. */
   hideWhenAnnouncementsDisabled?: boolean
+  /** If true, hidden when the instance is running in single-user mode. */
+  hideInSingleUserMode?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard',     i18nKey: 'navDashboard',     icon: LayoutDashboard, end: false },
   { to: '/jobs',          i18nKey: 'navJobs',           icon: List,            end: false },
-  { to: '/announcements', i18nKey: 'navAnnouncements',  icon: Megaphone,       end: false, hideWhenAnnouncementsDisabled: true },
+  { to: '/announcements', i18nKey: 'navAnnouncements',  icon: Megaphone,       end: false, hideWhenAnnouncementsDisabled: true, hideInSingleUserMode: true },
   { to: '/prowlarr',      i18nKey: 'navProwlarr',       icon: Search,          end: false },
   { to: '/notifications', i18nKey: 'navNotifications',  icon: Bell,            end: false },
   { to: '/settings',      i18nKey: 'navSettings',       icon: Settings,        end: false },

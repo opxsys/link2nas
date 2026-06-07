@@ -5,9 +5,14 @@ import { Button } from '@/components/ui/button'
 import { getEmailTemplate, saveEmailTemplate, resetEmailTemplate, previewEmailTemplate } from '@/api/admin-email-templates'
 import { ApiError } from '@/api/client'
 import { useSmtpStatus } from '@/lib/useSmtpStatus'
+import { useMe } from '@/lib/useMe'
 import type { EmailTemplate, EmailTemplatePreview } from '@/api/admin-email-templates'
 import AdminEmailTemplatePreview from './AdminEmailTemplatePreview'
 import { useI18n } from '@/i18n'
+
+const SINGLE_USER_HIDDEN_TPLS = new Set([
+  'invitation', 'password_reset', 'email_verification', 'magic_login', 'announcement',
+])
 
 const INPUT    = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
 const LABEL    = 'mb-1.5 block text-xs font-medium text-foreground'
@@ -16,14 +21,20 @@ const TEXTAREA = 'w-full rounded-md border border-input bg-background px-3 py-2 
 export default function AdminEmailTemplates() {
   const { t } = useI18n()
   const { smtpAvailable, smtpLoading } = useSmtpStatus()
+  const { me } = useMe()
+  const singleUserMode = Boolean(me?.single_user_mode)
 
   const TEMPLATE_KEYS = [
-    { value: 'invitation',         label: t('adminTplKeyInvitation')    },
-    { value: 'password_reset',     label: t('adminTplKeyPasswordReset') },
-    { value: 'email_verification', label: t('adminTplKeyEmailVerif')    },
-    { value: 'magic_login',        label: t('adminTplKeyMagicLogin')    },
+    ...(singleUserMode ? [] : [
+      { value: 'invitation',         label: t('adminTplKeyInvitation')    },
+      { value: 'password_reset',     label: t('adminTplKeyPasswordReset') },
+      { value: 'email_verification', label: t('adminTplKeyEmailVerif')    },
+      { value: 'magic_login',        label: t('adminTplKeyMagicLogin')    },
+    ]),
     { value: 'smtp_test',          label: t('adminTplKeySmtpTest')      },
-    { value: 'announcement',       label: t('adminTplKeyAnnouncement')  },
+    ...(singleUserMode ? [] : [
+      { value: 'announcement',       label: t('adminTplKeyAnnouncement')  },
+    ]),
     { value: 'notification_event', label: t('adminTplKeyNotifEvent')    },
     { value: 'notification_test',  label: t('adminTplKeyNotifTest')     },
   ]
@@ -35,6 +46,13 @@ export default function AdminEmailTemplates() {
 
   const [selectedKey, setSelectedKey] = useState('invitation')
   const [selectedLang, setSelectedLang] = useState('en')
+
+  // Reset to first visible key if the current selection is hidden by single-user mode
+  useEffect(() => {
+    if (singleUserMode && SINGLE_USER_HIDDEN_TPLS.has(selectedKey)) {
+      setSelectedKey('smtp_test')
+    }
+  }, [singleUserMode, selectedKey])
   const [template, setTemplate] = useState<EmailTemplate | null>(null)
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')

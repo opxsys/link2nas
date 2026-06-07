@@ -40,12 +40,27 @@ export default function Admin() {
 
   const [authState, setAuthState] = useState<AuthState>('loading')
   const [activeSection, setActiveSection] = useState<AdminSection>(initialSection)
+  const [singleUserMode, setSingleUserMode] = useState(false)
 
   useEffect(() => {
     getMe()
-      .then((me) => setAuthState(me.role === 'super_admin' ? 'allowed' : 'denied'))
+      .then((me) => {
+        setAuthState(me.role === 'super_admin' ? 'allowed' : 'denied')
+        setSingleUserMode(Boolean(me.single_user_mode))
+      })
       .catch(() => setAuthState('denied'))
   }, [])
+
+  // Redirect URL-driven hidden sections to overview in single-user mode
+  useEffect(() => {
+    if (singleUserMode && (activeSection === 'users' || activeSection === 'announcements')) {
+      setActiveSection('overview')
+    }
+  }, [singleUserMode, activeSection])
+
+  const hiddenInSingleUser =
+    singleUserMode && (activeSection === 'users' || activeSection === 'announcements')
+  const effectiveSection: AdminSection = hiddenInSingleUser ? 'overview' : activeSection
 
   if (authState === 'loading') {
     return (
@@ -64,8 +79,8 @@ export default function Admin() {
           <p className="text-base font-medium text-foreground">{t('adminAccessDenied')}</p>
           <p className="mt-1 text-sm text-muted-foreground">{t('adminAccessDeniedDesc')}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/announcements')}>
-          {t('adminBackToAnnouncements')}
+        <Button variant="outline" size="sm" onClick={() => navigate(singleUserMode ? '/dashboard' : '/announcements')}>
+          {singleUserMode ? t('navDashboard') : t('adminBackToAnnouncements')}
         </Button>
       </div>
     )
@@ -75,11 +90,11 @@ export default function Admin() {
     <>
       <PageHeader title={t('navAdmin')} description={t('adminDesc')} />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <AdminNav activeSection={activeSection} onSelect={setActiveSection} />
+        <AdminNav activeSection={effectiveSection} onSelect={setActiveSection} singleUserMode={singleUserMode} />
         <div className="min-w-0 flex-1">
-          {activeSection === 'overview'      && <AdminOverview />}
-          {activeSection === 'users'         && <AdminUsers />}
-          {activeSection === 'announcements' && (
+          {effectiveSection === 'overview'      && <AdminOverview singleUserMode={singleUserMode} />}
+          {effectiveSection === 'users'         && <AdminUsers />}
+          {effectiveSection === 'announcements' && (
             <AdminAnnouncements
               openCreate={initialSection === 'announcements' && initialAction === 'create'}
             />
