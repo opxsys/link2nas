@@ -54,13 +54,13 @@ export default function Admin() {
 
   // Redirect URL-driven hidden sections to overview in single-user mode
   useEffect(() => {
-    if (singleUserMode && (activeSection === 'users' || activeSection === 'announcements')) {
+    if (singleUserMode && (activeSection === 'users' || activeSection === 'announcements' || activeSection === 'sso')) {
       setActiveSection('overview')
     }
   }, [singleUserMode, activeSection])
 
   const hiddenInSingleUser =
-    singleUserMode && (activeSection === 'users' || activeSection === 'announcements')
+    singleUserMode && (activeSection === 'users' || activeSection === 'announcements' || activeSection === 'sso')
   const effectiveSection: AdminSection = hiddenInSingleUser ? 'overview' : activeSection
 
   if (authState === 'loading') {

@@ -83,6 +83,27 @@ KNOWN_ANTI_ABUSE_KINDS: list[dict] = [
         "limit_attr": "V2_RATE_LIMIT_PUBLIC_TOKEN_CONFIRM_MAX",
         "window_attr": "V2_RATE_LIMIT_PUBLIC_TOKEN_CONFIRM_WINDOW_SECONDS",
     },
+    {
+        "kind": "oidc_initiate",
+        "label": "OIDC Initiate",
+        "limit_attr": "V2_RATE_LIMIT_OIDC_INITIATE_MAX",
+        "window_attr": "V2_RATE_LIMIT_OIDC_INITIATE_WINDOW_SECONDS",
+        "single_user_hidden": True,
+    },
+    {
+        "kind": "oidc_callback",
+        "label": "OIDC Callback",
+        "limit_attr": "V2_RATE_LIMIT_OIDC_CALLBACK_MAX",
+        "window_attr": "V2_RATE_LIMIT_OIDC_CALLBACK_WINDOW_SECONDS",
+        "single_user_hidden": True,
+    },
+    {
+        "kind": "oidc_complete",
+        "label": "OIDC Complete",
+        "limit_attr": "V2_RATE_LIMIT_OIDC_COMPLETE_MAX",
+        "window_attr": "V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS",
+        "single_user_hidden": True,
+    },
 ]
 
 

@@ -19,6 +19,9 @@ const SINGLE_USER_HIDDEN_KINDS = new Set([
   'token_status',
   'invitation_accept',
   'me_password_change',
+  'oidc_initiate',
+  'oidc_callback',
+  'oidc_complete',
 ])
 
 type ActionStatus = 'idle' | 'ok' | 'error'

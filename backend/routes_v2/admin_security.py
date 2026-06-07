@@ -31,9 +31,12 @@ def get_anti_abuse():
     settings = current_app.config["SETTINGS"]
     redis_url = str(getattr(settings, "REDIS_URL", "") or "").strip()
     backend = limiter.get_backend_name()
+    single_user_mode = bool(getattr(settings, "LINK2NAS_SINGLE_USER_MODE", False))
 
     counters = []
     for meta in KNOWN_ANTI_ABUSE_KINDS:
+        if single_user_mode and meta.get("single_user_hidden"):
+            continue
         kind = meta["kind"]
         limit_attr = meta["limit_attr"]
         window_attr = meta["window_attr"]

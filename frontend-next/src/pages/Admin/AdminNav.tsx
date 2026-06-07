@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'sso',           labelKey: 'adminNavSso',           icon: KeyRound },
 ]
 
-const SINGLE_USER_HIDDEN_SECTIONS = new Set<AdminSection>(['users', 'announcements'])
+const SINGLE_USER_HIDDEN_SECTIONS = new Set<AdminSection>(['users', 'announcements', 'sso'])
 
 interface Props {
   activeSection: AdminSection
