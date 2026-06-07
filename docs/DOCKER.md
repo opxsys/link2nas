@@ -349,9 +349,36 @@ Do not use `down -v` in production. See [PostgreSQL password management](#postgr
 
 ---
 
+## Choosing a deployment mode
+
+Choose the deployment mode **before the first startup** on a clean volume. Do not change it on an existing production database.
+
+| Mode | Variable | Behaviour |
+|---|---|---|
+| **Multi-user** (default) | `LINK2NAS_SINGLE_USER_MODE=false` | Setup wizard on first run; login required; full Admin UI |
+| **Single-user** | `LINK2NAS_SINGLE_USER_MODE=true` | No setup wizard; no login; fixed auto-created super admin account |
+
+In single-user mode, the auto-created account may have no password hash. If you later switch to multi-user mode on the same database, that account may be unusable for login. **Switching modes on an existing database is not a supported migration path.**
+
+To reset and start fresh (all data lost — test environments only):
+```bash
+docker compose down -v   # destroys all volumes
+# Edit .env, then:
+docker compose up -d --build
+```
+
+**Before purging volumes in any environment:**
+- Save your `.env` file — it contains secrets that cannot be recovered.
+- Back up any data you want to keep.
+- Do not delete `docker-compose.yml` or `.env` — only the volumes.
+
+See [CONFIGURATION.md](CONFIGURATION.md) for the full single-user / multi-user mode documentation.
+
+---
+
 ## First setup
 
-On first run, Link2NAS detects an empty database and redirects to a setup page.
+On first run in multi-user mode, Link2NAS detects an empty database and redirects to a setup page.
 
 1. Open `http://localhost:5000` in your browser.
 2. The setup page will appear automatically.
@@ -359,6 +386,8 @@ On first run, Link2NAS detects an empty database and redirects to a setup page.
 4. Log in and go to **Settings** to configure:
    - A debrid provider (RealDebrid or AllDebrid)
    - A destination (links-only, local storage, or Synology NAS)
+
+In single-user mode, steps 2 and 3 are skipped — the app loads directly without a setup or login screen.
 
 ---
 

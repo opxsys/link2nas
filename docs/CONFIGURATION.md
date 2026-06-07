@@ -44,11 +44,58 @@ See [SECURITY.md](SECURITY.md) for the full security model.
 
 | Variable | Default | Description |
 |---|---|---|
-| `LINK2NAS_SINGLE_USER_MODE` | `false` | If `true`, the app skips the registration flow and maintains a single fixed account. |
-| `LINK2NAS_SINGLE_USER_EMAIL` | `single-user@link2nas.local` | Email for the auto-created single user account. |
-| `LINK2NAS_SINGLE_USER_DISPLAY_NAME` | `Single User` | Display name for the single user account. |
+| `LINK2NAS_SINGLE_USER_MODE` | `false` | If `true`, enables single-user mode. The registration/login flow is replaced by a fixed auto-created account. |
+| `LINK2NAS_SINGLE_USER_EMAIL` | `single-user@link2nas.local` | Email for the single-user account. Used at first startup only — see Bootstrap variables below. |
+| `LINK2NAS_SINGLE_USER_DISPLAY_NAME` | `Single User` | Display name for the single-user account. Used at first startup only. |
 
-In single-user mode, the fixed account is created or retrieved automatically on startup. Multi-user registration is disabled.
+### What single-user mode does
+
+When `LINK2NAS_SINGLE_USER_MODE=true`:
+
+- The setup wizard is skipped — no "create first admin" step on a fresh database.
+- `GET /api/v2/me` is accessible without a token — the single-user account is returned.
+- The single-user account is created automatically on startup if absent, using `LINK2NAS_SINGLE_USER_EMAIL` and `LINK2NAS_SINGLE_USER_DISPLAY_NAME`.
+- The account is always a **super admin** with email verification pre-confirmed.
+- Normal password login is not required — the account may have no password hash (`password_hash=None`).
+- The Next UI hides sections irrelevant to a solo installation: Admin Users, Admin Announcements, multi-user email templates (invitation, password reset, email verification, magic login, announcement), most auth rate-limit counters, the Password Policy section, and multi-user TTL security fields.
+- Settings > API Keys remains accessible for Prowlarr and qBittorrent integration.
+- The session inactivity timeout still applies if configured in Admin > Security.
+
+### What single-user mode does not do
+
+- It does not delete existing users or announcement records from the database.
+- It does not run a migration from multi-user to single-user.
+- It does not disable multi-user backend endpoints — the UI filters are frontend-only.
+
+### Bootstrap variables
+
+`LINK2NAS_SINGLE_USER_EMAIL` and `LINK2NAS_SINGLE_USER_DISPLAY_NAME` are **bootstrap** variables. They are read only to configure the account on first startup (or when the account is absent from the database). Changing them after the account is created has no effect unless the account is removed from the database.
+
+These variables are not a permanent migration mechanism. Do not rely on them to re-configure an existing installation.
+
+### ⚠ Warning — do not switch modes on an existing database
+
+**Do not switch an existing production database between single-user and multi-user modes unless you know exactly what you are doing. This is not a supported migration path.**
+
+- In single-user mode, the auto-created account may have no password hash. This is intentional: no login is required.
+- If you re-enable multi-user mode on the same database, that account may not be usable for classic password login and cannot be used as a multi-user admin without manual remediation.
+- To change modes cleanly, start from a fresh database, or perform a controlled manual migration.
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for the symptom and resolution.
+
+---
+
+## Multi-user mode
+
+Multi-user mode is the default (`LINK2NAS_SINGLE_USER_MODE=false`).
+
+Behaviour:
+
+- On a fresh database, the first visit shows the setup wizard to create a super admin account.
+- Login is required — every user authenticates with email + password or magic login.
+- `GET /api/v2/me` requires a valid `X-Api-Key` session token.
+- The Admin UI shows all sections: Users, Announcements, full email template library, full security TTL fields, all rate-limit counters.
+- SMTP is optional but required for invitation, magic login, password reset, and email verification flows.
 
 ---
 

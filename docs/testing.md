@@ -97,10 +97,14 @@ Current coverage:
 - `test_destination_error.py` — destination failure classification, field assignment, and `error_message` isolation logic
 - `test_provider_registry.py` — `PROVIDER_KEYS`, `PROVIDER_DISPLAY_NAMES`, and `build_provider()` correctness
 - `test_destination_registry.py` — `DESTINATION_KEYS`, `DESTINATION_ALIAS_KEYS`, `DESTINATION_ALL_KEYS`, and display name completeness
+- `test_single_user_mode.py` — `SingleUserService` and setup/status behaviour: fresh DB creates the single-user account; account reused by canonical ID or email; promotion to super_admin; reactivation of a disabled account; idempotence; multi-user fresh DB reports `setup_required=True`
+- `test_logout_revokes_session_token.py` — session token revocation: token active before deactivate; invalid after deactivate; idempotent deactivation; other tokens for the same user are not revoked; magic-login token treated identically to a session token; unknown token returns None without error
 
 To run a single test file directly:
 ```bash
 python3 -m unittest scripts/tests/unit/test_destination_error -v
+python3 -m unittest scripts/tests/unit/test_single_user_mode -v
+python3 -m unittest scripts/tests/unit/test_logout_revokes_session_token -v
 ```
 
 To run all quality checks including unit tests:
@@ -274,6 +278,8 @@ Uses `docker-compose.yml` + `docker-compose.postgres.yml`. Waits up to 450 secon
 | After notification changes | `test_v3_full.sh` |
 | After email or SMTP changes | `test_v3_full.sh` (with `SMTP_RUN_TEST=true` if needed) |
 | After qBittorrent/Prowlarr changes | `scripts/tests/qbittorrent/test_qbittorrent_compat.sh` |
+| After single-user mode changes | `check_unit_tests.sh` + manual H1 checklist |
+| After logout / session token changes | `check_unit_tests.sh` + Authentication / Session checklist |
 
 ---
 
@@ -282,6 +288,21 @@ Uses `docker-compose.yml` + `docker-compose.postgres.yml`. Waits up to 450 secon
 ```bash
 # Static quality only (no app required)
 bash scripts/test_quality.sh
+
+# Unit tests only (no app required)
+bash scripts/quality/check_unit_tests.sh
+
+# Single-user mode unit tests
+python3 -m unittest scripts/tests/unit/test_single_user_mode -v
+
+# Logout / token revocation unit tests
+python3 -m unittest scripts/tests/unit/test_logout_revokes_session_token -v
+
+# Frontend type-check and build (no app required)
+cd frontend-next && npm run type-check && npm run build
+
+# Python compilation check (no app required)
+python3 -m compileall app.py backend config.py
 
 # Quick smoke
 ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD=*** bash scripts/test_v3_smoke.sh

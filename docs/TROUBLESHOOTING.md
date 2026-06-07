@@ -302,6 +302,33 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
 
 ---
 
+## Single-user mode
+
+### After switching from single-user to multi-user, login fails
+
+**Symptom:** After setting `LINK2NAS_SINGLE_USER_MODE=false` on an instance that previously ran in single-user mode, the login page appears but the single-user account cannot authenticate with a password.
+
+**Cause:** The auto-created single-user account may have `password_hash=None`. In single-user mode, no password is required — the account is accessed without credentials. Switching back to multi-user mode on the same database leaves this account in a state that is incompatible with classic password login.
+
+**This is not a supported migration path.** Switching modes on an existing production database is not a guaranteed-safe operation.
+
+**Options:**
+
+1. **Fresh database (test or new deployment):** destroy the volumes and start over:
+   ```bash
+   docker compose down -v
+   # Update LINK2NAS_SINGLE_USER_MODE=false in .env, then restart
+   docker compose up -d --build
+   ```
+
+2. **Recover without data loss (advanced):** use a direct database session to assign a password hash or create a new super admin account manually, then proceed with multi-user mode. This requires knowledge of the database schema and Werkzeug password hashing.
+
+3. **Recommended:** choose the deployment mode once, before the first startup. Do not change it on an existing production database.
+
+See [CONFIGURATION.md](CONFIGURATION.md) for the full warning and the difference between single-user and multi-user modes.
+
+---
+
 ## Destinations (NAS / local)
 
 ### Destination status: "Connection refused"

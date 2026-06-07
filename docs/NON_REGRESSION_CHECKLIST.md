@@ -154,13 +154,51 @@ This is not exhaustive QA. The goal is to catch regressions in critical flows be
 
 ## H. Single-User / Multi-User
 
-- [ ] Single-user mode: app starts with a fixed account, no registration required
-- [ ] Single-user mode: `LINK2NAS_SINGLE_USER_EMAIL` and `LINK2NAS_SINGLE_USER_DISPLAY_NAME` respected
-- [ ] Multi-user mode: login page appears, registration or invitation flow works
+### H1 — Single-user mode (`LINK2NAS_SINGLE_USER_MODE=true`)
+
+Requires a fresh database or an instance with `LINK2NAS_SINGLE_USER_MODE=true` in `.env`.
+
+- [ ] App starts: no setup wizard shown, no login required
+- [ ] `GET /api/v2/setup/status` returns `{"setup_required": false, "single_user_mode": true}`
+- [ ] `GET /api/v2/me` without `X-Api-Key` returns the single-user account (`role: super_admin`)
+- [ ] Next UI loads directly (no login page, no setup screen)
+- [ ] Admin section is accessible
+- [ ] Admin nav: **Users** section absent
+- [ ] Admin nav: **Announcements** section absent
+- [ ] Admin Overview: "Total Users" and "Active Users" metric tiles absent
+- [ ] Admin Overview: "User Accounts" section card absent
+- [ ] Admin Overview: announcements config row absent
+- [ ] Admin Email Templates: `invitation`, `password_reset`, `email_verification`, `magic_login`, `announcement` templates absent
+- [ ] Admin Email Templates: `smtp_test`, `notification_event`, `notification_test` templates present
+- [ ] Admin Security: **Password Policy** section absent
+- [ ] Admin Security / Anti-Abuse table: only `qBittorrent Add` counter visible; all auth/account counters absent
+- [ ] Admin Security / Anti-Abuse: TTL fields for invitation, password reset, magic login, email verification absent; **Session Inactivity** field present
+- [ ] Sidebar: **Announcements** nav item absent
+- [ ] Announcements page (`/announcements`): redirects to Dashboard
+- [ ] Settings > API Keys: visible and usable (required for Prowlarr/qBittorrent)
+- [ ] Prowlarr / qBittorrent submission flow: works normally
+- [ ] Logout: does not block subsequent access (single-user mode bypasses token check)
+
+### H2 — Multi-user mode (`LINK2NAS_SINGLE_USER_MODE=false`) — non-regression
+
+Requires a standard (non-single-user) instance.
+
+- [ ] Fresh install: setup wizard appears, first super admin can be created
+- [ ] `GET /api/v2/setup/status` returns `{"setup_required": true, "single_user_mode": false}` on a fresh database
+- [ ] `GET /api/v2/me` without `X-Api-Key` returns an error — not single-user data
+- [ ] Login is required — the Next UI shows the login page before granting access
+- [ ] Admin nav: **Users** section present
+- [ ] Admin nav: **Announcements** section present
+- [ ] Admin Overview: user metric tiles (Total Users, Active Users) present
+- [ ] Admin Overview: User Accounts section card present
+- [ ] Admin Email Templates: all 8 template keys present (invitation, password_reset, email_verification, magic_login, smtp_test, announcement, notification_event, notification_test)
+- [ ] Admin Security: Password Policy section present
+- [ ] Admin Security / Anti-Abuse: all counters present
+- [ ] Sidebar: **Announcements** nav item present (when announcements are globally enabled)
+- [ ] Logout revokes the session token server-side (see Authentication / Session section)
 - [ ] Super admin can access Admin section
 - [ ] Normal user cannot access Admin section (receives 403 or redirect)
 - [ ] Disabled account cannot log in
-- [ ] Expired account behavior is handled cleanly (if applicable)
 - [ ] Session inactivity timeout works if configured
 
 ---
