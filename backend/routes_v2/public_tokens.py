@@ -23,6 +23,7 @@ def get_app_info():
     smtp_service = current_app.config.get("SMTP_SERVICE_V2")
     app_svc = _app_settings_service()
     settings_cfg = current_app.config.get("SETTINGS")
+    oidc_provider_svc = current_app.config.get("OIDC_PROVIDER_SERVICE_V2")
 
     app_name = app_svc.get_effective_app_name(
         env_fallback=getattr(settings_cfg, "APP_NAME", "")
@@ -33,11 +34,13 @@ def get_app_info():
     ) if app_svc else ""
 
     single_user_mode = bool(getattr(settings_cfg, "LINK2NAS_SINGLE_USER_MODE", False))
-    oidc_enabled = (
-        bool(getattr(settings_cfg, "OIDC_ENABLED", False))
-        and not single_user_mode
-    )
-    oidc_label = str(getattr(settings_cfg, "OIDC_BUTTON_LABEL", "Sign in with SSO")) if oidc_enabled else ""
+
+    oidc_providers = []
+    if oidc_provider_svc:
+        oidc_providers = oidc_provider_svc.list_public_enabled_providers(single_user_mode)
+
+    oidc_enabled = len(oidc_providers) > 0
+    oidc_label = oidc_providers[0]["button_label"] if oidc_providers else ""
 
     return jsonify({
         "app_name": app_name,
@@ -45,6 +48,7 @@ def get_app_info():
         "email_sending_available": smtp_service.is_email_sending_available() if smtp_service else False,
         "oidc_enabled": oidc_enabled,
         "oidc_label": oidc_label,
+        "oidc_providers": oidc_providers,
     })
 
 

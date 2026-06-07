@@ -23,12 +23,58 @@ def _svc() -> OidcService | None:
     return current_app.config.get("OIDC_SERVICE_V2")
 
 
-# ── GET /initiate ─────────────────────────────────────────────────────────────
+def _provider_svc():
+    return current_app.config.get("OIDC_PROVIDER_SERVICE_V2")
+
+
+def _settings():
+    return current_app.config.get("SETTINGS")
+
+
+def _exchange_ttl() -> int:
+    settings = _settings()
+    return int(getattr(settings, "OIDC_EXCHANGE_CODE_TTL_SECONDS", 60)) if settings else 60
+
+
+def _secure_cookie() -> bool:
+    settings = _settings()
+    return not getattr(settings, "DEBUG", False) if settings else True
+
+
+# ── Legacy compat: GET /initiate (no slug) ────────────────────────────────────
 
 @auth_oidc_v2_bp.get("/initiate")
-def oidc_initiate():
+def oidc_initiate_legacy():
+    """Compat: redirect to /<slug>/initiate if exactly one enabled provider exists."""
+    provider_svc = _provider_svc()
+    if not provider_svc:
+        return jsonify({"error": "OIDC not available"}), 404
+
+    settings = _settings()
+    single_user_mode = bool(getattr(settings, "LINK2NAS_SINGLE_USER_MODE", False))
+    providers = provider_svc.list_public_enabled_providers(single_user_mode)
+
+    if len(providers) == 1:
+        slug = providers[0]["slug"]
+        return redirect(f"/api/v2/auth/oidc/{slug}/initiate", 302)
+
+    return jsonify({"error": "OIDC provider not available"}), 404
+
+
+# ── Legacy compat: GET /callback (no slug) ────────────────────────────────────
+
+@auth_oidc_v2_bp.get("/callback")
+def oidc_callback_legacy():
+    """Legacy callback without provider slug is not supported in multi-provider mode."""
+    return redirect(_LOGIN_ERROR, 302)
+
+
+# ── GET /<slug>/initiate ──────────────────────────────────────────────────────
+
+@auth_oidc_v2_bp.get("/<slug>/initiate")
+def oidc_initiate(slug: str):
     limited = rate_limit_response(
-        "oidc_initiate", "public",
+        f"oidc_initiate:{slug}", "public",
         limit_attr="V2_RATE_LIMIT_OIDC_INITIATE_MAX",
         window_attr="V2_RATE_LIMIT_OIDC_INITIATE_WINDOW_SECONDS",
     )
@@ -40,30 +86,29 @@ def oidc_initiate():
         return jsonify({"error": "OIDC not available"}), 404
 
     try:
-        auth_url, _state = svc.initiate()
+        auth_url, _state = svc.initiate(slug)
     except OidcDisabledError:
-        return jsonify({"error": "OIDC is not enabled"}), 404
+        return jsonify({"error": "OIDC provider not available"}), 404
     except OidcConfigError:
-        return jsonify({"error": "OIDC provider unreachable"}), 503
+        return jsonify({"error": "OIDC provider not configured"}), 404
     except OidcError:
         return jsonify({"error": "OIDC unavailable"}), 503
 
     return redirect(auth_url, 302)
 
 
-# ── GET /callback ─────────────────────────────────────────────────────────────
+# ── GET /<slug>/callback ──────────────────────────────────────────────────────
 
-@auth_oidc_v2_bp.get("/callback")
-def oidc_callback():
+@auth_oidc_v2_bp.get("/<slug>/callback")
+def oidc_callback(slug: str):
     limited = rate_limit_response(
-        "oidc_callback", "public",
+        f"oidc_callback:{slug}", "public",
         limit_attr="V2_RATE_LIMIT_OIDC_CALLBACK_MAX",
         window_attr="V2_RATE_LIMIT_OIDC_CALLBACK_WINDOW_SECONDS",
     )
     if limited:
         return redirect(_LOGIN_ERROR, 302)
 
-    # Provider-side error (e.g. user cancelled, access denied)
     if request.args.get("error"):
         return redirect(_LOGIN_ERROR, 302)
 
@@ -78,22 +123,18 @@ def oidc_callback():
         return redirect(_LOGIN_ERROR, 302)
 
     try:
-        exchange_code = svc.handle_callback(state, code)
+        exchange_code = svc.handle_callback(slug, state, code)
     except OidcError:
         return redirect(_LOGIN_ERROR, 302)
-
-    settings = current_app.config["SETTINGS"]
-    ttl = int(getattr(settings, "OIDC_EXCHANGE_CODE_TTL_SECONDS", 60))
-    secure = not getattr(settings, "DEBUG", False)
 
     resp = redirect(_NEXT_CALLBACK, 302)
     resp.set_cookie(
         _COOKIE,
         exchange_code,
         httponly=True,
-        secure=secure,
+        secure=_secure_cookie(),
         samesite="Lax",
-        max_age=ttl,
+        max_age=_exchange_ttl(),
         path=_COMPLETE_PATH,
     )
     return resp

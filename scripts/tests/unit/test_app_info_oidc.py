@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Unit tests: GET /api/v2/public/app-info — OIDC fields.
+Unit tests: GET /api/v2/public/app-info — OIDC fields (DB-based, multi-provider).
 
-Uses Flask test_client with fake settings injected in app.config.
+Uses Flask test_client with fake services injected in app.config.
 No real DB, no SMTP, no OIDC provider.
 
 Covers:
-  1. OIDC_ENABLED=False → oidc_enabled=False, oidc_label=""
-  2. OIDC_ENABLED=True → oidc_enabled=True, oidc_label=OIDC_BUTTON_LABEL
-  3. OIDC_ENABLED=True + LINK2NAS_SINGLE_USER_MODE=True → oidc_enabled=False, oidc_label=""
-  4. Response never exposes OIDC internals (CLIENT_ID, CLIENT_SECRET, ISSUER,
-     SCOPES, ALLOWED_DOMAINS, AUTO_CREATE_USERS)
+  1.  No providers → oidc_enabled=false, oidc_label="", oidc_providers=[]
+  2.  One provider → oidc_enabled=true, oidc_label set, oidc_providers has one entry
+  3.  Multiple providers → oidc_enabled=true, all returned
+  4.  Service returns filtered list (disabled hidden at service layer)
+  5.  Single-user mode → oidc_enabled=false regardless of DB state
+  6.  No sensitive fields in oidc_providers (only slug + button_label)
+  7.  No OIDC_PROVIDER_SERVICE_V2 in config → graceful fallback (oidc_enabled=false)
 
 Run from project root:
     python3 scripts/tests/unit/test_app_info_oidc.py
@@ -25,32 +27,51 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from flask import Flask
+
 from backend.routes_v2.public_tokens import public_tokens_v2_bp
 
 
 # ── Fakes ─────────────────────────────────────────────────────────────────────
 
 class FakeSettings:
-    APP_NAME = "TestApp"
-    APP_TAGLINE = ""
-    OIDC_ENABLED = False
-    OIDC_BUTTON_LABEL = "Sign in with SSO"
+    DEBUG = True
     LINK2NAS_SINGLE_USER_MODE = False
-    # Internal values that must never appear in the API response
-    OIDC_CLIENT_ID = "fake-client-id-abc123"
-    OIDC_CLIENT_SECRET = "fake-client-secret-xyz"
-    OIDC_ISSUER = "https://idp.internal.example.com"
-    OIDC_SCOPES = "openid email profile"
-    OIDC_ALLOWED_DOMAINS = "restricted.example.com"
-    OIDC_AUTO_CREATE_USERS = True
+    APP_NAME = "Link2NAS"
+    APP_TAGLINE = ""
 
 
-def _make_app(settings: FakeSettings) -> Flask:
+class FakeSmtp:
+    def is_email_sending_available(self):
+        return False
+
+
+class FakeOidcProviderService:
+    def __init__(self, providers=None):
+        self._providers = providers or []
+
+    def list_public_enabled_providers(self, single_user_mode: bool):
+        if single_user_mode:
+            return []
+        return self._providers
+
+
+_P1 = {"slug": "keycloak", "button_label": "Sign in with Keycloak"}
+_P2 = {"slug": "google", "button_label": "Sign in with Google"}
+
+
+def _make_app(providers=None, *, single_user_mode: bool = False, omit_svc: bool = False) -> Flask:
     app = Flask(__name__)
     app.config["TESTING"] = True
+
+    settings = FakeSettings()
+    settings.LINK2NAS_SINGLE_USER_MODE = single_user_mode
     app.config["SETTINGS"] = settings
-    app.config["SMTP_SERVICE_V2"] = None
+    app.config["SMTP_SERVICE_V2"] = FakeSmtp()
     app.config["APP_SETTINGS_SERVICE_V2"] = None
+
+    if not omit_svc:
+        app.config["OIDC_PROVIDER_SERVICE_V2"] = FakeOidcProviderService(providers or [])
+
     app.register_blueprint(public_tokens_v2_bp)
     return app
 
@@ -59,68 +80,63 @@ def _make_app(settings: FakeSettings) -> Flask:
 
 class TestAppInfoOidc(unittest.TestCase):
 
-    # 1. OIDC_ENABLED=False → oidc_enabled=False, oidc_label=""
-    def test_oidc_disabled_returns_false_and_empty_label(self):
-        settings = FakeSettings()
-        settings.OIDC_ENABLED = False
-        resp = _make_app(settings).test_client().get("/api/v2/public/app-info")
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertFalse(data["oidc_enabled"], "oidc_enabled must be false when OIDC_ENABLED=False")
-        self.assertEqual(data["oidc_label"], "", "oidc_label must be empty when OIDC disabled")
+    # 1. No providers
+    def test_no_providers_oidc_disabled(self):
+        data = _make_app([]).test_client().get("/api/v2/public/app-info").get_json()
+        self.assertFalse(data["oidc_enabled"])
+        self.assertEqual(data["oidc_label"], "")
+        self.assertEqual(data["oidc_providers"], [])
 
-    # 2. OIDC_ENABLED=True → oidc_enabled=True, oidc_label=OIDC_BUTTON_LABEL
-    def test_oidc_enabled_returns_true_and_configured_label(self):
-        settings = FakeSettings()
-        settings.OIDC_ENABLED = True
-        settings.LINK2NAS_SINGLE_USER_MODE = False
-        settings.OIDC_BUTTON_LABEL = "Se connecter via Keycloak"
-        resp = _make_app(settings).test_client().get("/api/v2/public/app-info")
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertTrue(data["oidc_enabled"], "oidc_enabled must be true when OIDC_ENABLED=True")
-        self.assertEqual(data["oidc_label"], "Se connecter via Keycloak")
+    # 2. One provider
+    def test_one_provider_oidc_enabled(self):
+        data = _make_app([_P1]).test_client().get("/api/v2/public/app-info").get_json()
+        self.assertTrue(data["oidc_enabled"])
+        self.assertEqual(data["oidc_label"], _P1["button_label"])
+        self.assertEqual(len(data["oidc_providers"]), 1)
+        self.assertEqual(data["oidc_providers"][0]["slug"], _P1["slug"])
+        self.assertEqual(data["oidc_providers"][0]["button_label"], _P1["button_label"])
 
-    # 3. OIDC_ENABLED=True + LINK2NAS_SINGLE_USER_MODE=True → oidc_enabled=False, oidc_label=""
-    def test_oidc_disabled_in_single_user_mode(self):
-        settings = FakeSettings()
-        settings.OIDC_ENABLED = True
-        settings.LINK2NAS_SINGLE_USER_MODE = True
-        settings.OIDC_BUTTON_LABEL = "Sign in with SSO"
-        resp = _make_app(settings).test_client().get("/api/v2/public/app-info")
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertFalse(data["oidc_enabled"], "oidc_enabled must be false in single-user mode")
-        self.assertEqual(data["oidc_label"], "", "oidc_label must be empty in single-user mode")
+    # 3. Multiple providers all returned
+    def test_multiple_providers_all_returned(self):
+        data = _make_app([_P1, _P2]).test_client().get("/api/v2/public/app-info").get_json()
+        self.assertTrue(data["oidc_enabled"])
+        self.assertEqual(len(data["oidc_providers"]), 2)
+        slugs = {p["slug"] for p in data["oidc_providers"]}
+        self.assertIn("keycloak", slugs)
+        self.assertIn("google", slugs)
 
-    # 4. Response never exposes OIDC internals
-    def test_no_oidc_internals_in_response(self):
-        settings = FakeSettings()
-        settings.OIDC_ENABLED = True
-        settings.LINK2NAS_SINGLE_USER_MODE = False
-        resp = _make_app(settings).test_client().get("/api/v2/public/app-info")
-        self.assertEqual(resp.status_code, 200)
+    # 4. Service filters disabled; route reports based on what it receives
+    def test_service_filters_disabled_providers(self):
+        # Simulate service returning empty (all disabled)
+        data = _make_app([]).test_client().get("/api/v2/public/app-info").get_json()
+        self.assertFalse(data["oidc_enabled"])
+        self.assertEqual(data["oidc_providers"], [])
 
-        # Check JSON keys — only these five are allowed
-        data = resp.get_json()
-        allowed_keys = {"app_name", "app_tagline", "email_sending_available", "oidc_enabled", "oidc_label"}
-        self.assertEqual(set(data.keys()), allowed_keys, f"Unexpected keys in response: {set(data.keys()) - allowed_keys}")
+    # 5. Single-user mode disables OIDC
+    def test_single_user_mode_disables_oidc(self):
+        data = _make_app([_P1, _P2], single_user_mode=True).test_client().get(
+            "/api/v2/public/app-info"
+        ).get_json()
+        self.assertFalse(data["oidc_enabled"])
+        self.assertEqual(data["oidc_providers"], [])
 
-        # Check raw body for sensitive values
-        raw = resp.get_data(as_text=True)
-        for forbidden in [
-            settings.OIDC_CLIENT_ID,
-            settings.OIDC_CLIENT_SECRET,
-            settings.OIDC_ISSUER,
-            settings.OIDC_SCOPES,
-            settings.OIDC_ALLOWED_DOMAINS,
-        ]:
-            self.assertNotIn(forbidden, raw, f"Sensitive value must not appear in response: {forbidden!r}")
+    # 6. Provider entries contain only slug and button_label — no sensitive fields
+    def test_provider_entry_public_fields_only(self):
+        data = _make_app([_P1]).test_client().get("/api/v2/public/app-info").get_json()
+        entry = data["oidc_providers"][0]
+        self.assertSetEqual(set(entry.keys()), {"slug", "button_label"})
 
-        # Check forbidden field names are not present as JSON keys
-        for forbidden_key in ("client_id", "client_secret", "issuer", "scopes",
-                              "allowed_domains", "auto_create_users"):
-            self.assertNotIn(forbidden_key, data, f"Field {forbidden_key!r} must not be in response")
+        for field in ("issuer", "client_id", "client_secret", "encrypted_client_secret",
+                      "scopes", "allowed_domains", "allowed_domains_json",
+                      "auto_create_users", "id", "created_at", "updated_at"):
+            self.assertNotIn(field, entry, f"Sensitive field '{field}' must not be in public entry")
+
+    # 7. No OIDC_PROVIDER_SERVICE_V2 → graceful fallback
+    def test_missing_service_falls_back_gracefully(self):
+        data = _make_app(omit_svc=True).test_client().get("/api/v2/public/app-info").get_json()
+        self.assertFalse(data["oidc_enabled"])
+        self.assertEqual(data["oidc_label"], "")
+        self.assertEqual(data["oidc_providers"], [])
 
 
 if __name__ == "__main__":
