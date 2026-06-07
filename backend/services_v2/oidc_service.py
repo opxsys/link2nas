@@ -1,3 +1,4 @@
+import json
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -9,6 +10,7 @@ from jwt import PyJWKClient
 
 from backend.models.api_token import ApiToken
 from backend.models.external_identity import ExternalIdentity
+from backend.models.oidc_provider import OidcProvider
 from backend.models.oidc_state import OidcState
 from backend.models.user import User
 from backend.utils.time import utc_now_iso
@@ -51,28 +53,29 @@ class OidcExchangeError(OidcError):
 
 
 class OidcService:
-    def __init__(self, settings, user_repo, external_identity_repo, oidc_state_repo, api_token_repo):
+    def __init__(
+        self,
+        settings,
+        user_repo,
+        external_identity_repo,
+        oidc_state_repo,
+        api_token_repo,
+        oidc_provider_repo,
+        crypto_service,
+    ):
         self._settings = settings
         self._user_repo = user_repo
         self._ext_id_repo = external_identity_repo
         self._oidc_state_repo = oidc_state_repo
         self._token_repo = api_token_repo
+        self._provider_repo = oidc_provider_repo
+        self._crypto = crypto_service
 
     # ── Guards ────────────────────────────────────────────────────────────────
 
     def _check_enabled(self) -> None:
         if getattr(self._settings, "LINK2NAS_SINGLE_USER_MODE", False):
             raise OidcDisabledError("OIDC is not available in single-user mode")
-        if not getattr(self._settings, "OIDC_ENABLED", False):
-            raise OidcDisabledError("OIDC is not enabled")
-
-    def _check_config(self) -> None:
-        if not getattr(self._settings, "OIDC_ISSUER", ""):
-            raise OidcConfigError("OIDC_ISSUER is not configured")
-        if not getattr(self._settings, "OIDC_CLIENT_ID", ""):
-            raise OidcConfigError("OIDC_CLIENT_ID is not configured")
-        if not getattr(self._settings, "OIDC_CLIENT_SECRET", ""):
-            raise OidcConfigError("OIDC_CLIENT_SECRET is not configured")
 
     # ── Random value generation ───────────────────────────────────────────────
 
@@ -100,20 +103,21 @@ class OidcService:
 
     # ── Authorization URL ─────────────────────────────────────────────────────
 
-    def _callback_uri(self) -> str:
+    def _callback_uri(self, provider_slug: str) -> str:
         base = getattr(self._settings, "PUBLIC_BASE_URL", "").rstrip("/")
-        return base + "/api/v2/auth/oidc/callback"
+        return base + f"/api/v2/auth/oidc/{provider_slug}/callback"
 
-    def build_authorization_url(self, metadata: dict, state: str, nonce: str) -> str:
+    def build_authorization_url(
+        self, metadata: dict, state: str, nonce: str, provider: OidcProvider
+    ) -> str:
         endpoint = metadata.get("authorization_endpoint")
         if not endpoint:
             raise OidcConfigError("Provider metadata missing authorization_endpoint")
-        scopes = getattr(self._settings, "OIDC_SCOPES", "openid email profile")
         params = {
             "response_type": "code",
-            "client_id": self._settings.OIDC_CLIENT_ID,
-            "redirect_uri": self._callback_uri(),
-            "scope": scopes,
+            "client_id": provider.client_id,
+            "redirect_uri": self._callback_uri(provider.slug),
+            "scope": provider.scopes,
             "state": state,
             "nonce": nonce,
         }
@@ -121,7 +125,14 @@ class OidcService:
 
     # ── Token exchange ────────────────────────────────────────────────────────
 
-    def exchange_authorization_code(self, metadata: dict, authorization_code: str) -> dict:
+    def exchange_authorization_code(
+        self,
+        metadata: dict,
+        authorization_code: str,
+        client_id: str,
+        client_secret: str,
+        provider_slug: str,
+    ) -> dict:
         token_endpoint = metadata.get("token_endpoint")
         if not token_endpoint:
             raise OidcConfigError("Provider metadata missing token_endpoint")
@@ -131,9 +142,9 @@ class OidcService:
                 data={
                     "grant_type": "authorization_code",
                     "code": authorization_code,
-                    "redirect_uri": self._callback_uri(),
-                    "client_id": self._settings.OIDC_CLIENT_ID,
-                    "client_secret": self._settings.OIDC_CLIENT_SECRET,
+                    "redirect_uri": self._callback_uri(provider_slug),
+                    "client_id": client_id,
+                    "client_secret": client_secret,
                 },
                 timeout=15,
             )
@@ -144,7 +155,14 @@ class OidcService:
 
     # ── id_token validation ───────────────────────────────────────────────────
 
-    def validate_id_token(self, id_token: str, metadata: dict, nonce: str) -> dict:
+    def validate_id_token(
+        self,
+        id_token: str,
+        metadata: dict,
+        nonce: str,
+        client_id: str,
+        issuer: str,
+    ) -> dict:
         jwks_uri = metadata.get("jwks_uri")
         if not jwks_uri:
             raise OidcConfigError("Provider metadata missing jwks_uri")
@@ -160,8 +178,8 @@ class OidcService:
                 id_token,
                 signing_key.key,
                 algorithms=["RS256", "ES256", "RS384", "ES384", "RS512"],
-                audience=self._settings.OIDC_CLIENT_ID,
-                issuer=self._settings.OIDC_ISSUER,
+                audience=client_id,
+                issuer=issuer,
                 options={"require": ["sub", "iss", "aud", "exp", "iat"]},
             )
         except jwt.ExpiredSignatureError as exc:
@@ -213,7 +231,9 @@ class OidcService:
 
     # ── User mapping ──────────────────────────────────────────────────────────
 
-    def resolve_or_create_user(self, claims: dict) -> tuple[User, ExternalIdentity]:
+    def resolve_or_create_user(
+        self, claims: dict, provider: OidcProvider
+    ) -> tuple[User, ExternalIdentity]:
         issuer = claims["iss"]
         subject = claims["sub"]
         email = claims["email"]
@@ -247,10 +267,13 @@ class OidcService:
             return user, identity
 
         # Step 3: auto-create if allowed
-        if not getattr(self._settings, "OIDC_AUTO_CREATE_USERS", False):
+        if not provider.auto_create_users:
             raise OidcUserError("No matching user and auto-create is disabled")
 
-        allowed_domains: set = getattr(self._settings, "OIDC_ALLOWED_DOMAINS", set())
+        try:
+            allowed_domains: set = set(json.loads(provider.allowed_domains_json or "[]"))
+        except Exception:
+            allowed_domains = set()
         if allowed_domains:
             domain = email.split("@")[-1] if "@" in email else ""
             if domain not in allowed_domains:
@@ -300,17 +323,24 @@ class OidcService:
 
     # ── Initiate ──────────────────────────────────────────────────────────────
 
-    def initiate(self) -> tuple[str, str]:
-        """Returns (authorization_url, state). Stores state+nonce in DB."""
+    def initiate(self, provider_slug: str) -> tuple[str, str]:
+        """Looks up provider by slug, stores state+nonce in DB. Returns (auth_url, state)."""
         self._check_enabled()
-        self._check_config()
+
+        provider = self._provider_repo.get_by_slug(provider_slug)
+        if provider is None:
+            raise OidcConfigError(f"Unknown OIDC provider: {provider_slug!r}")
+        if not provider.enabled:
+            raise OidcDisabledError(f"OIDC provider {provider_slug!r} is disabled")
+
         self._oidc_state_repo.delete_expired(_now())
 
         state = self.generate_state()
         nonce = self.generate_nonce()
         now = _now()
-        ttl = int(getattr(self._settings, "OIDC_STATE_TTL_SECONDS", 600))
-        expires_at = (datetime.now(UTC) + timedelta(seconds=ttl)).isoformat()
+        expires_at = (
+            datetime.now(UTC) + timedelta(seconds=provider.state_ttl_seconds)
+        ).isoformat()
 
         self._oidc_state_repo.create(OidcState(
             id=str(uuid.uuid4()),
@@ -318,34 +348,59 @@ class OidcService:
             nonce=nonce,
             created_at=now,
             expires_at=expires_at,
+            provider_id=provider.id,
         ))
 
-        metadata = self.fetch_provider_metadata(self._settings.OIDC_ISSUER)
-        return self.build_authorization_url(metadata, state, nonce), state
+        metadata = self.fetch_provider_metadata(provider.issuer)
+        return self.build_authorization_url(metadata, state, nonce, provider), state
 
     # ── Callback ──────────────────────────────────────────────────────────────
 
-    def handle_callback(self, state_param: str, authorization_code: str) -> str:
-        """Validates OIDC response, resolves user. Stores user_id only. Returns exchange_code."""
+    def handle_callback(
+        self, provider_slug: str, state_param: str, authorization_code: str
+    ) -> str:
+        """Validates OIDC response, resolves user. Returns exchange_code."""
         self._check_enabled()
+
+        provider = self._provider_repo.get_by_slug(provider_slug)
+        if provider is None:
+            raise OidcConfigError(f"Unknown OIDC provider: {provider_slug!r}")
+        if not provider.enabled:
+            raise OidcDisabledError(f"OIDC provider {provider_slug!r} is disabled")
 
         oidc_state = self._oidc_state_repo.get_valid_by_state(state_param, _now())
         if oidc_state is None:
             raise OidcStateError("Invalid, expired, or already used state")
+        if oidc_state.provider_id != provider.id:
+            raise OidcStateError("State does not belong to this provider")
 
-        metadata = self.fetch_provider_metadata(self._settings.OIDC_ISSUER)
-        token_response = self.exchange_authorization_code(metadata, authorization_code)
+        if not provider.encrypted_client_secret:
+            raise OidcConfigError("OIDC provider has no client_secret configured")
+        try:
+            client_secret = self._crypto.decrypt(provider.encrypted_client_secret)
+        except Exception as exc:
+            raise OidcConfigError("OIDC provider client_secret could not be decrypted") from exc
+        if not client_secret:
+            raise OidcConfigError("OIDC provider has no client_secret configured")
+
+        metadata = self.fetch_provider_metadata(provider.issuer)
+        token_response = self.exchange_authorization_code(
+            metadata, authorization_code, provider.client_id, client_secret, provider_slug
+        )
 
         id_token_str = token_response.get("id_token")
         if not id_token_str:
             raise OidcTokenError("No id_token in provider response")
 
-        claims = self.validate_id_token(id_token_str, metadata, oidc_state.nonce)
-        user, _identity = self.resolve_or_create_user(claims)
+        claims = self.validate_id_token(
+            id_token_str, metadata, oidc_state.nonce, provider.client_id, provider.issuer
+        )
+        user, _identity = self.resolve_or_create_user(claims, provider)
 
         exchange_code = self.generate_exchange_code()
-        ttl = int(getattr(self._settings, "OIDC_EXCHANGE_CODE_TTL_SECONDS", 60))
-        exchange_expires_at = (datetime.now(UTC) + timedelta(seconds=ttl)).isoformat()
+        exchange_expires_at = (
+            datetime.now(UTC) + timedelta(seconds=provider.exchange_code_ttl_seconds)
+        ).isoformat()
 
         self._oidc_state_repo.mark_callback_consumed(
             state_id=oidc_state.id,

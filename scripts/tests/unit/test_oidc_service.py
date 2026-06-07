@@ -1,25 +1,33 @@
 #!/usr/bin/env python3
 """
-Unit tests: OidcService.
+Unit tests: OidcService (multi-provider).
 
 Covers:
-  handle_callback:
-    1.  Happy path → exchange_code returned, zero api_tokens created
-    2.  Invalid state → OidcStateError
-    3.  OIDC disabled → OidcDisabledError
+  initiate:
+    1.  Happy path → (auth_url, state), state stored with provider_id
+    2.  Unknown provider slug → OidcConfigError
+    3.  Disabled provider → OidcDisabledError
     4.  Single-user mode → OidcDisabledError
-    5.  email_verified false → OidcUserError
-    6.  No matching user, auto-create disabled → OidcUserError
-    7.  Disabled user → OidcUserError
-    8.  Expired user → OidcUserError
 
-  complete_login:
-    9.  Happy path → api_token created, raw token returned, state deleted
-    10. Invalid exchange_code → OidcExchangeError
-    11. Exchange_code one-time use (second call raises) → OidcExchangeError
-    12. User not found → OidcUserError
+  handle_callback:
+    5.  Happy path → exchange_code returned, zero api_tokens created
+    6.  Invalid state → OidcStateError
+    7.  State belongs to different provider → OidcStateError
+    8.  Unknown provider slug → OidcConfigError
+    9.  Disabled provider → OidcDisabledError
+    10. Single-user mode → OidcDisabledError
+    11. email_verified false → OidcUserError
+    12. No matching user, auto-create disabled → OidcUserError
     13. Disabled user → OidcUserError
     14. Expired user → OidcUserError
+
+  complete_login:
+    15. Happy path → api_token created, raw token returned, state deleted
+    16. Invalid exchange_code → OidcExchangeError
+    17. Exchange_code one-time use (second call raises) → OidcExchangeError
+    18. User not found → OidcUserError
+    19. Disabled user → OidcUserError
+    20. Expired user → OidcUserError
 
 Run from project root:
     python3 scripts/tests/unit/test_oidc_service.py
@@ -38,9 +46,11 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from backend.models.api_token import ApiToken
+from backend.models.oidc_provider import OidcProvider
 from backend.models.oidc_state import OidcState
 from backend.models.user import User
 from backend.services_v2.oidc_service import (
+    OidcConfigError,
     OidcDisabledError,
     OidcExchangeError,
     OidcService,
@@ -55,6 +65,8 @@ from backend.utils.time import utc_now_iso
 _ISSUER = "https://idp.example.com"
 _SUBJECT = "sub-test-001"
 _EMAIL = "alice@example.com"
+_PROVIDER_ID = "provider-id-fixed-for-tests"
+_PROVIDER_SLUG = "test-provider"
 
 _FAKE_METADATA = {
     "issuer": _ISSUER,
@@ -100,19 +112,32 @@ def _user(is_active: bool = True, account_expires_at: str | None = None) -> User
     )
 
 
+def _make_test_provider(enabled: bool = True) -> OidcProvider:
+    now = utc_now_iso()
+    return OidcProvider(
+        id=_PROVIDER_ID,
+        name="Test Provider",
+        slug=_PROVIDER_SLUG,
+        enabled=enabled,
+        issuer=_ISSUER,
+        client_id="test-client-id",
+        encrypted_client_secret="test-secret",
+        scopes="openid email profile",
+        button_label="Sign in with Test Provider",
+        auto_create_users=False,
+        allowed_domains_json="[]",
+        state_ttl_seconds=600,
+        exchange_code_ttl_seconds=60,
+        sort_order=0,
+        created_at=now,
+        updated_at=now,
+    )
+
+
 # ── Fake repos ────────────────────────────────────────────────────────────────
 
 class FakeSettings:
-    OIDC_ENABLED = True
     LINK2NAS_SINGLE_USER_MODE = False
-    OIDC_ISSUER = _ISSUER
-    OIDC_CLIENT_ID = "test-client-id"
-    OIDC_CLIENT_SECRET = "test-secret"
-    OIDC_SCOPES = "openid email profile"
-    OIDC_AUTO_CREATE_USERS = False
-    OIDC_ALLOWED_DOMAINS = set()
-    OIDC_STATE_TTL_SECONDS = 600
-    OIDC_EXCHANGE_CODE_TTL_SECONDS = 60
     PUBLIC_BASE_URL = "https://link2nas.example.com"
 
 
@@ -140,6 +165,7 @@ class FakeExtIdRepo:
 
     def create(self, identity): self._items.append(identity)
     def update_last_used(self, iid, ts): pass
+    def count_by_issuer(self, issuer): return 0
 
 
 class FakeOidcStateRepo:
@@ -159,6 +185,8 @@ class FakeOidcStateRepo:
         s = self._states.get(sid)
         if s is None or s.consumed_at is not None or s.expires_at <= now_iso:
             return None
+        if s.provider_id is None:
+            return None
         return s
 
     def mark_callback_consumed(self, state_id, exchange_code, user_id, expires_at, consumed_at):
@@ -175,6 +203,8 @@ class FakeOidcStateRepo:
             return None
         s = self._states.get(sid)
         if s is None or s.consumed_at is None or s.user_id is None or s.expires_at <= now_iso:
+            return None
+        if s.provider_id is None:
             return None
         return s
 
@@ -197,32 +227,48 @@ class FakeApiTokenRepo:
     def last(self) -> ApiToken | None: return self._created[-1] if self._created else None
 
 
+class FakeOidcProviderRepo:
+    def __init__(self, providers=None):
+        self._by_slug = {p.slug: p for p in (providers or [])}
+        self._by_id = {p.id: p for p in (providers or [])}
+
+    def get_by_slug(self, slug): return self._by_slug.get(slug)
+    def get_by_id(self, pid): return self._by_id.get(pid)
+
+
+class FakeCryptoService:
+    def decrypt(self, value): return value
+    def encrypt(self, value): return value
+
+
 # ── Patched service (no HTTP, no JWT) ─────────────────────────────────────────
 
 class _Svc(OidcService):
-    """OidcService with HTTP and JWT decode replaced by configurable fakes.
+    """OidcService with HTTP and JWT decode replaced by configurable fakes."""
 
-    Post-decode claim checks (email_verified, email) still run through real logic
-    so that tests with bad claims reflect actual service behaviour.
-    """
-
-    def __init__(self, settings, user_repo, ext_id_repo, state_repo, token_repo):
-        super().__init__(settings, user_repo, ext_id_repo, state_repo, token_repo)
+    def __init__(
+        self, settings, user_repo, ext_id_repo, state_repo, token_repo,
+        provider_repo=None, crypto_svc=None,
+    ):
+        super().__init__(
+            settings, user_repo, ext_id_repo, state_repo, token_repo,
+            provider_repo or FakeOidcProviderRepo([_make_test_provider()]),
+            crypto_svc or FakeCryptoService(),
+        )
         self._claims = dict(_BASE_CLAIMS)
         self._validate_raises: Exception | None = None
 
     def fetch_provider_metadata(self, issuer):
         return _FAKE_METADATA
 
-    def exchange_authorization_code(self, metadata, code):
+    def exchange_authorization_code(self, metadata, code, client_id, client_secret, provider_slug):
         return {"id_token": "header.payload.sig", "access_token": "fake-access"}
 
-    def validate_id_token(self, id_token, metadata, nonce):
+    def validate_id_token(self, id_token, metadata, nonce, client_id, issuer):
         if self._validate_raises:
             raise self._validate_raises
         claims = dict(self._claims)
-        claims["nonce"] = nonce  # JWT decode is mocked; align nonce automatically
-        # Run real post-decode checks so bad-claim tests reflect actual service behaviour
+        claims["nonce"] = nonce
         email_verified = claims.get("email_verified", False)
         if isinstance(email_verified, str):
             email_verified = email_verified.lower() == "true"
@@ -237,7 +283,7 @@ class _Svc(OidcService):
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
-def _make_state(state_repo: FakeOidcStateRepo) -> OidcState:
+def _make_state(state_repo: FakeOidcStateRepo, provider_id: str | None = None) -> OidcState:
     now = utc_now_iso()
     s = OidcState(
         id=str(uuid.uuid4()),
@@ -245,13 +291,13 @@ def _make_state(state_repo: FakeOidcStateRepo) -> OidcState:
         nonce="nonce_" + secrets.token_urlsafe(16),
         created_at=now,
         expires_at=_future(600),
+        provider_id=provider_id or _PROVIDER_ID,
     )
     state_repo.create(s)
     return s
 
 
 def _make_consumed_state(state_repo: FakeOidcStateRepo, user_id: str) -> str:
-    """Simulate a state that has already gone through /callback. Returns exchange_code."""
     s = _make_state(state_repo)
     exchange_code = "ex_" + secrets.token_urlsafe(16)
     state_repo.mark_callback_consumed(
@@ -264,68 +310,140 @@ def _make_consumed_state(state_repo: FakeOidcStateRepo, user_id: str) -> str:
     return exchange_code
 
 
+# ── Tests: initiate ───────────────────────────────────────────────────────────
+
+class TestInitiate(unittest.TestCase):
+
+    def _svc(self, **setting_overrides):
+        settings = FakeSettings()
+        for k, v in setting_overrides.items():
+            setattr(settings, k, v)
+        self.state_repo = FakeOidcStateRepo()
+        return _Svc(settings, FakeUserRepo(), FakeExtIdRepo(), self.state_repo, FakeApiTokenRepo())
+
+    # 1. Happy path
+    def test_happy_path_returns_auth_url_and_state(self):
+        from urllib.parse import unquote
+        svc = self._svc()
+        auth_url, state = svc.initiate(_PROVIDER_SLUG)
+
+        self.assertIsInstance(auth_url, str)
+        self.assertIn("https://idp.example.com/auth", auth_url)
+        # redirect_uri is URL-encoded in the query string; decode to verify slug is in the path
+        self.assertIn(f"/{_PROVIDER_SLUG}/callback", unquote(auth_url))
+        self.assertIsInstance(state, str)
+        self.assertGreater(len(state), 16)
+
+    # 2. Unknown provider slug
+    def test_unknown_slug_raises_config_error(self):
+        svc = self._svc()
+        with self.assertRaises(OidcConfigError):
+            svc.initiate("no-such-provider")
+
+    # 3. Disabled provider
+    def test_disabled_provider_raises(self):
+        settings = FakeSettings()
+        self.state_repo = FakeOidcStateRepo()
+        provider_repo = FakeOidcProviderRepo([_make_test_provider(enabled=False)])
+        svc = _Svc(
+            settings, FakeUserRepo(), FakeExtIdRepo(),
+            self.state_repo, FakeApiTokenRepo(),
+            provider_repo=provider_repo,
+        )
+        with self.assertRaises(OidcDisabledError):
+            svc.initiate(_PROVIDER_SLUG)
+
+    # 4. Single-user mode
+    def test_single_user_mode_raises(self):
+        svc = self._svc(LINK2NAS_SINGLE_USER_MODE=True)
+        with self.assertRaises(OidcDisabledError):
+            svc.initiate(_PROVIDER_SLUG)
+
+    # 4b. Legacy OIDC_ENABLED=False does NOT disable a DB-configured provider
+    def test_legacy_oidc_enabled_false_does_not_disable_db_provider(self):
+        from urllib.parse import unquote
+        svc = self._svc(OIDC_ENABLED=False)
+        auth_url, state = svc.initiate(_PROVIDER_SLUG)
+        self.assertIn("client_id=test-client-id", unquote(auth_url))
+        self.assertGreater(len(state), 16)
+
+
 # ── Tests: handle_callback ────────────────────────────────────────────────────
 
 class TestHandleCallback(unittest.TestCase):
 
-    def _svc(self, user=None, **setting_overrides):
+    def _svc(self, user=None, provider_repo=None, **setting_overrides):
         u = user or _user()
         settings = FakeSettings()
         for k, v in setting_overrides.items():
             setattr(settings, k, v)
         self.token_repo = FakeApiTokenRepo()
         self.state_repo = FakeOidcStateRepo()
-        svc = _Svc(settings, FakeUserRepo([u]), FakeExtIdRepo(), self.state_repo, self.token_repo)
+        svc = _Svc(
+            settings, FakeUserRepo([u]), FakeExtIdRepo(),
+            self.state_repo, self.token_repo,
+            provider_repo=provider_repo,
+        )
         return svc, u
 
-    # 1. Happy path ───────────────────────────────────────────────────────────
-
+    # 5. Happy path
     def test_happy_path_returns_exchange_code_no_token_created(self):
         svc, _ = self._svc()
         s = _make_state(self.state_repo)
 
-        result = svc.handle_callback(s.state, "auth-code-xxx")
+        result = svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code-xxx")
 
         self.assertIsInstance(result, str)
         self.assertGreater(len(result), 16)
         self.assertEqual(self.token_repo.count(), 0,
                          "handle_callback must NOT create any api_token")
 
-    # 2. Invalid state ────────────────────────────────────────────────────────
-
+    # 6. Invalid state
     def test_invalid_state_raises(self):
         svc, _ = self._svc()
         with self.assertRaises(OidcStateError):
-            svc.handle_callback("no-such-state", "auth-code")
+            svc.handle_callback(_PROVIDER_SLUG, "no-such-state", "auth-code")
 
-    # 3. OIDC disabled ────────────────────────────────────────────────────────
+    # 7. State belongs to a different provider
+    def test_state_wrong_provider_raises(self):
+        svc, _ = self._svc()
+        other_provider_id = str(uuid.uuid4())
+        s = _make_state(self.state_repo, provider_id=other_provider_id)
+        with self.assertRaises(OidcStateError):
+            svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code")
 
-    def test_oidc_disabled_raises(self):
-        svc, _ = self._svc(OIDC_ENABLED=False)
+    # 8. Unknown provider slug
+    def test_unknown_slug_raises_config_error(self):
+        svc, _ = self._svc()
+        s = _make_state(self.state_repo)
+        with self.assertRaises(OidcConfigError):
+            svc.handle_callback("no-such-provider", s.state, "auth-code")
+
+    # 9. Disabled provider
+    def test_disabled_provider_raises(self):
+        provider_repo = FakeOidcProviderRepo([_make_test_provider(enabled=False)])
+        svc, _ = self._svc(provider_repo=provider_repo)
         s = _make_state(self.state_repo)
         with self.assertRaises(OidcDisabledError):
-            svc.handle_callback(s.state, "auth-code")
+            svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code")
 
-    # 4. Single-user mode ─────────────────────────────────────────────────────
-
+    # 10. Single-user mode
     def test_single_user_mode_raises(self):
         svc, _ = self._svc(LINK2NAS_SINGLE_USER_MODE=True)
         s = _make_state(self.state_repo)
         with self.assertRaises(OidcDisabledError):
-            svc.handle_callback(s.state, "auth-code")
+            svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code")
 
-    # 5. email_verified false ─────────────────────────────────────────────────
-
+    # 11. email_verified false
     def test_email_not_verified_raises_no_token(self):
         svc, _ = self._svc()
-        svc._claims["email_verified"] = False  # real check in _Svc.validate_id_token will fire
+        svc._claims["email_verified"] = False
         s = _make_state(self.state_repo)
         with self.assertRaises(OidcUserError):
-            svc.handle_callback(s.state, "auth-code")
+            svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code")
         self.assertEqual(self.token_repo.count(), 0)
 
-    # 6. No matching user, auto-create disabled ───────────────────────────────
-
+    # 12. No matching user, auto-create disabled
     def test_auto_create_disabled_no_user_raises(self):
         settings = FakeSettings()
         self.token_repo = FakeApiTokenRepo()
@@ -333,25 +451,23 @@ class TestHandleCallback(unittest.TestCase):
         svc = _Svc(settings, FakeUserRepo(), FakeExtIdRepo(), self.state_repo, self.token_repo)
         s = _make_state(self.state_repo)
         with self.assertRaises(OidcUserError):
-            svc.handle_callback(s.state, "auth-code")
+            svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code")
         self.assertEqual(self.token_repo.count(), 0)
 
-    # 7. Disabled user ────────────────────────────────────────────────────────
-
+    # 13. Disabled user
     def test_disabled_user_raises_no_token(self):
         svc, _ = self._svc(user=_user(is_active=False))
         s = _make_state(self.state_repo)
         with self.assertRaises(OidcUserError):
-            svc.handle_callback(s.state, "auth-code")
+            svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code")
         self.assertEqual(self.token_repo.count(), 0)
 
-    # 8. Expired user ─────────────────────────────────────────────────────────
-
+    # 14. Expired user
     def test_expired_user_raises_no_token(self):
         svc, _ = self._svc(user=_user(account_expires_at=_past(3600)))
         s = _make_state(self.state_repo)
         with self.assertRaises(OidcUserError):
-            svc.handle_callback(s.state, "auth-code")
+            svc.handle_callback(_PROVIDER_SLUG, s.state, "auth-code")
         self.assertEqual(self.token_repo.count(), 0)
 
 
@@ -367,8 +483,7 @@ class TestCompleteLogin(unittest.TestCase):
         svc = _Svc(FakeSettings(), self.user_repo, FakeExtIdRepo(), self.state_repo, self.token_repo)
         return svc, u
 
-    # 9. Happy path ───────────────────────────────────────────────────────────
-
+    # 15. Happy path
     def test_happy_path_creates_token_deletes_state(self):
         svc, u = self._svc()
         exchange_code = _make_consumed_state(self.state_repo, u.id)
@@ -384,15 +499,13 @@ class TestCompleteLogin(unittest.TestCase):
             "OidcState must be deleted after complete_login",
         )
 
-    # 10. Invalid exchange_code ───────────────────────────────────────────────
-
+    # 16. Invalid exchange_code
     def test_invalid_exchange_code_raises(self):
         svc, _ = self._svc()
         with self.assertRaises(OidcExchangeError):
             svc.complete_login("no-such-exchange-code")
 
-    # 11. One-time use ────────────────────────────────────────────────────────
-
+    # 17. One-time use
     def test_exchange_code_one_time_use(self):
         svc, u = self._svc()
         exchange_code = _make_consumed_state(self.state_repo, u.id)
@@ -405,8 +518,7 @@ class TestCompleteLogin(unittest.TestCase):
         self.assertEqual(self.token_repo.count(), 1,
                          "Only one token must exist after two calls with the same exchange_code")
 
-    # 12. User not found ──────────────────────────────────────────────────────
-
+    # 18. User not found
     def test_user_not_found_raises_no_token(self):
         svc, _ = self._svc()
         exchange_code = _make_consumed_state(self.state_repo, str(uuid.uuid4()))
@@ -414,8 +526,7 @@ class TestCompleteLogin(unittest.TestCase):
             svc.complete_login(exchange_code)
         self.assertEqual(self.token_repo.count(), 0)
 
-    # 13. Disabled user ───────────────────────────────────────────────────────
-
+    # 19. Disabled user
     def test_disabled_user_raises_no_token(self):
         svc, u = self._svc(user=_user(is_active=False))
         exchange_code = _make_consumed_state(self.state_repo, u.id)
@@ -423,8 +534,7 @@ class TestCompleteLogin(unittest.TestCase):
             svc.complete_login(exchange_code)
         self.assertEqual(self.token_repo.count(), 0)
 
-    # 14. Expired user ────────────────────────────────────────────────────────
-
+    # 20. Expired user
     def test_expired_user_raises_no_token(self):
         svc, u = self._svc(user=_user(account_expires_at=_past(3600)))
         exchange_code = _make_consumed_state(self.state_repo, u.id)
