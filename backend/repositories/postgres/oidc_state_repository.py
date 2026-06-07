@@ -10,7 +10,7 @@ class OidcStateRepository:
             conn.execute(
                 """
                 INSERT INTO oidc_states (
-                    id, state, nonce, exchange_code, api_token_id,
+                    id, state, nonce, exchange_code, user_id,
                     created_at, expires_at, consumed_at
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -20,7 +20,7 @@ class OidcStateRepository:
                     state.state,
                     state.nonce,
                     state.exchange_code,
-                    state.api_token_id,
+                    state.user_id,
                     state.created_at,
                     state.expires_at,
                     state.consumed_at,
@@ -49,7 +49,7 @@ class OidcStateRepository:
         self,
         state_id: str,
         exchange_code: str,
-        api_token_id: str,
+        user_id: str,
         expires_at: str,
         consumed_at: str,
     ) -> None:
@@ -59,11 +59,11 @@ class OidcStateRepository:
                 UPDATE oidc_states
                 SET consumed_at = %s,
                     exchange_code = %s,
-                    api_token_id = %s,
+                    user_id = %s,
                     expires_at = %s
                 WHERE id = %s
                 """,
-                (consumed_at, exchange_code, api_token_id, expires_at, state_id),
+                (consumed_at, exchange_code, user_id, expires_at, state_id),
             )
 
     def get_valid_by_exchange_code(self, exchange_code: str, now_iso: str) -> OidcState | None:
@@ -74,7 +74,7 @@ class OidcStateRepository:
                 FROM oidc_states
                 WHERE exchange_code = %s
                   AND consumed_at IS NOT NULL
-                  AND api_token_id IS NOT NULL
+                  AND user_id IS NOT NULL
                   AND expires_at > %s
                 """,
                 (exchange_code, now_iso),
@@ -105,7 +105,7 @@ class OidcStateRepository:
             state=row["state"],
             nonce=row["nonce"],
             exchange_code=row["exchange_code"],
-            api_token_id=row["api_token_id"],
+            user_id=row["user_id"],
             created_at=row["created_at"],
             expires_at=row["expires_at"],
             consumed_at=row["consumed_at"],

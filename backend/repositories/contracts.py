@@ -187,7 +187,7 @@ class OidcStateRepository(ABC):
         self,
         state_id: str,
         exchange_code: str,
-        api_token_id: str,
+        user_id: str,
         expires_at: str,
         consumed_at: str,
     ) -> None: ...

@@ -6,8 +6,8 @@ Covers:
   1. create + get_valid_by_state
   2. get_valid_by_state excludes consumed states
   3. get_valid_by_state excludes expired states
-  4. mark_callback_consumed sets exchange_code/api_token_id/consumed_at/expires_at
-  5. get_valid_by_exchange_code requires api_token_id IS NOT NULL
+  4. mark_callback_consumed sets exchange_code/user_id/consumed_at/expires_at
+  5. get_valid_by_exchange_code requires user_id IS NOT NULL
   6. delete removes the row
   7. delete_expired removes only expired states
 
@@ -91,7 +91,7 @@ class TestOidcStateRepository(unittest.TestCase):
         self.oidc_state_repo.mark_callback_consumed(
             state_id=s.id,
             exchange_code="ex_" + secrets.token_urlsafe(16),
-            api_token_id=str(uuid.uuid4()),
+            user_id=str(uuid.uuid4()),
             expires_at=_future_iso(60),
             consumed_at=utc_now_iso(),
         )
@@ -115,14 +115,14 @@ class TestOidcStateRepository(unittest.TestCase):
         self.oidc_state_repo.create(s)
 
         exchange_code = "ex_" + secrets.token_urlsafe(16)
-        api_token_id = str(uuid.uuid4())
+        user_id = str(uuid.uuid4())
         new_expires_at = _future_iso(60)
         consumed_at = utc_now_iso()
 
         self.oidc_state_repo.mark_callback_consumed(
             state_id=s.id,
             exchange_code=exchange_code,
-            api_token_id=api_token_id,
+            user_id=user_id,
             expires_at=new_expires_at,
             consumed_at=consumed_at,
         )
@@ -130,13 +130,13 @@ class TestOidcStateRepository(unittest.TestCase):
         found = self.oidc_state_repo.get_valid_by_exchange_code(exchange_code, utc_now_iso())
         self.assertIsNotNone(found)
         self.assertEqual(found.exchange_code, exchange_code)
-        self.assertEqual(found.api_token_id, api_token_id)
+        self.assertEqual(found.user_id, user_id)
         self.assertEqual(found.consumed_at, consumed_at)
         self.assertEqual(found.expires_at, new_expires_at)
 
-    # ── Test 5: get_valid_by_exchange_code requires api_token_id IS NOT NULL ──
+    # ── Test 5: get_valid_by_exchange_code requires user_id IS NOT NULL ──────
 
-    def test_get_valid_by_exchange_code_requires_api_token_id_not_null(self):
+    def test_get_valid_by_exchange_code_requires_user_id_not_null(self):
         exchange_code = "orphan_" + secrets.token_urlsafe(16)
         now = utc_now_iso()
         future = _future_iso(60)
@@ -145,7 +145,7 @@ class TestOidcStateRepository(unittest.TestCase):
             conn.execute(
                 """
                 INSERT INTO oidc_states
-                    (id, state, nonce, exchange_code, api_token_id,
+                    (id, state, nonce, exchange_code, user_id,
                      created_at, expires_at, consumed_at)
                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?)
                 """,
@@ -154,7 +154,7 @@ class TestOidcStateRepository(unittest.TestCase):
             )
 
         result = self.oidc_state_repo.get_valid_by_exchange_code(exchange_code, utc_now_iso())
-        self.assertIsNone(result, "State with api_token_id IS NULL must not be returned")
+        self.assertIsNone(result, "State with user_id IS NULL must not be returned")
 
     # ── Test 6: delete removes the row ────────────────────────────────────────
 

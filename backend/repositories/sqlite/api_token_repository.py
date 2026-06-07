@@ -56,22 +56,6 @@ class ApiTokenRepository:
 
         return [self._map_row(row) for row in rows]
 
-    def get_by_id(self, token_id: str) -> ApiToken | None:
-        with self.db.connect() as conn:
-            row = conn.execute(
-                """
-                SELECT *
-                FROM api_tokens
-                WHERE id = ? AND is_active = 1
-                """,
-                (token_id,),
-            ).fetchone()
-
-        if row is None:
-            return None
-
-        return self._map_row(row)
-
     def deactivate(self, user_id: str, token_id: str) -> None:
         with self.db.connect() as conn:
             conn.execute(

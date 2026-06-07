@@ -495,7 +495,7 @@ CREATE TABLE IF NOT EXISTS oidc_states (
     nonce TEXT NOT NULL,
 
     exchange_code TEXT,
-    api_token_id TEXT,
+    user_id TEXT,
 
     created_at TEXT NOT NULL,
     expires_at TEXT NOT NULL,

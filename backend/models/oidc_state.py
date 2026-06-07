@@ -9,5 +9,5 @@ class OidcState:
     created_at: str
     expires_at: str
     exchange_code: str | None = None
-    api_token_id: str | None = None
+    user_id: str | None = None
     consumed_at: str | None = None
