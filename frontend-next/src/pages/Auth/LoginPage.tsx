@@ -6,7 +6,7 @@ import LoginForm from './LoginForm'
 import SetupForm from './SetupForm'
 import ForgotPasswordForm from './ForgotPasswordForm'
 import MagicLoginForm from './MagicLoginForm'
-import { getSetupStatus, storeToken, getStoredToken } from '@/api/auth'
+import { getSetupStatus, storeToken, getStoredToken, type SetupStatus } from '@/api/auth'
 import { invalidateMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
 import { useAuthI18n } from '@/i18n'
@@ -18,7 +18,7 @@ export default function LoginPage() {
   const { appInfo } = useAppInfo()
   const { t } = useAuthI18n()
   const [view, setView] = useState<AuthView>('login')
-  const [setupRequired, setSetupRequired] = useState<boolean | null>(null)
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null)
   const [setupLoading, setSetupLoading] = useState(true)
 
   const existingToken = getStoredToken()
@@ -26,13 +26,16 @@ export default function LoginPage() {
   useEffect(() => {
     if (existingToken) return
     getSetupStatus()
-      .then(s => setSetupRequired(s.setup_required))
-      .catch(() => setSetupRequired(false))
+      .then(s => setSetupStatus(s))
+      .catch(() => setSetupStatus({ setup_required: false, single_user_mode: false }))
       .finally(() => setSetupLoading(false))
   }, [existingToken])
 
   // Redirect away if already authenticated
   if (existingToken) return <Navigate to="/" replace />
+
+  // Single-user mode: no login required — ProtectedRoute handles auth via /me
+  if (!setupLoading && setupStatus?.single_user_mode) return <Navigate to="/" replace />
 
   function handleLoginSuccess(token: string, user: LoginUser) {
     storeToken(token)
@@ -55,7 +58,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-center py-8">
             <Loader2 size={20} className="animate-spin text-muted-foreground" aria-hidden="true" />
           </div>
-        ) : setupRequired ? (
+        ) : setupStatus?.setup_required ? (
           <SetupForm onSuccess={handleLoginSuccess} />
         ) : view === 'forgot-password' ? (
           <ForgotPasswordForm smtpAvailable={smtpAvailable} onSetView={setView} />

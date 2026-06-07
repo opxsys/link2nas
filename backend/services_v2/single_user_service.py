@@ -16,6 +16,32 @@ class SingleUserService:
         self.user_repository = user_repository
         self.settings = settings
 
+    def _promote_user(self, user: User, timestamp: str) -> User:
+        """Ensure a user has the required single-user properties. Returns the user."""
+        changed = False
+
+        if user.role != "super_admin":
+            user.role = "super_admin"
+            changed = True
+
+        if not user.is_active:
+            user.is_active = True
+            changed = True
+
+        if not user.email_verified_at:
+            user.email_verified_at = timestamp
+            changed = True
+
+        if getattr(user, "force_password_change", False):
+            user.force_password_change = False
+            changed = True
+
+        if changed:
+            user.updated_at = timestamp
+            self.user_repository.update(user)
+
+        return user
+
     def get_or_create_single_user(self) -> User:
         email = str(
             getattr(self.settings, "LINK2NAS_SINGLE_USER_EMAIL", "")
@@ -27,45 +53,21 @@ class SingleUserService:
             or "Single User"
         ).strip() or "Single User"
 
-        existing_by_email = self.user_repository.get_by_email(email)
-        existing_by_id = self.user_repository.get_by_id(SINGLE_USER_ID)
-
-        if existing_by_email and existing_by_email.id != SINGLE_USER_ID:
-            raise RuntimeError(
-                f"Single-user email already belongs to another account: {email}"
-            )
-
         timestamp = _now()
 
+        # Canonical single-user (fixed ID) takes priority.
+        # Do not overwrite email/display_name from .env after creation —
+        # those fields are editable from the UI and stored in DB.
+        existing_by_id = self.user_repository.get_by_id(SINGLE_USER_ID)
         if existing_by_id:
-            changed = False
+            return self._promote_user(existing_by_id, timestamp)
 
-            # Do not overwrite email/display_name from .env after creation.
-            # In single-user mode, the profile is editable from the UI and stored in DB.
-            # LINK2NAS_SINGLE_USER_EMAIL and LINK2NAS_SINGLE_USER_DISPLAY_NAME are only
-            # initial bootstrap/fallback values.
-
-            if existing_by_id.role != "super_admin":
-                existing_by_id.role = "super_admin"
-                changed = True
-
-            if not existing_by_id.is_active:
-                existing_by_id.is_active = True
-                changed = True
-
-            if not existing_by_id.email_verified_at:
-                existing_by_id.email_verified_at = timestamp
-                changed = True
-
-            if getattr(existing_by_id, "force_password_change", False):
-                existing_by_id.force_password_change = False
-                changed = True
-
-            if changed:
-                existing_by_id.updated_at = timestamp
-                self.user_repository.update(existing_by_id)
-
-            return existing_by_id
+        # No canonical single-user yet. If a user with the configured email
+        # already exists (e.g. switching from multi-user to single-user mode),
+        # reuse that account rather than failing.
+        existing_by_email = self.user_repository.get_by_email(email)
+        if existing_by_email:
+            return self._promote_user(existing_by_email, timestamp)
 
         user = User(
             id=SINGLE_USER_ID,

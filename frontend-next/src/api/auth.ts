@@ -35,8 +35,13 @@ export function login(email: string, password: string): Promise<LoginResponse> {
   })
 }
 
-export function getSetupStatus(): Promise<{ setup_required: boolean }> {
-  return request<{ setup_required: boolean }>('/api/v2/setup/status')
+export interface SetupStatus {
+  setup_required: boolean
+  single_user_mode: boolean
+}
+
+export function getSetupStatus(): Promise<SetupStatus> {
+  return request<SetupStatus>('/api/v2/setup/status')
 }
 
 export function createFirstAdmin(params: {

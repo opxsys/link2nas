@@ -25,9 +25,17 @@ def _error(message: str, status_code: int = 400):
 def setup_status_v2():
     from flask import current_app
 
+    settings = current_app.config.get("SETTINGS")
+    if getattr(settings, "LINK2NAS_SINGLE_USER_MODE", False):
+        return jsonify({
+            "setup_required": False,
+            "single_user_mode": True,
+        })
+
     user_repo = current_app.config["USER_REPO_V2"]
     return jsonify({
         "setup_required": user_repo.count_users() == 0,
+        "single_user_mode": False,
     })
 
 

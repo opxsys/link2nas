@@ -7,9 +7,9 @@ import { invalidateMe } from '@/lib/useMe'
 type AuthState = 'checking' | 'ok' | 'rejected'
 
 export default function ProtectedRoute() {
-  const [authState, setAuthState] = useState<AuthState>(() =>
-    getStoredToken() ? 'checking' : 'rejected'
-  )
+  // Always start in 'checking' so that single-user mode (no token required)
+  // can authenticate via GET /me without a stored token.
+  const [authState, setAuthState] = useState<AuthState>('checking')
 
   // Validate the stored token by calling /api/v2/me on mount.
   // client.ts already removes the token and dispatches auth-expired on 401;
