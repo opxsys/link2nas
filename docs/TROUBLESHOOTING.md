@@ -444,6 +444,77 @@ After this, the next `docker compose up` will start from a clean state, includin
 
 ---
 
+## OIDC / SSO authentication
+
+### Where do I configure OIDC providers?
+
+Providers are configured in **Admin > SSO / OIDC**, not in `.env`. To add a provider:
+
+1. Go to **Admin > SSO / OIDC** and click **Add provider**.
+2. Fill in the name, slug, issuer URL, client ID, and client secret.
+3. Register the callback URL with your OIDC provider:
+   ```
+   {PUBLIC_BASE_URL}/api/v2/auth/oidc/{slug}/callback
+   ```
+   The `{slug}` must exactly match the slug entered in the admin form.
+4. Click **Test discovery** to verify the issuer URL is reachable and exposes a valid discovery document.
+
+---
+
+### `POST /api/v2/auth/oidc/complete` returns `400 No exchange session found`
+
+**Cause:** The `l2n_oidc_exchange` cookie was not sent or was rejected by the browser.
+
+The most common cause in local development is that the cookie has the `Secure` flag set, which prevents it from being sent over HTTP (non-TLS) connections. This happens when `DEBUG=false`.
+
+**Fix for local HTTP smoke testing:** set `DEBUG=true` in `.env`. The `Secure` flag is omitted when `DEBUG=true`, so the cookie is accepted over plain HTTP.
+
+**In production (HTTPS):** keep `DEBUG=false`. The `Secure` flag is correct and required for HTTPS deployments.
+
+---
+
+### `POST /api/v2/auth/oidc/complete` returns `401 Authentication failed`
+
+Three distinct causes share this generic response (intentionally generic to avoid leaking information):
+
+1. **No matching local account and auto-create is disabled.** The OIDC email does not correspond to any existing Link2NAS account, and `auto_create_users` is `false` for this provider. Either create the account manually in **Admin > Users** or enable auto-create in **Admin > SSO / OIDC**.
+
+2. **`email_verified` is `false` or missing in the `id_token`.** Link2NAS requires a verified email claim. Confirm your provider is configured to include `email_verified: true` in the token. Some providers require explicit configuration to include this claim.
+
+3. **Email mismatch.** The external identity is already linked to a different email. The issuer + subject pair identifies the user after the first login — if the provider changed or the subject was reused, the identity will not match automatically.
+
+---
+
+### The SSO button does not appear on the login page
+
+**Possible causes:**
+
+- No provider is enabled in **Admin > SSO / OIDC**. At least one provider must be enabled to show the login button.
+- The app is running in **single-user mode** (`LINK2NAS_SINGLE_USER_MODE=true`). OIDC is not available in single-user mode — the SSO section is hidden.
+
+---
+
+### Discovery test fails in Admin > SSO / OIDC
+
+**Symptom:** Clicking "Test discovery" returns an error.
+
+**Cause:** The issuer URL is incorrect, the provider is unreachable from the server running Link2NAS, or the discovery document is not available at `{issuer}/.well-known/openid-configuration`.
+
+**Check:**
+- Verify the issuer URL does not have a trailing slash.
+- Confirm the provider is reachable from the server: `curl {issuer}/.well-known/openid-configuration`.
+- In Docker, confirm the container can resolve the provider hostname. Use `docker compose exec web curl {issuer}/.well-known/openid-configuration`.
+
+---
+
+### OIDC rate limit counters not visible in Admin > Security
+
+**Cause:** The application is running in single-user mode (`LINK2NAS_SINGLE_USER_MODE=true`). OIDC rate limit counters (OIDC Initiate, OIDC Callback, OIDC Complete) are hidden in single-user mode.
+
+In multi-user mode, the counters appear in **Admin > Security > Anti-abuse / Rate limits**.
+
+---
+
 ## Quality and test runners
 
 ### `check_unit_tests.sh` fails with `ModuleNotFoundError`

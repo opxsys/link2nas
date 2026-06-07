@@ -36,15 +36,35 @@ The frontend authenticates requests using a **session token sent as an HTTP head
 
 ### OIDC / SSO authentication
 
-When OIDC is enabled, the session model is **unchanged**: after a successful SSO login, Link2NAS issues a standard session token stored in `localStorage` and sent as `X-Api-Key` — identical to local login.
+Link2NAS supports multiple OIDC providers configured via **Admin > SSO / OIDC**. Provider credentials (`client_secret`) are stored encrypted in the database — no OIDC credentials are held in `.env`.
 
-The `l2n_oidc_exchange` cookie introduced for the OIDC flow is **not a global session cookie**. It is:
-- Short-lived (default 60 seconds, controlled by `OIDC_EXCHANGE_CODE_TTL_SECONDS`).
+**Session model (unchanged):** after a successful SSO login, Link2NAS issues a standard session token stored in `localStorage` and sent as `X-Api-Key` — identical to local login. No persistent auth cookie is introduced.
+
+**Provider credentials:**
+- `client_secret` is encrypted at rest with `V2_SECRET_ENCRYPTION_KEY` (Fernet/CryptoService).
+- `client_secret` and `encrypted_client_secret` are never returned by any API endpoint.
+- `GET /api/v2/public/app-info` exposes only `{ slug, button_label }` per provider — no credentials, no issuer, no client ID.
+
+**Callback URL pattern:** each provider has its own slug in the redirect URI registered with the provider:
+```
+{PUBLIC_BASE_URL}/api/v2/auth/oidc/{slug}/callback
+```
+
+**State binding:** `oidc_states.provider_id` binds each state record to the issuing provider, preventing cross-provider state confusion.
+
+**`l2n_oidc_exchange` cookie:**
+- Short-lived (default 60 s, configurable per provider as `exchange_code_ttl_seconds`).
 - Scoped to the `/api/v2/auth/oidc/complete` endpoint only (`Path` attribute).
 - `HttpOnly` and `SameSite=Lax`.
 - Deleted immediately after the exchange completes or fails.
 
-The OAuth authorization code, exchange code, and session token are never placed in URLs. The OIDC client secret is never logged or included in API responses.
+**Security invariants:**
+- `email_verified` is mandatory — tokens without a verified email claim are rejected.
+- No `super_admin` can be created or promoted via OIDC. Auto-created accounts are always assigned `user` role.
+- No `api_token`, session token, exchange code, or authorization code is placed in URLs.
+- OIDC is not available in single-user mode (`LINK2NAS_SINGLE_USER_MODE=true`).
+
+**HTTPS / reverse proxy:** the `Secure` cookie flag is set when `DEBUG=false`. In production, run behind HTTPS. TLS termination via a reverse proxy (nginx, Caddy, Traefik) is a deployment concern outside the scope of this release.
 
 ---
 

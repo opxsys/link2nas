@@ -4,20 +4,20 @@
 
 ### Summary
 
-This release adds generic OpenID Connect (OIDC) / SSO authentication as an optional login method. The local email + password login is unchanged. Configuration is via `.env` only — no Admin UI in this version.
+This release adds generic OpenID Connect (OIDC) / SSO authentication as an optional login method, with full multi-provider support and an Admin UI for provider management. The local email + password login is unchanged. Providers are configured from **Admin > SSO / OIDC** — no OIDC credentials in `.env`.
 
 ---
 
 ### Added
 
-**Generic OIDC / SSO authentication**
+**Generic OIDC / SSO authentication — multi-provider**
 
-Link2NAS now supports any standard OpenID Connect provider (Keycloak, Authentik, Authelia, Google Workspace, Azure AD, etc.) via the Authorization Code Flow.
+Link2NAS now supports any number of standard OpenID Connect providers (Keycloak, Authentik, Authelia, Google Workspace, Azure AD, etc.) via the Authorization Code Flow. Providers are managed from **Admin > SSO / OIDC** and stored in the database.
 
 Flow overview:
 
-1. User clicks the SSO button on the login page → redirected to the provider.
-2. Provider authenticates the user and redirects back to `/api/v2/auth/oidc/callback`.
+1. User clicks an SSO button on the login page → redirected to the corresponding provider.
+2. Provider authenticates the user and redirects back to `GET /api/v2/auth/oidc/{slug}/callback`.
 3. Backend validates the authorization code, verifies the `id_token` (RS256 / ES256 / RS384 / ES384 / RS512), resolves the user.
 4. A short-lived `l2n_oidc_exchange` cookie (HttpOnly, SameSite=Lax, scoped to `/api/v2/auth/oidc/complete`) is set.
 5. Frontend calls `POST /api/v2/auth/oidc/complete` — the cookie is exchanged for a standard Link2NAS session token returned as JSON.
@@ -26,50 +26,73 @@ Flow overview:
 Security properties:
 
 - **No `api_token` in URLs** at any stage of the flow.
-- **`l2n_oidc_exchange` cookie is temporary** — HttpOnly, short-lived (default 60 s), scoped to a single endpoint, deleted immediately on success or failure. It is not a global session cookie.
-- **Session model unchanged** — Link2NAS continues to use `X-Api-Key` / `localStorage`, identical to local login. No persistent auth cookie is introduced.
+- **`l2n_oidc_exchange` cookie is temporary** — HttpOnly, short-lived (default 60 s per provider), scoped to a single endpoint, deleted immediately on success or failure. Not a global session cookie.
+- **Session model unchanged** — Link2NAS continues to use `X-Api-Key` / `localStorage`. No persistent auth cookie is introduced.
 - **`email_verified` is mandatory** — tokens without a verified email claim are rejected.
 - **No `super_admin` via OIDC** — auto-created accounts and externally mapped accounts are always assigned the `user` role. Role promotion requires manual action in the Admin UI.
-- **`OIDC_AUTO_CREATE_USERS=false` by default** — only users with an existing account whose email matches the OIDC `email` claim can sign in via SSO unless auto-creation is explicitly enabled.
-- **OIDC is disabled in single-user mode** — `LINK2NAS_SINGLE_USER_MODE=true` forces `oidc_enabled=false` in the public app-info regardless of `OIDC_ENABLED`.
+- **Auto-create disabled by default** — only users with an existing account whose email matches the OIDC `email` claim can sign in via SSO unless auto-creation is explicitly enabled.
+- **OIDC is disabled and hidden in single-user mode** — when `LINK2NAS_SINGLE_USER_MODE=true`, Admin > SSO / OIDC is hidden, and no OIDC providers are exposed on the login page.
+- **`client_secret` encrypted at rest** — provider secrets are encrypted with `V2_SECRET_ENCRYPTION_KEY` (Fernet). Never returned by API. No OIDC credentials in `.env`.
 
-New environment variables (all optional, safe defaults):
+Callback URL to register with your provider (per-provider slug):
+```
+{PUBLIC_BASE_URL}/api/v2/auth/oidc/{slug}/callback
+```
 
-| Variable | Default |
-|---|---|
-| `OIDC_ENABLED` | `false` |
-| `OIDC_ISSUER` | *(empty)* |
-| `OIDC_CLIENT_ID` | *(empty)* |
-| `OIDC_CLIENT_SECRET` | *(empty)* |
-| `OIDC_SCOPES` | `openid email profile` |
-| `OIDC_BUTTON_LABEL` | `Sign in with SSO` |
-| `OIDC_AUTO_CREATE_USERS` | `false` |
-| `OIDC_ALLOWED_DOMAINS` | *(empty)* |
-| `OIDC_DEFAULT_ROLE` | `user` |
-| `OIDC_STATE_TTL_SECONDS` | `600` |
-| `OIDC_EXCHANGE_CODE_TTL_SECONDS` | `60` |
-| `V2_RATE_LIMIT_OIDC_INITIATE_MAX` | `20` |
-| `V2_RATE_LIMIT_OIDC_INITIATE_WINDOW_SECONDS` | `300` |
-| `V2_RATE_LIMIT_OIDC_CALLBACK_MAX` | `30` |
-| `V2_RATE_LIMIT_OIDC_CALLBACK_WINDOW_SECONDS` | `300` |
-| `V2_RATE_LIMIT_OIDC_COMPLETE_MAX` | `20` |
-| `V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS` | `300` |
+**Admin > SSO / OIDC**
 
-Callback URL to register with your provider: `{PUBLIC_BASE_URL}/api/v2/auth/oidc/callback`
+New admin section for managing OIDC providers:
+- Create, edit, delete providers.
+- Enable / disable individual providers.
+- Test discovery endpoint (`POST /api/v2/admin/oidc-providers/{id}/test-discovery`).
+- Slug is set at creation and cannot be changed.
 
-**Next UI — SSO login button and callback page**
+New admin API endpoints:
 
-- Login page: SSO button displayed below the local login form when `oidc_enabled=true` in app-info. Button label is `OIDC_BUTTON_LABEL` (default: "Sign in with SSO"), with i18n support (EN/FR).
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v2/admin/oidc-providers/` | List all providers |
+| `POST` | `/api/v2/admin/oidc-providers/` | Create a provider |
+| `GET` | `/api/v2/admin/oidc-providers/{id}` | Get a provider |
+| `PATCH` | `/api/v2/admin/oidc-providers/{id}` | Update a provider |
+| `DELETE` | `/api/v2/admin/oidc-providers/{id}` | Delete a provider |
+| `POST` | `/api/v2/admin/oidc-providers/{id}/test-discovery` | Test discovery URL |
+
+Public auth routes (slug-aware):
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v2/auth/oidc/{slug}/initiate` | Start OIDC flow for provider |
+| `GET` | `/api/v2/auth/oidc/{slug}/callback` | Provider callback |
+| `POST` | `/api/v2/auth/oidc/complete` | Exchange cookie for session token |
+
+**Next UI — multi-provider SSO login and callback page**
+
+- Login page: one SSO button per enabled provider, ordered by `sort_order`. Button label is the provider's `button_label`.
 - New public route `/oidc/callback`: completes the exchange, stores the session token, redirects to the home page or `/settings` if `force_password_change` is set.
 - Local login form and all existing auth flows are unchanged.
+
+**OIDC rate limits in Admin > Security > Anti-abuse**
+
+Three OIDC counters are now visible in **Admin > Security > Anti-abuse / Rate limits** (multi-user mode only):
+
+- OIDC Initiate — default: 20 req / 300 s
+- OIDC Callback — default: 30 req / 300 s
+- OIDC Complete — default: 20 req / 300 s
+
+These counters are hidden in single-user mode. Defaults can be overridden via `V2_RATE_LIMIT_OIDC_*` environment variables if needed.
 
 **New unit tests**
 
 - `scripts/tests/unit/test_oidc_external_identity_repository.py` — 6 tests: create, get by issuer/subject, get by user ID, duplicate constraint, update last used.
-- `scripts/tests/unit/test_oidc_state_repository.py` — 8 tests: create, consumed/expired exclusions, `mark_callback_consumed`, `get_valid_by_exchange_code` requires `user_id NOT NULL`, delete, delete_expired.
-- `scripts/tests/unit/test_oidc_service.py` — 14 tests: `handle_callback` (disabled, invalid state, email not verified, disabled/expired user, auto-create off, happy path — no token created); `complete_login` (invalid exchange code, one-time use, user not found, disabled/expired user, happy path — token created and state deleted).
-- `scripts/tests/unit/test_oidc_routes.py` — 15 tests: `/initiate` (disabled → 404, success → 302); `/callback` (success, cookie flags, Secure flag, exchange_code not in Location, error redirect cases); `/complete` (no cookie → 400, success → 200 + cookie cleared, exchange error, user error → generic 401).
-- `scripts/tests/unit/test_app_info_oidc.py` — 4 tests: OIDC disabled, OIDC enabled with label, OIDC forced off in single-user mode, response key whitelist + no internal values leaked.
+- `scripts/tests/unit/test_oidc_state_repository.py` — 11 tests: create, consumed/expired exclusions, `mark_callback_consumed`, `get_valid_by_exchange_code` requires `user_id NOT NULL`, delete, delete_expired.
+- `scripts/tests/unit/test_oidc_provider_repository.py` — repository CRUD.
+- `scripts/tests/unit/test_oidc_provider_service.py` — provider service: create/update/delete, secret handling, slug validation, in-use constraint.
+- `scripts/tests/unit/test_oidc_service.py` — 21 tests: `handle_callback` (disabled, invalid state, email not verified, disabled/expired user, auto-create off, happy path); `complete_login` (invalid exchange code, one-time use, user not found, disabled/expired user, happy path — token created and state deleted).
+- `scripts/tests/unit/test_oidc_routes.py` — 20 tests: slug-aware `/initiate`, `/callback`, `/complete`; cookie flags; Secure flag; error cases; generic error messages.
+- `scripts/tests/unit/test_admin_oidc_provider_routes.py` — 16 tests: admin CRUD routes; auth (super admin only); no secret leakage; discovery test; 409 on delete in-use.
+- `scripts/tests/unit/test_app_info_oidc.py` — 7 tests: OIDC providers list; no sensitive fields in public response; single-user mode hides providers.
+- `scripts/tests/unit/test_anti_abuse_oidc.py` — 7 tests: OIDC kinds in registry; `single_user_hidden=True`; multi-user → kinds visible; single-user → kinds absent; reset kind.
 
 ---
 
@@ -77,23 +100,21 @@ Callback URL to register with your provider: `{PUBLIC_BASE_URL}/api/v2/auth/oidc
 
 | File | What changed |
 |---|---|
-| [CONFIGURATION.md](CONFIGURATION.md) | New `## OIDC / SSO authentication` section: prerequisites, full variable table, rate limit table, security notes. |
-| [SECURITY.md](SECURITY.md) | New `### OIDC / SSO authentication` subsection in Authentication: session model, temporary cookie properties, no-secrets-in-URLs guarantee. |
-| [`.env.sample`](../.env.sample) | New `── OIDC / SSO authentication` block with all 17 variables documented. |
-| [`.env.docker.sample`](../.env.docker.sample) | Same OIDC block. |
-| [`.env.docker.postgres.sample`](../.env.docker.postgres.sample) | Same OIDC block. |
+| [CONFIGURATION.md](CONFIGURATION.md) | OIDC section rewritten: multi-provider, Admin UI, per-provider fields, rate limits in Admin Security. `.env` credentials removed. |
+| [SECURITY.md](SECURITY.md) | OIDC subsection updated: multi-provider, encrypted secrets, callback URL with slug, state binding, security invariants. |
+| [`.env.sample`](../.env.sample) | OIDC provider credentials removed. Replaced with a pointer to Admin > SSO / OIDC. |
+| [`.env.docker.sample`](../.env.docker.sample) | Same. |
+| [`.env.docker.postgres.sample`](../.env.docker.postgres.sample) | Same. |
 
 ---
 
 ### Known limitations / Notes
 
-- **No Admin UI for OIDC in v3.6.** All OIDC configuration is done via `.env`. A future release may add an Admin interface for provider configuration, user-identity management, and OIDC-specific audit logs.
-
-- **`OIDC_DEFAULT_ROLE` is locked to `user`.** The configuration key exists for forward compatibility. No other value is accepted in this release.
-
 - **No OIDC-initiated logout (RP-Initiated Logout).** Clicking "Sign out" in Link2NAS revokes the local session token only. The session with the OIDC provider is not terminated. Users must sign out from the provider separately if needed.
 
-- **External identity linking uses issuer + subject as the stable identifier.** On first OIDC login, if no external identity exists yet, Link2NAS can match an existing local user by verified email. After that initial link, issuer + subject is the stable identifier used on all subsequent logins. If the provider changes or the subject changes, the identity will not match automatically and must be relinked manually.
+- **External identity linking uses issuer + subject as the stable identifier.** On first OIDC login, if no external identity exists, Link2NAS can match an existing local user by verified email. After that initial link, issuer + subject is the stable identifier. If the provider changes or the subject changes, the identity will not match automatically and must be relinked manually.
+
+- **HTTPS / reverse proxy not covered in this release.** Running behind HTTPS is required for the `Secure` cookie flag to be set correctly. TLS termination via a reverse proxy (nginx, Caddy, Traefik) or Cloudflare is a deployment concern that is not covered in this release.
 
 ---
 

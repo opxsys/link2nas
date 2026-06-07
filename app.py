@@ -58,48 +58,6 @@ from backend.routes_v2.admin_security import admin_security_v2_bp
 from backend.routes_v2.public_files import public_files_v2_bp
 
 
-def _bootstrap_oidc_from_env(oidc_provider_service, settings) -> None:
-    """One-time migration: if oidc_providers table is empty and env has full OIDC config,
-    create a 'default' provider from legacy env vars so existing deployments keep working."""
-    import json as _json
-    try:
-        if not bool(getattr(settings, "OIDC_ENABLED", False)):
-            return
-        issuer = str(getattr(settings, "OIDC_ISSUER", "") or "").strip().rstrip("/")
-        client_id = str(getattr(settings, "OIDC_CLIENT_ID", "") or "").strip()
-        client_secret = str(getattr(settings, "OIDC_CLIENT_SECRET", "") or "").strip()
-        if not issuer or not client_id or not client_secret:
-            return
-        if oidc_provider_service.list_all():
-            return
-
-        raw_domains = getattr(settings, "OIDC_ALLOWED_DOMAINS", None)
-        if isinstance(raw_domains, set):
-            allowed_domains = sorted(list(raw_domains))
-        elif isinstance(raw_domains, str) and raw_domains.strip():
-            allowed_domains = [d.strip() for d in raw_domains.split(",") if d.strip()]
-        else:
-            allowed_domains = []
-
-        oidc_provider_service.create_provider(
-            name="Default OIDC provider",
-            slug="default",
-            issuer=issuer,
-            client_id=client_id,
-            client_secret=client_secret,
-            scopes=str(getattr(settings, "OIDC_SCOPES", "openid email profile") or "openid email profile"),
-            button_label=str(getattr(settings, "OIDC_BUTTON_LABEL", "Sign in with SSO") or "Sign in with SSO"),
-            enabled=True,
-            auto_create_users=bool(getattr(settings, "OIDC_AUTO_CREATE_USERS", False)),
-            allowed_domains_json=_json.dumps(allowed_domains),
-            state_ttl_seconds=int(getattr(settings, "OIDC_STATE_TTL_SECONDS", 600) or 600),
-            exchange_code_ttl_seconds=int(getattr(settings, "OIDC_EXCHANGE_CODE_TTL_SECONDS", 60) or 60),
-            sort_order=0,
-        )
-    except Exception:
-        pass  # Never crash the app on bootstrap failure
-
-
 def create_app() -> Flask:
     settings = Settings()
     settings.ensure_directories()
@@ -219,7 +177,6 @@ def create_app() -> Flask:
         ext_id_repo=repositories_v2.external_identity_repository,
         crypto_service=crypto_service_v2,
     )
-    _bootstrap_oidc_from_env(oidc_provider_service_v2, settings)
     app.config["OIDC_PROVIDER_SERVICE_V2"] = oidc_provider_service_v2
 
     app.config["OIDC_SERVICE_V2"] = OidcService(
