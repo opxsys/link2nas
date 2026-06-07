@@ -11,6 +11,10 @@ const FALLBACK: AppInfo = {
   oidc_enabled: false,
   oidc_label: '',
   oidc_providers: [],
+  identity_proxy_enabled: false,
+  identity_proxy_label: '',
+  identity_proxy_auto_login: false,
+  identity_proxy_provider_type: '',
 }
 
 function fetchOnce(): Promise<AppInfo> {

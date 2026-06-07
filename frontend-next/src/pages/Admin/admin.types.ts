@@ -11,6 +11,7 @@ export type AdminSection =
   | 'general'
   | 'timeouts'
   | 'sso'
+  | 'identity-proxy'
 
 export type UserRole = 'admin' | 'user' | 'viewer'
 export type UserStatus = 'active' | 'disabled' | 'pending'
@@ -490,6 +491,27 @@ export interface AdminOidcProvider {
   has_client_secret: boolean
   created_at?: string
   updated_at?: string
+}
+
+// Real API types for GET/PATCH /api/v2/admin/identity-proxy/config
+export interface AdminIdentityProxyConfig {
+  id?: string
+  name?: string
+  provider_type?: string
+  enabled?: boolean
+  label?: string
+  auto_login?: boolean
+  auto_create_users?: boolean
+  allowed_domains?: string[]
+  config?: Record<string, string>
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AdminIdentityProxyTestResult {
+  ok: boolean
+  error?: string
+  detail?: string
 }
 
 export interface OidcProviderPayload {

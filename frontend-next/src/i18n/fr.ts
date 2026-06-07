@@ -104,6 +104,25 @@ export const fr: Translations = {
   oidcSsoFallback:      'Se connecter avec SSO',
   oidcCompletingSignIn: 'Connexion en cours…',
   oidcAuthFailed:       "Échec de l'authentification. Veuillez réessayer.",
+  // Auth — Identity Proxy
+  ipSsoFallback:        "Se connecter via le proxy d'identité",
+  ipAutoLoginSigning:   'Connexion en cours…',
+  ipAutoLoginFailed:    'La connexion a échoué. Veuillez réessayer ou vous connecter manuellement.',
+  ipFallbackToManual:   'Se connecter manuellement',
+
+  // Admin — Identity Proxy
+  adminNavIdentityProxy:       "Proxy d'identité",
+  adminIpTitle:                "Proxy d'identité",
+  adminIpDesc:                 "Configurez un fournisseur d'identité par proxy inverse (ex. Cloudflare Access).",
+  adminIpLabel:                'Libellé du bouton',
+  adminIpAutoLogin:            'Connexion automatique (ignorer la page de connexion derrière un proxy de confiance)',
+  adminIpAutoCreateUsers:      'Créer automatiquement les utilisateurs à la première connexion',
+  adminIpAllowedDomains:       'Domaines e-mail autorisés (séparés par des virgules)',
+  adminIpAllowedDomainsHint:   'Laisser vide pour autoriser tous les domaines.',
+  adminIpTeamDomain:           "Domaine d'équipe",
+  adminIpAudience:             'Audience (AUD)',
+  adminIpTestOk:               'Test de configuration réussi.',
+  adminIpLoadFailed:           "Échec du chargement de la configuration du proxy d'identité",
 
   // Admin SSO / OIDC providers
   adminNavSso:                  'SSO / OIDC',

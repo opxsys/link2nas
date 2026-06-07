@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { login } from '@/api/auth'
 import { ApiError } from '@/api/client'
+import { identityProxyLogin } from '@/api/identity-proxy'
 import { useAuthI18n } from '@/i18n'
 import type { LoginUser } from '@/api/auth'
 import type { OidcPublicProvider } from '@/api/app-info'
@@ -16,17 +17,38 @@ interface Props {
   onSuccess: (token: string, user: LoginUser) => void
   onSetView: (v: AuthView) => void
   oidcProviders?: OidcPublicProvider[]
+  identityProxyEnabled?: boolean
+  identityProxyLabel?: string
 }
 
-export default function LoginForm({ emailAvailable, onSuccess, onSetView, oidcProviders }: Props) {
+export default function LoginForm({
+  emailAvailable, onSuccess, onSetView, oidcProviders,
+  identityProxyEnabled, identityProxyLabel,
+}: Props) {
   const { t } = useAuthI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ipLoading, setIpLoading] = useState(false)
+  const [ipError, setIpError] = useState<string | null>(null)
 
   const providers = oidcProviders ?? []
   const hasOidc = providers.length > 0
+  const hasExternal = hasOidc || identityProxyEnabled
+
+  async function handleIpLogin() {
+    setIpError(null)
+    setIpLoading(true)
+    try {
+      const res = await identityProxyLogin()
+      onSuccess(res.token, res.user)
+    } catch {
+      setIpError(t('ipAutoLoginFailed'))
+    } finally {
+      setIpLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -103,7 +125,7 @@ export default function LoginForm({ emailAvailable, onSuccess, onSetView, oidcPr
         </div>
       )}
 
-      {hasOidc && (
+      {hasExternal && (
         <>
           <div className="relative my-5 flex items-center">
             <div className="flex-1 border-t border-border" />
@@ -117,11 +139,33 @@ export default function LoginForm({ emailAvailable, onSuccess, onSetView, oidcPr
                 type="button"
                 variant="outline"
                 className="w-full"
+                disabled={loading || ipLoading}
                 onClick={() => { window.location.href = `/api/v2/auth/oidc/${provider.slug}/initiate` }}
               >
                 {provider.button_label || t('oidcSsoFallback')}
               </Button>
             ))}
+            {identityProxyEnabled && (
+              <>
+                {ipError && (
+                  <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {ipError}
+                  </p>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={loading || ipLoading}
+                  onClick={handleIpLogin}
+                >
+                  {ipLoading && (
+                    <Loader2 size={14} className="mr-2 animate-spin" aria-hidden="true" />
+                  )}
+                  {identityProxyLabel || t('ipSsoFallback')}
+                </Button>
+              </>
+            )}
           </div>
         </>
       )}

@@ -6,6 +6,7 @@ import LoginForm from './LoginForm'
 import SetupForm from './SetupForm'
 import ForgotPasswordForm from './ForgotPasswordForm'
 import MagicLoginForm from './MagicLoginForm'
+import IdentityProxyAutoLogin from './IdentityProxyAutoLogin'
 import { getSetupStatus, storeToken, getStoredToken, type SetupStatus } from '@/api/auth'
 import { invalidateMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [view, setView] = useState<AuthView>('login')
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null)
   const [setupLoading, setSetupLoading] = useState(true)
+  const [bypassAutoLogin, setBypassAutoLogin] = useState(false)
 
   const existingToken = getStoredToken()
 
@@ -46,6 +48,8 @@ export default function LoginPage() {
   const appName = appInfo.app_name || 'Link2NAS'
   const tagline = appInfo.app_tagline || t('appTaglineFallback')
   const smtpAvailable = appInfo.email_sending_available
+  const ipAutoLogin = appInfo.identity_proxy_enabled && appInfo.identity_proxy_auto_login && !bypassAutoLogin
+  const ipEnabled = appInfo.identity_proxy_enabled && !ipAutoLogin
 
   return (
     <AuthShell appName={appName}>
@@ -60,6 +64,12 @@ export default function LoginPage() {
           </div>
         ) : setupStatus?.setup_required ? (
           <SetupForm onSuccess={handleLoginSuccess} />
+        ) : ipAutoLogin ? (
+          <IdentityProxyAutoLogin
+            label={appInfo.identity_proxy_label}
+            onSuccess={handleLoginSuccess}
+            onFallback={() => setBypassAutoLogin(true)}
+          />
         ) : view === 'forgot-password' ? (
           <ForgotPasswordForm smtpAvailable={smtpAvailable} onSetView={setView} />
         ) : view === 'magic-login' ? (
@@ -70,6 +80,8 @@ export default function LoginPage() {
             onSuccess={handleLoginSuccess}
             onSetView={setView}
             oidcProviders={appInfo.oidc_providers}
+            identityProxyEnabled={ipEnabled}
+            identityProxyLabel={appInfo.identity_proxy_label}
           />
         )}
       </div>

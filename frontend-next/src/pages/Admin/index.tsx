@@ -18,11 +18,13 @@ import AdminMaintenance from './AdminMaintenance'
 import AdminGeneral from './AdminGeneral'
 import AdminTimeouts from './AdminTimeouts'
 import AdminSso from './AdminSso'
+import AdminIdentityProxy from './AdminIdentityProxy'
 import type { AdminSection } from './admin.types'
 
 const VALID_SECTIONS: AdminSection[] = [
   'overview', 'general', 'users', 'announcements', 'emails',
   'security', 'timeouts', 'runtime', 'cleanup', 'system-events', 'maintenance', 'sso',
+  'identity-proxy',
 ]
 
 function toSection(raw: string | null): AdminSection {
@@ -52,15 +54,17 @@ export default function Admin() {
       .catch(() => setAuthState('denied'))
   }, [])
 
+  const SINGLE_USER_HIDDEN: AdminSection[] = ['users', 'announcements', 'sso', 'identity-proxy']
+
   // Redirect URL-driven hidden sections to overview in single-user mode
   useEffect(() => {
-    if (singleUserMode && (activeSection === 'users' || activeSection === 'announcements' || activeSection === 'sso')) {
+    if (singleUserMode && SINGLE_USER_HIDDEN.includes(activeSection)) {
       setActiveSection('overview')
     }
-  }, [singleUserMode, activeSection])
+  }, [singleUserMode, activeSection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hiddenInSingleUser =
-    singleUserMode && (activeSection === 'users' || activeSection === 'announcements' || activeSection === 'sso')
+    singleUserMode && SINGLE_USER_HIDDEN.includes(activeSection)
   const effectiveSection: AdminSection = hiddenInSingleUser ? 'overview' : activeSection
 
   if (authState === 'loading') {
@@ -108,7 +112,8 @@ export default function Admin() {
           {activeSection === 'maintenance'   && <AdminMaintenance />}
           {activeSection === 'general'       && <AdminGeneral />}
           {activeSection === 'timeouts'      && <AdminTimeouts />}
-          {activeSection === 'sso'           && <AdminSso />}
+          {activeSection === 'sso'             && <AdminSso />}
+          {activeSection === 'identity-proxy' && <AdminIdentityProxy />}
         </div>
       </div>
     </>

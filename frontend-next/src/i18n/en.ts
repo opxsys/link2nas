@@ -102,6 +102,25 @@ export const en = {
   oidcSsoFallback:      'Sign in with SSO',
   oidcCompletingSignIn: 'Completing sign in…',
   oidcAuthFailed:       'Authentication failed. Please try again.',
+  // Auth — Identity Proxy
+  ipSsoFallback:        'Sign in with Identity Proxy',
+  ipAutoLoginSigning:   'Signing in…',
+  ipAutoLoginFailed:    'Sign-in failed. Please try again or sign in manually.',
+  ipFallbackToManual:   'Sign in manually',
+
+  // Admin — Identity Proxy
+  adminNavIdentityProxy:       'Identity Proxy',
+  adminIpTitle:                'Identity Proxy',
+  adminIpDesc:                 'Configure a reverse proxy identity provider (e.g. Cloudflare Access).',
+  adminIpLabel:                'Button label',
+  adminIpAutoLogin:            'Auto-login (bypass the login page when behind a trusted proxy)',
+  adminIpAutoCreateUsers:      'Auto-create users on first sign-in',
+  adminIpAllowedDomains:       'Allowed email domains (comma-separated)',
+  adminIpAllowedDomainsHint:   'Leave blank to allow any domain.',
+  adminIpTeamDomain:           'Team domain',
+  adminIpAudience:             'Audience (AUD)',
+  adminIpTestOk:               'Configuration test passed.',
+  adminIpLoadFailed:           'Failed to load identity proxy configuration',
 
   // Admin SSO / OIDC providers
   adminNavSso:                  'SSO / OIDC',

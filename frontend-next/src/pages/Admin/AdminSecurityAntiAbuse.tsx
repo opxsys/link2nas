@@ -22,6 +22,7 @@ const SINGLE_USER_HIDDEN_KINDS = new Set([
   'oidc_initiate',
   'oidc_callback',
   'oidc_complete',
+  'identity_proxy_login',
 ])
 
 type ActionStatus = 'idle' | 'ok' | 'error'
