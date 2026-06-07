@@ -21,6 +21,8 @@ from backend.routes_v2.settings import settings_v2_bp
 from backend.repositories.factory import build_repositories
 from backend.routes_v2.setup import setup_v2_bp
 from backend.routes_v2.auth import auth_v2_bp
+from backend.routes_v2.auth_oidc import auth_oidc_v2_bp
+from backend.services_v2.oidc_service import OidcService
 from backend.routes_v2.admin_users import admin_users_bp
 from backend.routes_v2.system import system_v2_bp
 from backend.services_v2.account_token_service import AccountTokenService
@@ -167,6 +169,14 @@ def create_app() -> Flask:
     app.config["NOTIFICATION_EVENT_REPO_V2"] = notification_event_repo_v2
     app.config["CRYPTO_SERVICE_V2"] = crypto_service_v2
 
+    app.config["OIDC_SERVICE_V2"] = OidcService(
+        settings=settings,
+        user_repo=user_repo_v2,
+        external_identity_repo=repositories_v2.external_identity_repository,
+        oidc_state_repo=repositories_v2.oidc_state_repository,
+        api_token_repo=api_token_repo_v2,
+    )
+
     app.config["SMTP_SERVICE_V2"] = SmtpService(
         smtp_settings_repo_v2,
         crypto_service_v2,
@@ -247,6 +257,7 @@ def create_app() -> Flask:
 
     app.register_blueprint(setup_v2_bp)
     app.register_blueprint(auth_v2_bp)
+    app.register_blueprint(auth_oidc_v2_bp)
     app.register_blueprint(settings_v2_bp)
     app.register_blueprint(system_v2_bp)
     app.register_blueprint(jobs_v2_bp)
