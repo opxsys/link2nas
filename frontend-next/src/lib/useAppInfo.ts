@@ -8,6 +8,8 @@ const FALLBACK: AppInfo = {
   app_name: 'Link2NAS',
   app_tagline: '',
   email_sending_available: false,
+  oidc_enabled: false,
+  oidc_label: '',
 }
 
 function fetchOnce(): Promise<AppInfo> {

@@ -3,6 +3,7 @@ import AppShell from '@/components/layout/AppShell'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import LoginPage from '@/pages/Auth/LoginPage'
 import MagicLoginConfirmPage from '@/pages/Auth/MagicLoginConfirmPage'
+import OidcCallbackPage from '@/pages/Auth/OidcCallbackPage'
 import ResetPasswordPage from '@/pages/Auth/ResetPasswordPage'
 import InvitePage from '@/pages/Auth/InvitePage'
 import VerifyEmailPage from '@/pages/Auth/VerifyEmailPage'
@@ -36,6 +37,7 @@ export default function App() {
       {/* Public auth routes — no sidebar */}
       <Route path="login" element={<LoginPage />} />
       <Route path="magic-login" element={<MagicLoginConfirmPage />} />
+      <Route path="oidc/callback" element={<OidcCallbackPage />} />
       <Route path="reset-password" element={<ResetPasswordPage />} />
       <Route path="invite" element={<InvitePage />} />
       <Route path="verify-email" element={<VerifyEmailPage />} />

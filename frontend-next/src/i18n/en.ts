@@ -97,6 +97,11 @@ export const en = {
   verifyingEmail:       'Verifying email…',
   emailVerified:        'Email verified. You can now sign in.',
   invalidVerifyLink:    'This verification link is invalid, expired, or already used.',
+  // SSO / OIDC
+  oidcOr:               'or',
+  oidcSsoFallback:      'Sign in with SSO',
+  oidcCompletingSignIn: 'Completing sign in…',
+  oidcAuthFailed:       'Authentication failed. Please try again.',
 
   // Shared UI
   loading:   'Loading…',

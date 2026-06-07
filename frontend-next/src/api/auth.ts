@@ -120,6 +120,10 @@ export function confirmEmailVerification(token: string): Promise<{ ok: boolean; 
   })
 }
 
+export function completeOidcLogin(): Promise<LoginResponse> {
+  return request<LoginResponse>('/api/v2/auth/oidc/complete', { method: 'POST' })
+}
+
 export function logout(): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>('/api/v2/auth/logout', { method: 'POST' })
 }

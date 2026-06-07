@@ -99,6 +99,11 @@ export const fr: Translations = {
   verifyingEmail:       "Vérification de l'adresse email…",
   emailVerified:        'Email vérifié. Vous pouvez maintenant vous connecter.',
   invalidVerifyLink:    'Ce lien de vérification est invalide, expiré ou déjà utilisé.',
+  // SSO / OIDC
+  oidcOr:               'ou',
+  oidcSsoFallback:      'Se connecter avec SSO',
+  oidcCompletingSignIn: 'Connexion en cours…',
+  oidcAuthFailed:       "Échec de l'authentification. Veuillez réessayer.",
 
   // Shared UI
   loading:   'Chargement…',

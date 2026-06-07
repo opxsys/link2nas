@@ -14,9 +14,11 @@ interface Props {
   emailAvailable: boolean
   onSuccess: (token: string, user: LoginUser) => void
   onSetView: (v: AuthView) => void
+  oidcEnabled?: boolean
+  oidcLabel?: string
 }
 
-export default function LoginForm({ emailAvailable, onSuccess, onSetView }: Props) {
+export default function LoginForm({ emailAvailable, onSuccess, onSetView, oidcEnabled, oidcLabel }: Props) {
   const { t } = useAuthI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -96,6 +98,24 @@ export default function LoginForm({ emailAvailable, onSuccess, onSetView }: Prop
             {t('magicLogin')}
           </button>
         </div>
+      )}
+
+      {oidcEnabled && (
+        <>
+          <div className="relative my-5 flex items-center">
+            <div className="flex-1 border-t border-border" />
+            <span className="mx-3 text-xs text-muted-foreground">{t('oidcOr')}</span>
+            <div className="flex-1 border-t border-border" />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => { window.location.href = '/api/v2/auth/oidc/initiate' }}
+          >
+            {oidcLabel || t('oidcSsoFallback')}
+          </Button>
+        </>
       )}
     </form>
   )

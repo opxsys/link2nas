@@ -32,10 +32,19 @@ def get_app_info():
         env_fallback=getattr(settings_cfg, "APP_TAGLINE", "")
     ) if app_svc else ""
 
+    single_user_mode = bool(getattr(settings_cfg, "LINK2NAS_SINGLE_USER_MODE", False))
+    oidc_enabled = (
+        bool(getattr(settings_cfg, "OIDC_ENABLED", False))
+        and not single_user_mode
+    )
+    oidc_label = str(getattr(settings_cfg, "OIDC_BUTTON_LABEL", "Sign in with SSO")) if oidc_enabled else ""
+
     return jsonify({
         "app_name": app_name,
         "app_tagline": app_tagline,
         "email_sending_available": smtp_service.is_email_sending_available() if smtp_service else False,
+        "oidc_enabled": oidc_enabled,
+        "oidc_label": oidc_label,
     })
 
 
