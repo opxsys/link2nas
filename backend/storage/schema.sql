@@ -492,3 +492,52 @@ CREATE TABLE IF NOT EXISTS email_templates (
 
 CREATE INDEX IF NOT EXISTS idx_email_templates_key_lang
 ON email_templates(template_key, language);
+
+
+CREATE TABLE IF NOT EXISTS external_identities (
+    id TEXT PRIMARY KEY,
+
+    user_id TEXT NOT NULL,
+
+    provider TEXT NOT NULL,
+    issuer TEXT NOT NULL,
+    subject TEXT NOT NULL,
+
+    email TEXT,
+
+    linked_at TEXT NOT NULL,
+    last_used_at TEXT,
+
+    UNIQUE (issuer, subject),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_external_identities_issuer_subject
+ON external_identities (issuer, subject);
+
+CREATE INDEX IF NOT EXISTS idx_external_identities_user_id
+ON external_identities (user_id);
+
+
+CREATE TABLE IF NOT EXISTS oidc_states (
+    id TEXT PRIMARY KEY,
+
+    state TEXT NOT NULL UNIQUE,
+    nonce TEXT NOT NULL,
+
+    exchange_code TEXT,
+    api_token_id TEXT,
+
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    consumed_at TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_oidc_states_state
+ON oidc_states (state);
+
+CREATE INDEX IF NOT EXISTS idx_oidc_states_exchange_code
+ON oidc_states (exchange_code);
+
+CREATE INDEX IF NOT EXISTS idx_oidc_states_expires_at
+ON oidc_states (expires_at);
