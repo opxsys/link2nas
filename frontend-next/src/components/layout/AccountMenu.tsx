@@ -37,6 +37,7 @@ export default function AccountMenu() {
   const navigate = useNavigate()
   const { preference, setPreference } = useTheme()
   const { me } = useMe()
+  const singleUserMode = Boolean(me?.single_user_mode)
   const { t } = useI18n()
   const [lang, setLang] = useState(me?.preferred_language ?? '')
 
@@ -167,16 +168,18 @@ export default function AccountMenu() {
           </div>
 
           {/* Sign out */}
-          <div className="border-t border-border p-1">
-            <button
-              role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
-              onClick={handleLogout}
-            >
-              <LogOut size={14} aria-hidden="true" />
-              {t('signOut')}
-            </button>
-          </div>
+          {!singleUserMode && (
+            <div className="border-t border-border p-1">
+              <button
+                role="menuitem"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                onClick={handleLogout}
+              >
+                <LogOut size={14} aria-hidden="true" />
+                {t('signOut')}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
