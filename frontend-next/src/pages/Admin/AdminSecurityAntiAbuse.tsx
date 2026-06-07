@@ -4,7 +4,22 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getAntiAbuse, resetAntiAbuseAll, resetAntiAbuseKind } from '@/api/admin-security'
 import type { AntiAbuseStatus, AntiAbuseCounter } from './admin.types'
+import { useMe } from '@/lib/useMe'
 import { useI18n } from '@/i18n'
+
+const SINGLE_USER_HIDDEN_KINDS = new Set([
+  'login',
+  'magic_login_request',
+  'magic_login_confirm',
+  'password_reset_confirm',
+  'email_verification_confirm',
+  'email_verification_request',
+  'admin_invitation_email',
+  'admin_password_reset_email',
+  'token_status',
+  'invitation_accept',
+  'me_password_change',
+])
 
 type ActionStatus = 'idle' | 'ok' | 'error'
 
@@ -26,9 +41,19 @@ function StatusBadge({ status }: { status: AntiAbuseCounter['status'] }) {
 
 export default function AdminSecurityAntiAbuse() {
   const { t } = useI18n()
+  const { me } = useMe()
+  const singleUserMode = Boolean(me?.single_user_mode)
   const [data, setData] = useState<AntiAbuseStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
+
+  const visibleCounters = data?.counters.filter(
+    (counter) => !singleUserMode || !SINGLE_USER_HIDDEN_KINDS.has(counter.kind),
+  ) ?? []
+
+  const visibleCounters = data?.counters.filter(
+    (counter) => !singleUserMode || !SINGLE_USER_HIDDEN_KINDS.has(counter.kind),
+  ) ?? []
   const [resettingKind, setResettingKind] = useState<string | null>(null)
   const [resettingAll, setResettingAll] = useState(false)
   const [actionStatus, setActionStatus] = useState<ActionStatus>('idle')
@@ -138,7 +163,7 @@ export default function AdminSecurityAntiAbuse() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {data.counters.map((c) => (
+                  {visibleCounters.map((c) => (
                     <tr key={c.kind} className="hover:bg-muted/30">
                       <td className="px-3 py-2 text-xs font-medium text-foreground">{c.label}</td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">{c.limit}</td>

@@ -76,44 +76,46 @@ export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled
         </div>
       </SectionCard>
 
-      <SectionCard title={t('adminPwPolicyTitle')} description={t('adminPwPolicyDesc')}>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <label htmlFor="sec-pw-min-length" className={FIELD_LABEL}>
-              {t('adminMinLengthLabel')}
-              <span className="ml-1.5 text-xs text-muted-foreground">(8–128)</span>
-            </label>
-            <div className="flex shrink-0 items-center gap-2">
-              <input
-                id="sec-pw-min-length"
-                type="number"
-                className={NUM}
-                value={passwordPolicy.min_length}
-                disabled={disabled}
-                min={8}
-                max={128}
-                onChange={(e) => onPasswordPolicy('min_length', Number(e.target.value))}
-              />
-              <span className={UNIT}>{t('adminPwChars')}</span>
+      {!singleUserMode && (
+        <SectionCard title={t('adminPwPolicyTitle')} description={t('adminPwPolicyDesc')}>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <label htmlFor="sec-pw-min-length" className={FIELD_LABEL}>
+                {t('adminMinLengthLabel')}
+                <span className="ml-1.5 text-xs text-muted-foreground">(8–128)</span>
+              </label>
+              <div className="flex shrink-0 items-center gap-2">
+                <input
+                  id="sec-pw-min-length"
+                  type="number"
+                  className={NUM}
+                  value={passwordPolicy.min_length}
+                  disabled={disabled}
+                  min={8}
+                  max={128}
+                  onChange={(e) => onPasswordPolicy('min_length', Number(e.target.value))}
+                />
+                <span className={UNIT}>{t('adminPwChars')}</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+              {POLICY_CHECKS.map(({ key, labelKey }) => (
+                <div key={key} className={CHECK_ROW}>
+                  <input
+                    id={`sec-pw-${key}`}
+                    type="checkbox"
+                    className={CHECK}
+                    checked={passwordPolicy[key] as boolean}
+                    disabled={disabled}
+                    onChange={(e) => onPasswordPolicy(key, e.target.checked)}
+                  />
+                  <label htmlFor={`sec-pw-${key}`} className={FIELD_LABEL}>{t(labelKey)}</label>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
-            {POLICY_CHECKS.map(({ key, labelKey }) => (
-              <div key={key} className={CHECK_ROW}>
-                <input
-                  id={`sec-pw-${key}`}
-                  type="checkbox"
-                  className={CHECK}
-                  checked={passwordPolicy[key] as boolean}
-                  disabled={disabled}
-                  onChange={(e) => onPasswordPolicy(key, e.target.checked)}
-                />
-                <label htmlFor={`sec-pw-${key}`} className={FIELD_LABEL}>{t(labelKey)}</label>
-              </div>
-            ))}
-          </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      )}
     </div>
   )
 }
