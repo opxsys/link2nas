@@ -11,3 +11,4 @@ class OidcState:
     exchange_code: str | None = None
     user_id: str | None = None
     consumed_at: str | None = None
+    provider_id: str | None = None

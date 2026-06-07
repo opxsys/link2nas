@@ -57,6 +57,14 @@ class ExternalIdentityRepository:
                 ),
             )
 
+    def count_by_issuer(self, issuer: str) -> int:
+        with self.db.connect() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM external_identities WHERE issuer = ?",
+                (issuer,),
+            ).fetchone()
+        return row[0] if row else 0
+
     def update_last_used(self, identity_id: str, last_used_at: str) -> None:
         with self.db.connect() as conn:
             conn.execute(

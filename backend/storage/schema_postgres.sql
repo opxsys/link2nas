@@ -510,3 +510,35 @@ ON oidc_states (exchange_code);
 
 CREATE INDEX IF NOT EXISTS idx_oidc_states_expires_at
 ON oidc_states (expires_at);
+
+-- Migration: provider_id added for multi-provider OIDC (v3.6)
+ALTER TABLE oidc_states ADD COLUMN IF NOT EXISTS provider_id TEXT DEFAULT NULL;
+
+
+CREATE TABLE IF NOT EXISTS oidc_providers (
+    id                        TEXT    PRIMARY KEY,
+    name                      TEXT    NOT NULL,
+    slug                      TEXT    NOT NULL UNIQUE,
+    enabled                   BOOLEAN NOT NULL DEFAULT TRUE,
+    issuer                    TEXT    NOT NULL UNIQUE,
+    client_id                 TEXT    NOT NULL,
+    encrypted_client_secret   TEXT,
+    scopes                    TEXT    NOT NULL DEFAULT 'openid email profile',
+    button_label              TEXT    NOT NULL,
+    auto_create_users         BOOLEAN NOT NULL DEFAULT FALSE,
+    allowed_domains_json      TEXT    NOT NULL DEFAULT '[]',
+    state_ttl_seconds         INTEGER NOT NULL DEFAULT 600,
+    exchange_code_ttl_seconds INTEGER NOT NULL DEFAULT 60,
+    sort_order                INTEGER NOT NULL DEFAULT 0,
+    created_at                TEXT    NOT NULL,
+    updated_at                TEXT    NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_oidc_providers_slug
+ON oidc_providers (slug);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_oidc_providers_issuer
+ON oidc_providers (issuer);
+
+CREATE INDEX IF NOT EXISTS idx_oidc_providers_sort
+ON oidc_providers (sort_order, created_at);

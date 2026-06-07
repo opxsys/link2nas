@@ -11,9 +11,9 @@ class OidcStateRepository:
                 """
                 INSERT INTO oidc_states (
                     id, state, nonce, exchange_code, user_id,
-                    created_at, expires_at, consumed_at
+                    created_at, expires_at, consumed_at, provider_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     state.id,
@@ -24,6 +24,7 @@ class OidcStateRepository:
                     state.created_at,
                     state.expires_at,
                     state.consumed_at,
+                    state.provider_id,
                 ),
             )
 
@@ -36,6 +37,7 @@ class OidcStateRepository:
                 WHERE state = ?
                   AND consumed_at IS NULL
                   AND expires_at > ?
+                  AND provider_id IS NOT NULL
                 """,
                 (state, now_iso),
             ).fetchone()
@@ -75,6 +77,7 @@ class OidcStateRepository:
                 WHERE exchange_code = ?
                   AND consumed_at IS NOT NULL
                   AND user_id IS NOT NULL
+                  AND provider_id IS NOT NULL
                   AND expires_at > ?
                 """,
                 (exchange_code, now_iso),
@@ -109,4 +112,5 @@ class OidcStateRepository:
             created_at=row["created_at"],
             expires_at=row["expires_at"],
             consumed_at=row["consumed_at"],
+            provider_id=row["provider_id"],
         )

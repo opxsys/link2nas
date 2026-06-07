@@ -5,6 +5,7 @@ from backend.models.announcement_read import AnnouncementRead
 from backend.models.destination_config import DestinationConfig
 from backend.models.external_identity import ExternalIdentity
 from backend.models.job import Job
+from backend.models.oidc_provider import OidcProvider
 from backend.models.oidc_state import OidcState
 from backend.models.provider_config import ProviderConfig
 from backend.models.user import User
@@ -174,6 +175,9 @@ class ExternalIdentityRepository(ABC):
     @abstractmethod
     def update_last_used(self, identity_id: str, last_used_at: str) -> None: ...
 
+    @abstractmethod
+    def count_by_issuer(self, issuer: str) -> int: ...
+
 
 class OidcStateRepository(ABC):
     @abstractmethod
@@ -200,3 +204,29 @@ class OidcStateRepository(ABC):
 
     @abstractmethod
     def delete_expired(self, now_iso: str) -> None: ...
+
+
+class OidcProviderRepository(ABC):
+    @abstractmethod
+    def create(self, provider: OidcProvider) -> None: ...
+
+    @abstractmethod
+    def get_by_id(self, provider_id: str) -> OidcProvider | None: ...
+
+    @abstractmethod
+    def get_by_slug(self, slug: str) -> OidcProvider | None: ...
+
+    @abstractmethod
+    def get_by_issuer(self, issuer: str) -> OidcProvider | None: ...
+
+    @abstractmethod
+    def list_all(self) -> list[OidcProvider]: ...
+
+    @abstractmethod
+    def list_enabled(self) -> list[OidcProvider]: ...
+
+    @abstractmethod
+    def update(self, provider: OidcProvider) -> None: ...
+
+    @abstractmethod
+    def delete(self, provider_id: str) -> None: ...

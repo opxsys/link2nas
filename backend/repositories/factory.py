@@ -76,6 +76,12 @@ from backend.repositories.sqlite.oidc_state_repository import (
 from backend.repositories.postgres.oidc_state_repository import (
     OidcStateRepository as PostgresOidcStateRepository,
 )
+from backend.repositories.sqlite.oidc_provider_repository import (
+    OidcProviderRepository,
+)
+from backend.repositories.postgres.oidc_provider_repository import (
+    OidcProviderRepository as PostgresOidcProviderRepository,
+)
 
 
 class UnsupportedRepositoryBackendError(Exception):
@@ -103,6 +109,7 @@ class Repositories:
     email_template_repository: object
     external_identity_repository: object
     oidc_state_repository: object
+    oidc_provider_repository: object
 
 def build_repositories(settings) -> Repositories:
     backend = settings.V2_DATABASE_BACKEND
@@ -133,6 +140,7 @@ def build_repositories(settings) -> Repositories:
             email_template_repository=EmailTemplateRepository(db),
             external_identity_repository=ExternalIdentityRepository(db),
             oidc_state_repository=OidcStateRepository(db),
+            oidc_provider_repository=OidcProviderRepository(db),
         )
 
     if backend == "postgres":
@@ -160,6 +168,7 @@ def build_repositories(settings) -> Repositories:
             email_template_repository=PostgresEmailTemplateRepository(db),
             external_identity_repository=PostgresExternalIdentityRepository(db),
             oidc_state_repository=PostgresOidcStateRepository(db),
+            oidc_provider_repository=PostgresOidcProviderRepository(db),
         )
 
 

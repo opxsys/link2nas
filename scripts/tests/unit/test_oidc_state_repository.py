@@ -3,13 +3,17 @@
 Unit tests: OidcStateRepository (SQLite).
 
 Covers:
-  1. create + get_valid_by_state
-  2. get_valid_by_state excludes consumed states
-  3. get_valid_by_state excludes expired states
-  4. mark_callback_consumed sets exchange_code/user_id/consumed_at/expires_at
-  5. get_valid_by_exchange_code requires user_id IS NOT NULL
-  6. delete removes the row
-  7. delete_expired removes only expired states
+  1.  create + get_valid_by_state
+  2.  get_valid_by_state excludes consumed states
+  3.  get_valid_by_state excludes expired states
+  4.  get_valid_by_state excludes states without provider_id (legacy/pre-migration)
+  5.  mark_callback_consumed sets exchange_code/user_id/consumed_at/expires_at
+  6.  provider_id is preserved through mark_callback_consumed
+  7.  get_valid_by_exchange_code requires user_id IS NOT NULL
+  8.  get_valid_by_exchange_code rejects exchange codes without provider_id
+  9.  delete removes the row
+  10. delete_expired removes only expired states
+  11. delete_expired keeps valid states
 
 Run from project root:
     python3 scripts/tests/unit/test_oidc_state_repository.py
@@ -50,7 +54,11 @@ def _future_iso(seconds: int = 3600) -> str:
     return (datetime.now(UTC) + timedelta(seconds=seconds)).isoformat()
 
 
-def _make_state(state_val: str | None = None, expires_at: str | None = None) -> OidcState:
+def _make_state(
+    state_val: str | None = None,
+    expires_at: str | None = None,
+    provider_id: str | None = None,
+) -> OidcState:
     now = utc_now_iso()
     return OidcState(
         id=str(uuid.uuid4()),
@@ -58,6 +66,7 @@ def _make_state(state_val: str | None = None, expires_at: str | None = None) -> 
         nonce="nonce_" + secrets.token_urlsafe(16),
         created_at=now,
         expires_at=expires_at or _future_iso(600),
+        provider_id=provider_id or str(uuid.uuid4()),
     )
 
 
@@ -70,7 +79,7 @@ class TestOidcStateRepository(unittest.TestCase):
     def tearDown(self):
         os.unlink(self._db_path)
 
-    # ── Test 1: create + get_valid_by_state ───────────────────────────────────
+    # ── 1. create + get_valid_by_state ────────────────────────────────────────
 
     def test_create_and_get_valid_by_state(self):
         s = _make_state()
@@ -80,9 +89,10 @@ class TestOidcStateRepository(unittest.TestCase):
         self.assertIsNotNone(found)
         self.assertEqual(found.id, s.id)
         self.assertEqual(found.nonce, s.nonce)
+        self.assertEqual(found.provider_id, s.provider_id)
         self.assertIsNone(found.consumed_at)
 
-    # ── Test 2: consumed state excluded ──────────────────────────────────────
+    # ── 2. consumed state excluded ────────────────────────────────────────────
 
     def test_get_valid_by_state_excludes_consumed(self):
         s = _make_state()
@@ -99,7 +109,7 @@ class TestOidcStateRepository(unittest.TestCase):
         found = self.oidc_state_repo.get_valid_by_state(s.state, utc_now_iso())
         self.assertIsNone(found, "Consumed state must not be returned by get_valid_by_state")
 
-    # ── Test 3: expired state excluded ───────────────────────────────────────
+    # ── 3. expired state excluded ─────────────────────────────────────────────
 
     def test_get_valid_by_state_excludes_expired(self):
         s = _make_state(expires_at=_past_iso(60))
@@ -108,7 +118,28 @@ class TestOidcStateRepository(unittest.TestCase):
         found = self.oidc_state_repo.get_valid_by_state(s.state, utc_now_iso())
         self.assertIsNone(found, "Expired state must not be returned by get_valid_by_state")
 
-    # ── Test 4: mark_callback_consumed sets all fields ────────────────────────
+    # ── 4. state without provider_id rejected (legacy/pre-migration rows) ─────
+
+    def test_get_valid_by_state_rejects_state_without_provider_id(self):
+        raw_state = "state_" + secrets.token_urlsafe(16)
+        now = utc_now_iso()
+        future = _future_iso(600)
+
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO oidc_states
+                    (id, state, nonce, exchange_code, user_id,
+                     created_at, expires_at, consumed_at, provider_id)
+                VALUES (?, ?, ?, NULL, NULL, ?, ?, NULL, NULL)
+                """,
+                (str(uuid.uuid4()), raw_state, "nonce_legacy", now, future),
+            )
+
+        result = self.oidc_state_repo.get_valid_by_state(raw_state, utc_now_iso())
+        self.assertIsNone(result, "State with provider_id IS NULL must be rejected")
+
+    # ── 5. mark_callback_consumed sets all fields ─────────────────────────────
 
     def test_mark_callback_consumed_sets_fields(self):
         s = _make_state()
@@ -134,7 +165,28 @@ class TestOidcStateRepository(unittest.TestCase):
         self.assertEqual(found.consumed_at, consumed_at)
         self.assertEqual(found.expires_at, new_expires_at)
 
-    # ── Test 5: get_valid_by_exchange_code requires user_id IS NOT NULL ──────
+    # ── 6. provider_id preserved through mark_callback_consumed ───────────────
+
+    def test_provider_id_preserved_through_callback_consumed(self):
+        provider_id = str(uuid.uuid4())
+        s = _make_state(provider_id=provider_id)
+        self.oidc_state_repo.create(s)
+
+        exchange_code = "ex_" + secrets.token_urlsafe(16)
+        self.oidc_state_repo.mark_callback_consumed(
+            state_id=s.id,
+            exchange_code=exchange_code,
+            user_id=str(uuid.uuid4()),
+            expires_at=_future_iso(60),
+            consumed_at=utc_now_iso(),
+        )
+
+        found = self.oidc_state_repo.get_valid_by_exchange_code(exchange_code, utc_now_iso())
+        self.assertIsNotNone(found)
+        self.assertEqual(found.provider_id, provider_id,
+                         "provider_id must survive mark_callback_consumed unchanged")
+
+    # ── 7. get_valid_by_exchange_code requires user_id IS NOT NULL ────────────
 
     def test_get_valid_by_exchange_code_requires_user_id_not_null(self):
         exchange_code = "orphan_" + secrets.token_urlsafe(16)
@@ -146,17 +198,51 @@ class TestOidcStateRepository(unittest.TestCase):
                 """
                 INSERT INTO oidc_states
                     (id, state, nonce, exchange_code, user_id,
-                     created_at, expires_at, consumed_at)
-                VALUES (?, ?, ?, ?, NULL, ?, ?, ?)
+                     created_at, expires_at, consumed_at, provider_id)
+                VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)
                 """,
-                (str(uuid.uuid4()), "orphan_state_" + secrets.token_urlsafe(8),
-                 "nonce", exchange_code, now, future, now),
+                (
+                    str(uuid.uuid4()),
+                    "orphan_state_" + secrets.token_urlsafe(8),
+                    "nonce",
+                    exchange_code,
+                    now, future, now,
+                    str(uuid.uuid4()),
+                ),
             )
 
         result = self.oidc_state_repo.get_valid_by_exchange_code(exchange_code, utc_now_iso())
         self.assertIsNone(result, "State with user_id IS NULL must not be returned")
 
-    # ── Test 6: delete removes the row ────────────────────────────────────────
+    # ── 8. get_valid_by_exchange_code rejects exchange without provider_id ────
+
+    def test_get_valid_by_exchange_code_rejects_exchange_without_provider_id(self):
+        exchange_code = "legacy_ex_" + secrets.token_urlsafe(16)
+        now = utc_now_iso()
+        future = _future_iso(60)
+
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO oidc_states
+                    (id, state, nonce, exchange_code, user_id,
+                     created_at, expires_at, consumed_at, provider_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                """,
+                (
+                    str(uuid.uuid4()),
+                    "state_" + secrets.token_urlsafe(8),
+                    "nonce",
+                    exchange_code,
+                    str(uuid.uuid4()),
+                    now, future, now,
+                ),
+            )
+
+        result = self.oidc_state_repo.get_valid_by_exchange_code(exchange_code, utc_now_iso())
+        self.assertIsNone(result, "Exchange code with provider_id IS NULL must be rejected")
+
+    # ── 9. delete removes the row ─────────────────────────────────────────────
 
     def test_delete_removes_row(self):
         s = _make_state()
@@ -165,13 +251,12 @@ class TestOidcStateRepository(unittest.TestCase):
 
         self.oidc_state_repo.delete(s.id)
 
-        # Row gone: unique state value can be reinserted without IntegrityError
         s2 = _make_state(state_val=s.state)
         self.oidc_state_repo.create(s2)
         found = self.oidc_state_repo.get_valid_by_state(s.state, utc_now_iso())
         self.assertEqual(found.id, s2.id)
 
-    # ── Test 7: delete_expired removes only expired rows ─────────────────────
+    # ── 10. delete_expired removes only expired rows ──────────────────────────
 
     def test_delete_expired_removes_expired_states(self):
         expired = _make_state(expires_at=_past_iso(3600))
@@ -179,12 +264,13 @@ class TestOidcStateRepository(unittest.TestCase):
 
         self.oidc_state_repo.delete_expired(utc_now_iso())
 
-        # Reuse the same unique state value: must succeed if row was deleted
         fresh = _make_state(state_val=expired.state, expires_at=_future_iso(600))
         self.oidc_state_repo.create(fresh)
         self.assertIsNotNone(
             self.oidc_state_repo.get_valid_by_state(expired.state, utc_now_iso())
         )
+
+    # ── 11. delete_expired keeps valid states ─────────────────────────────────
 
     def test_delete_expired_keeps_valid_states(self):
         valid = _make_state(expires_at=_future_iso(600))
