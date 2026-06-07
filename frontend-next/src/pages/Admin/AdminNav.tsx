@@ -10,6 +10,7 @@ import {
   Wrench,
   Settings2,
   Timer,
+  KeyRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'cleanup',       labelKey: 'adminNavCleanup',       icon: Trash2 },
   { id: 'system-events', labelKey: 'adminNavEvents',        icon: AlertTriangle },
   { id: 'maintenance',   labelKey: 'adminNavMaintenance',   icon: Wrench },
+  { id: 'sso',           labelKey: 'adminNavSso',           icon: KeyRound },
 ]
 
 const SINGLE_USER_HIDDEN_SECTIONS = new Set<AdminSection>(['users', 'announcements'])

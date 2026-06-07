@@ -5,6 +5,7 @@ import { login } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import { useAuthI18n } from '@/i18n'
 import type { LoginUser } from '@/api/auth'
+import type { OidcPublicProvider } from '@/api/app-info'
 import type { AuthView } from './auth.types'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
@@ -14,16 +15,18 @@ interface Props {
   emailAvailable: boolean
   onSuccess: (token: string, user: LoginUser) => void
   onSetView: (v: AuthView) => void
-  oidcEnabled?: boolean
-  oidcLabel?: string
+  oidcProviders?: OidcPublicProvider[]
 }
 
-export default function LoginForm({ emailAvailable, onSuccess, onSetView, oidcEnabled, oidcLabel }: Props) {
+export default function LoginForm({ emailAvailable, onSuccess, onSetView, oidcProviders }: Props) {
   const { t } = useAuthI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const providers = oidcProviders ?? []
+  const hasOidc = providers.length > 0
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -100,21 +103,26 @@ export default function LoginForm({ emailAvailable, onSuccess, onSetView, oidcEn
         </div>
       )}
 
-      {oidcEnabled && (
+      {hasOidc && (
         <>
           <div className="relative my-5 flex items-center">
             <div className="flex-1 border-t border-border" />
             <span className="mx-3 text-xs text-muted-foreground">{t('oidcOr')}</span>
             <div className="flex-1 border-t border-border" />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => { window.location.href = '/api/v2/auth/oidc/initiate' }}
-          >
-            {oidcLabel || t('oidcSsoFallback')}
-          </Button>
+          <div className="flex flex-col gap-2">
+            {providers.map((provider) => (
+              <Button
+                key={provider.slug}
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => { window.location.href = `/api/v2/auth/oidc/${provider.slug}/initiate` }}
+              >
+                {provider.button_label || t('oidcSsoFallback')}
+              </Button>
+            ))}
+          </div>
         </>
       )}
     </form>

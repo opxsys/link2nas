@@ -17,11 +17,12 @@ import AdminSystemEvents from './AdminSystemEvents'
 import AdminMaintenance from './AdminMaintenance'
 import AdminGeneral from './AdminGeneral'
 import AdminTimeouts from './AdminTimeouts'
+import AdminSso from './AdminSso'
 import type { AdminSection } from './admin.types'
 
 const VALID_SECTIONS: AdminSection[] = [
   'overview', 'general', 'users', 'announcements', 'emails',
-  'security', 'timeouts', 'runtime', 'cleanup', 'system-events', 'maintenance',
+  'security', 'timeouts', 'runtime', 'cleanup', 'system-events', 'maintenance', 'sso',
 ]
 
 function toSection(raw: string | null): AdminSection {
@@ -107,6 +108,7 @@ export default function Admin() {
           {activeSection === 'maintenance'   && <AdminMaintenance />}
           {activeSection === 'general'       && <AdminGeneral />}
           {activeSection === 'timeouts'      && <AdminTimeouts />}
+          {activeSection === 'sso'           && <AdminSso />}
         </div>
       </div>
     </>

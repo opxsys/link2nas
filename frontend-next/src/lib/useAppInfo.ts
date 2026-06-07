@@ -10,6 +10,7 @@ const FALLBACK: AppInfo = {
   email_sending_available: false,
   oidc_enabled: false,
   oidc_label: '',
+  oidc_providers: [],
 }
 
 function fetchOnce(): Promise<AppInfo> {

@@ -10,6 +10,7 @@ export type AdminSection =
   | 'maintenance'
   | 'general'
   | 'timeouts'
+  | 'sso'
 
 export type UserRole = 'admin' | 'user' | 'viewer'
 export type UserStatus = 'active' | 'disabled' | 'pending'
@@ -469,4 +470,40 @@ export interface RestartCooldowns {
   default_seconds: number
   realdebrid_seconds: number
   alldebrid_seconds: number
+}
+
+// Real API types for /api/v2/admin/oidc-providers
+export interface AdminOidcProvider {
+  id: string
+  name: string
+  slug: string
+  enabled: boolean
+  issuer: string
+  client_id: string
+  scopes: string
+  button_label: string
+  auto_create_users: boolean
+  allowed_domains: string[]
+  state_ttl_seconds: number
+  exchange_code_ttl_seconds: number
+  sort_order: number
+  has_client_secret: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface OidcProviderPayload {
+  name: string
+  slug?: string
+  enabled: boolean
+  issuer: string
+  client_id: string
+  client_secret?: string
+  scopes: string
+  button_label: string
+  auto_create_users: boolean
+  allowed_domains: string[]
+  state_ttl_seconds: number
+  exchange_code_ttl_seconds: number
+  sort_order: number
 }

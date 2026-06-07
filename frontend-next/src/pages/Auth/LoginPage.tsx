@@ -69,8 +69,7 @@ export default function LoginPage() {
             emailAvailable={smtpAvailable}
             onSuccess={handleLoginSuccess}
             onSetView={setView}
-            oidcEnabled={appInfo.oidc_enabled}
-            oidcLabel={appInfo.oidc_label}
+            oidcProviders={appInfo.oidc_providers}
           />
         )}
       </div>
