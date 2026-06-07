@@ -48,6 +48,10 @@ export default function AdminSecurityFields({ tokenTtl, passwordPolicy, disabled
     { key: 'require_special',   labelKey: 'adminReqSpecial'   },
   ]
 
+  if (singleUserMode) {
+    return null
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <SectionCard title={t('adminTtlTitle')} description={t('adminTtlDesc')}>

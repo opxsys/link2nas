@@ -108,43 +108,45 @@ export default function AdminSecurity() {
 
   return (
     <div className="flex flex-col gap-4">
-      <form onSubmit={handleSave} className="flex flex-col gap-4">
-        <AdminSecurityFields
-          tokenTtl={tokenTtl}
-          passwordPolicy={passwordPolicy}
-          disabled={busy}
-          singleUserMode={singleUserMode}
-          onTokenTtl={handleTokenTtl}
-          onPasswordPolicy={handlePasswordPolicy}
-        />
+      {!singleUserMode && (
+        <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <AdminSecurityFields
+            tokenTtl={tokenTtl}
+            passwordPolicy={passwordPolicy}
+            disabled={busy}
+            singleUserMode={singleUserMode}
+            onTokenTtl={handleTokenTtl}
+            onPasswordPolicy={handlePasswordPolicy}
+          />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={busy}>
-            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            {t('adminSaveSettings')}
-          </Button>
-        </div>
-        {saveStatus === 'saved' && (
-          <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
-            <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
-            <span className="flex-1">{saveMessage}</span>
-            <button type="button" onClick={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }}
-              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
-              <X size={13} aria-hidden="true" />
-            </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" size="sm" disabled={busy}>
+              {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+              {t('adminSaveSettings')}
+            </Button>
           </div>
-        )}
-        {saveStatus === 'error' && (
-          <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-            <XCircle size={15} className="shrink-0" aria-hidden="true" />
-            <span className="flex-1">{saveMessage}</span>
-            <button type="button" onClick={() => setSaveStatus('idle')}
-              className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
-              <X size={13} aria-hidden="true" />
-            </button>
-          </div>
-        )}
-      </form>
+          {saveStatus === 'saved' && (
+            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+              <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+              <span className="flex-1">{saveMessage}</span>
+              <button type="button" onClick={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
+                <X size={13} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {saveStatus === 'error' && (
+            <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+              <XCircle size={15} className="shrink-0" aria-hidden="true" />
+              <span className="flex-1">{saveMessage}</span>
+              <button type="button" onClick={() => setSaveStatus('idle')}
+                className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t('dismiss')}>
+                <X size={13} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+        </form>
+      )}
 
       <AdminSecurityAntiAbuse />
     </div>
