@@ -4,6 +4,7 @@ from backend.models.announcement import Announcement
 from backend.models.announcement_read import AnnouncementRead
 from backend.models.destination_config import DestinationConfig
 from backend.models.external_identity import ExternalIdentity
+from backend.models.identity_proxy_config import IdentityProxyConfig
 from backend.models.job import Job
 from backend.models.oidc_provider import OidcProvider
 from backend.models.oidc_state import OidcState
@@ -230,3 +231,23 @@ class OidcProviderRepository(ABC):
 
     @abstractmethod
     def delete(self, provider_id: str) -> None: ...
+
+
+class IdentityProxyConfigRepository(ABC):
+    @abstractmethod
+    def create(self, config: IdentityProxyConfig) -> None: ...
+
+    @abstractmethod
+    def get_by_id(self, config_id: str) -> IdentityProxyConfig | None: ...
+
+    @abstractmethod
+    def get_first(self) -> IdentityProxyConfig | None: ...
+
+    @abstractmethod
+    def list_all(self) -> list[IdentityProxyConfig]: ...
+
+    @abstractmethod
+    def update(self, config: IdentityProxyConfig) -> None: ...
+
+    @abstractmethod
+    def delete(self, config_id: str) -> None: ...

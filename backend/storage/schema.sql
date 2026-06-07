@@ -572,3 +572,21 @@ ON oidc_providers (issuer);
 
 CREATE INDEX IF NOT EXISTS idx_oidc_providers_sort
 ON oidc_providers (sort_order, created_at);
+
+
+CREATE TABLE IF NOT EXISTS identity_proxy_configs (
+    id                   TEXT    PRIMARY KEY,
+    name                 TEXT    NOT NULL,
+    provider_type        TEXT    NOT NULL,
+    enabled              INTEGER NOT NULL DEFAULT 0,
+    label                TEXT    NOT NULL,
+    auto_login           INTEGER NOT NULL DEFAULT 1,
+    auto_create_users    INTEGER NOT NULL DEFAULT 0,
+    allowed_domains_json TEXT    NOT NULL DEFAULT '[]',
+    config_json          TEXT    NOT NULL DEFAULT '{}',
+    created_at           TEXT    NOT NULL,
+    updated_at           TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_identity_proxy_configs_enabled
+ON identity_proxy_configs (enabled, created_at);

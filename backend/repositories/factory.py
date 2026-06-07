@@ -82,6 +82,12 @@ from backend.repositories.sqlite.oidc_provider_repository import (
 from backend.repositories.postgres.oidc_provider_repository import (
     OidcProviderRepository as PostgresOidcProviderRepository,
 )
+from backend.repositories.sqlite.identity_proxy_config_repository import (
+    IdentityProxyConfigRepository,
+)
+from backend.repositories.postgres.identity_proxy_config_repository import (
+    IdentityProxyConfigRepository as PostgresIdentityProxyConfigRepository,
+)
 
 
 class UnsupportedRepositoryBackendError(Exception):
@@ -110,6 +116,7 @@ class Repositories:
     external_identity_repository: object
     oidc_state_repository: object
     oidc_provider_repository: object
+    identity_proxy_config_repository: object
 
 def build_repositories(settings) -> Repositories:
     backend = settings.V2_DATABASE_BACKEND
@@ -141,6 +148,7 @@ def build_repositories(settings) -> Repositories:
             external_identity_repository=ExternalIdentityRepository(db),
             oidc_state_repository=OidcStateRepository(db),
             oidc_provider_repository=OidcProviderRepository(db),
+            identity_proxy_config_repository=IdentityProxyConfigRepository(db),
         )
 
     if backend == "postgres":
@@ -169,6 +177,7 @@ def build_repositories(settings) -> Repositories:
             external_identity_repository=PostgresExternalIdentityRepository(db),
             oidc_state_repository=PostgresOidcStateRepository(db),
             oidc_provider_repository=PostgresOidcProviderRepository(db),
+            identity_proxy_config_repository=PostgresIdentityProxyConfigRepository(db),
         )
 
 
