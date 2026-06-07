@@ -104,7 +104,7 @@ backend/routes_v2/auth_oidc.py
 backend/services_v2/oidc_service.py
 backend/models/external_identity.py
 backend/repositories/sqlite/external_identity_repository.py
-backend/repositories/postgresql/external_identity_repository.py
+backend/repositories/postgres/external_identity_repository.py
 ```
 
 Possible additional files:
@@ -113,7 +113,7 @@ Possible additional files:
 backend/services_v2/oidc_state_service.py
 backend/models/oidc_exchange_code.py
 backend/repositories/sqlite/oidc_exchange_repository.py
-backend/repositories/postgresql/oidc_exchange_repository.py
+backend/repositories/postgres/oidc_exchange_repository.py
 ```
 
 ### Modified backend files

@@ -156,6 +156,28 @@ class Settings:
         self.CLEANUP_CANCELLED_JOB_RETENTION_HOURS = env_int("CLEANUP_CANCELLED_JOB_RETENTION_HOURS", 336)
         self.CLEANUP_TEMP_FILE_RETENTION_HOURS = env_int("CLEANUP_TEMP_FILE_RETENTION_HOURS", 24)
 
+        self.OIDC_ENABLED = env_bool("OIDC_ENABLED", False)
+        self.OIDC_ISSUER = env("OIDC_ISSUER", "")
+        self.OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", "")
+        self.OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET", "")
+        self.OIDC_SCOPES = env("OIDC_SCOPES", "openid email profile")
+        self.OIDC_BUTTON_LABEL = env("OIDC_BUTTON_LABEL", "Sign in with SSO")
+        self.OIDC_AUTO_CREATE_USERS = env_bool("OIDC_AUTO_CREATE_USERS", False)
+        self.OIDC_ALLOWED_DOMAINS = env_csv("OIDC_ALLOWED_DOMAINS", "")
+        _oidc_default_role = env("OIDC_DEFAULT_ROLE", "user").strip().lower()
+        if _oidc_default_role != "user":
+            raise ValueError("OIDC_DEFAULT_ROLE must be user in this release")
+        self.OIDC_DEFAULT_ROLE = _oidc_default_role
+        self.OIDC_STATE_TTL_SECONDS = env_int("OIDC_STATE_TTL_SECONDS", 600)
+        self.OIDC_EXCHANGE_CODE_TTL_SECONDS = env_int("OIDC_EXCHANGE_CODE_TTL_SECONDS", 60)
+
+        self.V2_RATE_LIMIT_OIDC_INITIATE_MAX = env_int("V2_RATE_LIMIT_OIDC_INITIATE_MAX", 20)
+        self.V2_RATE_LIMIT_OIDC_INITIATE_WINDOW_SECONDS = env_int("V2_RATE_LIMIT_OIDC_INITIATE_WINDOW_SECONDS", 300)
+        self.V2_RATE_LIMIT_OIDC_CALLBACK_MAX = env_int("V2_RATE_LIMIT_OIDC_CALLBACK_MAX", 30)
+        self.V2_RATE_LIMIT_OIDC_CALLBACK_WINDOW_SECONDS = env_int("V2_RATE_LIMIT_OIDC_CALLBACK_WINDOW_SECONDS", 300)
+        self.V2_RATE_LIMIT_OIDC_COMPLETE_MAX = env_int("V2_RATE_LIMIT_OIDC_COMPLETE_MAX", 20)
+        self.V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS = env_int("V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS", 300)
+
     def _validate_production_secrets(self) -> None:
         _PLACEHOLDERS = frozenset({
             "change-me", "change_me", "changeme",
