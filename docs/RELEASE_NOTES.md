@@ -1,5 +1,102 @@
 # Release Notes
 
+## v3.6.0-beta.1
+
+### Summary
+
+This release adds generic OpenID Connect (OIDC) / SSO authentication as an optional login method. The local email + password login is unchanged. Configuration is via `.env` only — no Admin UI in this version.
+
+---
+
+### Added
+
+**Generic OIDC / SSO authentication**
+
+Link2NAS now supports any standard OpenID Connect provider (Keycloak, Authentik, Authelia, Google Workspace, Azure AD, etc.) via the Authorization Code Flow.
+
+Flow overview:
+
+1. User clicks the SSO button on the login page → redirected to the provider.
+2. Provider authenticates the user and redirects back to `/api/v2/auth/oidc/callback`.
+3. Backend validates the authorization code, verifies the `id_token` (RS256 / ES256 / RS384 / ES384 / RS512), resolves the user.
+4. A short-lived `l2n_oidc_exchange` cookie (HttpOnly, SameSite=Lax, scoped to `/api/v2/auth/oidc/complete`) is set.
+5. Frontend calls `POST /api/v2/auth/oidc/complete` — the cookie is exchanged for a standard Link2NAS session token returned as JSON.
+6. Session is stored in `localStorage` and sent as `X-Api-Key`, identical to local login.
+
+Security properties:
+
+- **No `api_token` in URLs** at any stage of the flow.
+- **`l2n_oidc_exchange` cookie is temporary** — HttpOnly, short-lived (default 60 s), scoped to a single endpoint, deleted immediately on success or failure. It is not a global session cookie.
+- **Session model unchanged** — Link2NAS continues to use `X-Api-Key` / `localStorage`, identical to local login. No persistent auth cookie is introduced.
+- **`email_verified` is mandatory** — tokens without a verified email claim are rejected.
+- **No `super_admin` via OIDC** — auto-created accounts and externally mapped accounts are always assigned the `user` role. Role promotion requires manual action in the Admin UI.
+- **`OIDC_AUTO_CREATE_USERS=false` by default** — only users with an existing account whose email matches the OIDC `email` claim can sign in via SSO unless auto-creation is explicitly enabled.
+- **OIDC is disabled in single-user mode** — `LINK2NAS_SINGLE_USER_MODE=true` forces `oidc_enabled=false` in the public app-info regardless of `OIDC_ENABLED`.
+
+New environment variables (all optional, safe defaults):
+
+| Variable | Default |
+|---|---|
+| `OIDC_ENABLED` | `false` |
+| `OIDC_ISSUER` | *(empty)* |
+| `OIDC_CLIENT_ID` | *(empty)* |
+| `OIDC_CLIENT_SECRET` | *(empty)* |
+| `OIDC_SCOPES` | `openid email profile` |
+| `OIDC_BUTTON_LABEL` | `Sign in with SSO` |
+| `OIDC_AUTO_CREATE_USERS` | `false` |
+| `OIDC_ALLOWED_DOMAINS` | *(empty)* |
+| `OIDC_DEFAULT_ROLE` | `user` |
+| `OIDC_STATE_TTL_SECONDS` | `600` |
+| `OIDC_EXCHANGE_CODE_TTL_SECONDS` | `60` |
+| `V2_RATE_LIMIT_OIDC_INITIATE_MAX` | `20` |
+| `V2_RATE_LIMIT_OIDC_INITIATE_WINDOW_SECONDS` | `300` |
+| `V2_RATE_LIMIT_OIDC_CALLBACK_MAX` | `30` |
+| `V2_RATE_LIMIT_OIDC_CALLBACK_WINDOW_SECONDS` | `300` |
+| `V2_RATE_LIMIT_OIDC_COMPLETE_MAX` | `20` |
+| `V2_RATE_LIMIT_OIDC_COMPLETE_WINDOW_SECONDS` | `300` |
+
+Callback URL to register with your provider: `{PUBLIC_BASE_URL}/api/v2/auth/oidc/callback`
+
+**Next UI — SSO login button and callback page**
+
+- Login page: SSO button displayed below the local login form when `oidc_enabled=true` in app-info. Button label is `OIDC_BUTTON_LABEL` (default: "Sign in with SSO"), with i18n support (EN/FR).
+- New public route `/oidc/callback`: completes the exchange, stores the session token, redirects to the home page or `/settings` if `force_password_change` is set.
+- Local login form and all existing auth flows are unchanged.
+
+**New unit tests**
+
+- `scripts/tests/unit/test_oidc_external_identity_repository.py` — 6 tests: create, get by issuer/subject, get by user ID, duplicate constraint, update last used.
+- `scripts/tests/unit/test_oidc_state_repository.py` — 8 tests: create, consumed/expired exclusions, `mark_callback_consumed`, `get_valid_by_exchange_code` requires `user_id NOT NULL`, delete, delete_expired.
+- `scripts/tests/unit/test_oidc_service.py` — 14 tests: `handle_callback` (disabled, invalid state, email not verified, disabled/expired user, auto-create off, happy path — no token created); `complete_login` (invalid exchange code, one-time use, user not found, disabled/expired user, happy path — token created and state deleted).
+- `scripts/tests/unit/test_oidc_routes.py` — 15 tests: `/initiate` (disabled → 404, success → 302); `/callback` (success, cookie flags, Secure flag, exchange_code not in Location, error redirect cases); `/complete` (no cookie → 400, success → 200 + cookie cleared, exchange error, user error → generic 401).
+- `scripts/tests/unit/test_app_info_oidc.py` — 4 tests: OIDC disabled, OIDC enabled with label, OIDC forced off in single-user mode, response key whitelist + no internal values leaked.
+
+---
+
+### Documentation
+
+| File | What changed |
+|---|---|
+| [CONFIGURATION.md](CONFIGURATION.md) | New `## OIDC / SSO authentication` section: prerequisites, full variable table, rate limit table, security notes. |
+| [SECURITY.md](SECURITY.md) | New `### OIDC / SSO authentication` subsection in Authentication: session model, temporary cookie properties, no-secrets-in-URLs guarantee. |
+| [`.env.sample`](../.env.sample) | New `── OIDC / SSO authentication` block with all 17 variables documented. |
+| [`.env.docker.sample`](../.env.docker.sample) | Same OIDC block. |
+| [`.env.docker.postgres.sample`](../.env.docker.postgres.sample) | Same OIDC block. |
+
+---
+
+### Known limitations / Notes
+
+- **No Admin UI for OIDC in v3.6.** All OIDC configuration is done via `.env`. A future release may add an Admin interface for provider configuration, user-identity management, and OIDC-specific audit logs.
+
+- **`OIDC_DEFAULT_ROLE` is locked to `user`.** The configuration key exists for forward compatibility. No other value is accepted in this release.
+
+- **No OIDC-initiated logout (RP-Initiated Logout).** Clicking "Sign out" in Link2NAS revokes the local session token only. The session with the OIDC provider is not terminated. Users must sign out from the provider separately if needed.
+
+- **External identity linking uses issuer + subject as the stable identifier.** On first OIDC login, if no external identity exists yet, Link2NAS can match an existing local user by verified email. After that initial link, issuer + subject is the stable identifier used on all subsequent logins. If the provider changes or the subject changes, the identity will not match automatically and must be relinked manually.
+
+---
+
 ## v3.5.0-beta.13
 
 ### Summary
