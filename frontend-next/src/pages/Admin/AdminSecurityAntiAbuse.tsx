@@ -51,9 +51,6 @@ export default function AdminSecurityAntiAbuse() {
     (counter) => !singleUserMode || !SINGLE_USER_HIDDEN_KINDS.has(counter.kind),
   ) ?? []
 
-  const visibleCounters = data?.counters.filter(
-    (counter) => !singleUserMode || !SINGLE_USER_HIDDEN_KINDS.has(counter.kind),
-  ) ?? []
   const [resettingKind, setResettingKind] = useState<string | null>(null)
   const [resettingAll, setResettingAll] = useState(false)
   const [actionStatus, setActionStatus] = useState<ActionStatus>('idle')
