@@ -5,6 +5,7 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number = 0,
     public readonly data: unknown = null,
+    public readonly code: string | null = null,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -66,8 +67,11 @@ export async function request<T = unknown>(path: string, options: RequestInit = 
       message = `Server error HTTP ${response.status}`
     }
 
-    throw new ApiError(message, response.status, data)
+    const code = typeof d?.code === 'string' ? d.code : null
+
+    throw new ApiError(message, response.status, data, code)
   }
 
   return data as T
 }
+

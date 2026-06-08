@@ -79,7 +79,8 @@ def create_provider():
             "error": (
                 "Cannot enable this OIDC provider while Identity Proxy is active. "
                 "Disable Identity Proxy first."
-            )
+            ),
+            "code": "OIDC_PROVIDER_CONFLICT_IDENTITY_PROXY_ACTIVE",
         }), 409
 
     try:
@@ -163,7 +164,8 @@ def update_provider(provider_id: str):
             "error": (
                 "Cannot enable this OIDC provider while Identity Proxy is active. "
                 "Disable Identity Proxy first."
-            )
+            ),
+            "code": "OIDC_PROVIDER_CONFLICT_IDENTITY_PROXY_ACTIVE",
         }), 409
 
     try:

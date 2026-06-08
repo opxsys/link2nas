@@ -74,7 +74,7 @@ export default function AdminSsoProviderForm({ provider, onSaved, onClose }: Pro
 
       onSaved(saved)
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.code === 'OIDC_PROVIDER_CONFLICT_IDENTITY_PROXY_ACTIVE') {
         setError(t('adminSsoIdentityProxyConflict'))
       } else {
         setError(err instanceof ApiError ? err.message : t('adminSsoSaveFailed'))

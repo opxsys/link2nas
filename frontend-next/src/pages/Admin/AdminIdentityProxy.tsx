@@ -94,7 +94,7 @@ export default function AdminIdentityProxy() {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.code === 'IDENTITY_PROXY_CONFLICT_OIDC_ACTIVE') {
         setSaveError(t('adminIdentityProxyOidcConflict'))
       } else {
         setSaveError(err instanceof ApiError ? err.message : t('saveFailed'))

@@ -87,7 +87,8 @@ def upsert_config():
                 "error": (
                     "Cannot enable Identity Proxy while OIDC providers are active. "
                     "Disable all active OIDC providers first."
-                )
+                ),
+                "code": "IDENTITY_PROXY_CONFLICT_OIDC_ACTIVE",
             }), 409
 
     try:
