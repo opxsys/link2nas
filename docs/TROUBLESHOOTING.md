@@ -537,3 +537,88 @@ The application must be running before executing functional tests. Start the app
 ### `gitleaks` not found
 
 Install it from [github.com/gitleaks/gitleaks](https://github.com/gitleaks/gitleaks), or skip the secret scan step and verify `.env.sample` manually — it must contain only placeholder values.
+
+---
+
+## Identity Proxy / Cloudflare Access
+
+### 403 returned by Cloudflare Access before reaching Link2NAS
+
+**Symptom:** The browser receives a `403` page from Cloudflare Access before the login page appears.
+
+**Cause:** The user is not authorized by the Cloudflare Access policy for this application.
+
+**Fix:** Review the Access policy in the Cloudflare Zero Trust dashboard (`one.dash.cloudflare.com`) under **Access > Applications**. Confirm the user's email or group is included in an allow rule.
+
+---
+
+### `POST /api/v2/auth/identity-proxy/login` returns `401 Authentication failed`
+
+**Symptom:** Login fails with `{"error": "Authentication failed"}`. The reverse proxy is running and the user has access.
+
+**Common causes:**
+
+1. **No JWT header present.** The `Cf-Access-Jwt-Assertion` header was not attached by the reverse proxy. Confirm that all requests to Link2NAS pass through Cloudflare Access and that Link2NAS is not reachable via a path that bypasses the proxy.
+
+2. **Audience mismatch.** The `aud` claim in the JWT does not match the **Audience (AUD)** configured in **Admin > Identity Proxy**. Copy the AUD tag directly from the Cloudflare Access application detail page.
+
+3. **Team domain mismatch.** The `iss` claim in the JWT does not match the configured team domain. Verify the team domain in **Admin > Identity Proxy** matches exactly the value shown in your Cloudflare Zero Trust account.
+
+4. **JWT expired.** The token has passed its `exp` claim. This is expected if the user's Cloudflare session has expired — refreshing the page should trigger a new Cloudflare authentication and a fresh JWT.
+
+5. **No matching Link2NAS account and auto-create disabled.** The email from the JWT does not correspond to any existing Link2NAS account, and **Auto-create users** is disabled. Either create the account manually in **Admin > Users** or enable auto-create in **Admin > Identity Proxy**.
+
+---
+
+### Test passes in Admin > Identity Proxy but login still fails
+
+**Symptom:** The test button in **Admin > Identity Proxy** returns a success, but actual logins return `401`.
+
+**Cause:** The test only verifies that Link2NAS can reach the Cloudflare JWKS endpoint and that the audience is syntactically valid. It does not validate a real JWT from a real user session.
+
+**Check:**
+- Confirm that login requests actually pass through Cloudflare Access and carry a valid `Cf-Access-Jwt-Assertion` header.
+- Verify that Link2NAS is not directly reachable at a path that bypasses the proxy.
+
+---
+
+### Testing `POST /api/v2/auth/identity-proxy/login` with curl returns `401`
+
+**Expected behavior.** Requests made directly with `curl` do not carry a `Cf-Access-Jwt-Assertion` header, so authentication fails with `401 Authentication failed`. This is correct.
+
+To test the endpoint end-to-end, the request must pass through Cloudflare Access so that the JWT header is injected. Direct requests bypassing the proxy are always rejected by design.
+
+---
+
+### Auto-login keeps failing or the spinner does not resolve
+
+**Symptom:** With **Auto-login** enabled, the login page attempts authentication automatically but keeps showing a spinner or falling back to an error.
+
+**Cause:** JWT validation is failing on every attempt — typically because the Cloudflare session has expired or the JWT header is not reaching Link2NAS.
+
+**Fix:**
+1. Open browser developer tools and inspect the `POST /api/v2/auth/identity-proxy/login` request.
+2. If the response is `401`, the JWT is missing or invalid — check the Cloudflare Access session for the current user.
+3. If the response is `404`, Identity Proxy may be disabled or the application is in single-user mode.
+4. Click the **Sign in manually** fallback button (shown on error) to use password-based login while investigating.
+
+---
+
+### Verifying no JWT or sensitive header appears in logs
+
+**Purpose:** Confirm that the `Cf-Access-Jwt-Assertion` header value is not written to application logs.
+
+```bash
+grep -i "cf-access" logs/*.log
+grep -i "jwt" logs/*.log
+grep -i "Assertion" logs/*.log
+```
+
+Expected result: no matches. The Identity Proxy implementation does not log JWT values.
+
+In Docker:
+```bash
+docker compose logs web | grep -iE "cf-access|jwt|Assertion"
+```
+
+Expected result: no matches.

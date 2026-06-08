@@ -66,6 +66,27 @@ Link2NAS supports multiple OIDC providers configured via **Admin > SSO / OIDC**.
 
 **HTTPS / reverse proxy:** the `Secure` cookie flag is set when `DEBUG=false`. In production, run behind HTTPS. TLS termination via a reverse proxy (nginx, Caddy, Traefik) is a deployment concern outside the scope of this release.
 
+### Identity Proxy authentication
+
+Link2NAS supports Identity Proxy authentication as an optional login method. A trusted reverse proxy (such as Cloudflare Access) authenticates the user and attaches a signed JWT in the `Cf-Access-Jwt-Assertion` header; Link2NAS validates the JWT to identify the user.
+
+**JWT validation (Cloudflare Access):**
+- The JWT signature is verified against the JWKS endpoint at `https://{team_domain}/cdn-cgi/access/certs` — no shared secret is stored in Link2NAS.
+- Link2NAS checks the signature algorithm (RS256 / ES256), the `iss` claim (must equal `https://{team_domain}`), the `aud` claim (must match the configured audience), and the `exp` claim.
+- An invalid, missing, or expired JWT results in `401 Authentication failed`. Error details are never included in the response body.
+
+**No JWT logged or returned:** the `Cf-Access-Jwt-Assertion` header value is never written to application logs and never included in error messages or API responses.
+
+**Session model unchanged:** after a successful Identity Proxy login, Link2NAS issues a standard session token stored in `localStorage` and sent as `X-Api-Key` — identical to local login. No persistent auth cookie is introduced.
+
+**Public app-info:** `GET /api/v2/public/app-info` exposes only `identity_proxy_enabled`, `identity_proxy_label`, `identity_proxy_auto_login`, and `identity_proxy_provider_type` — no `team_domain`, no `audience`, no internal config.
+
+**Proxy trust:** `Cf-Access-Jwt-Assertion` must be set only by the trusted reverse proxy. Ensure Link2NAS is not directly reachable from the public internet without passing through the proxy, so that forged headers cannot be submitted directly.
+
+**Auto-create:** if enabled, auto-created accounts are always assigned the `user` role. No `super_admin` can be created or promoted via Identity Proxy. Role promotion requires manual action in **Admin > Users**.
+
+**Single-user mode:** Identity Proxy is not available when `LINK2NAS_SINGLE_USER_MODE=true`. All Identity Proxy endpoints return `404` in single-user mode.
+
 ---
 
 ## 3. CSRF

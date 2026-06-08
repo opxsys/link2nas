@@ -94,15 +94,53 @@ These counters are hidden in single-user mode. Defaults can be overridden via `V
 - `scripts/tests/unit/test_app_info_oidc.py` — 7 tests: OIDC providers list; no sensitive fields in public response; single-user mode hides providers.
 - `scripts/tests/unit/test_anti_abuse_oidc.py` — 7 tests: OIDC kinds in registry; `single_user_hidden=True`; multi-user → kinds visible; single-user → kinds absent; reset kind.
 
+**Identity Proxy authentication — Cloudflare Access**
+
+Link2NAS now supports Identity Proxy authentication as a second optional login method alongside OIDC. A trusted reverse proxy (Cloudflare Access) authenticates the user and attaches a signed JWT in `Cf-Access-Jwt-Assertion`; Link2NAS validates it without requiring user interaction on the login page.
+
+Key properties:
+
+- **Cloudflare Access** is the first supported provider (`cloudflare_access`). JWT validated via JWKS at `https://{team_domain}/cdn-cgi/access/certs` — no shared secret stored in Link2NAS.
+- **Admin UI:** configured from **Admin > Identity Proxy**. Fields: enabled, button label, auto-login, auto-create users, allowed email domains, team domain, audience (AUD). No Identity Proxy credentials in `.env`.
+- **Manual login button:** when auto-login is disabled, the login page shows a button. Clicking it calls `POST /api/v2/auth/identity-proxy/login`.
+- **Auto-login:** when enabled, the login page attempts authentication automatically on load. A manual fallback button is shown on failure.
+- **Session model unchanged:** after a successful Identity Proxy login, Link2NAS issues a standard `X-Api-Key` session token — identical to local login.
+- **`GET /api/v2/public/app-info`** exposes `identity_proxy_enabled`, `identity_proxy_label`, `identity_proxy_auto_login`, `identity_proxy_provider_type` — no `team_domain`, no `audience`.
+- **Rate limit:** `identity_proxy_login` counter — default 20 requests / 300 s. Hidden in single-user mode. Overridable via `V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_MAX` and `V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_WINDOW_SECONDS`.
+- **Single-user mode:** Identity Proxy is disabled when `LINK2NAS_SINGLE_USER_MODE=true`. Admin section hidden; all Identity Proxy endpoints return `404`.
+- **Auto-create:** auto-created accounts are always assigned the `user` role. No `super_admin` can be created via Identity Proxy.
+
+New admin API endpoints:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v2/admin/identity-proxy/config` | Get current Identity Proxy configuration |
+| `PATCH` | `/api/v2/admin/identity-proxy/config` | Create or update Identity Proxy configuration |
+| `POST` | `/api/v2/admin/identity-proxy/test` | Test JWKS reachability and audience validity |
+
+New public auth endpoint:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v2/auth/identity-proxy/login` | Authenticate via Identity Proxy JWT header |
+
+**Next UI — Admin > Identity Proxy and login page integration**
+
+- New admin section **Admin > Identity Proxy**: form with all configuration fields, test button.
+- Login page: shows Identity Proxy button when `identity_proxy_enabled` and auto-login is off.
+- Login page: renders `IdentityProxyAutoLogin` component when `identity_proxy_auto_login` is on — attempts login on mount, shows fallback button on failure.
+- Admin > Security > Anti-abuse: `identity_proxy_login` counter added; hidden in single-user mode.
+
 ---
 
 ### Documentation
 
 | File | What changed |
 |---|---|
-| [CONFIGURATION.md](CONFIGURATION.md) | OIDC section rewritten: multi-provider, Admin UI, per-provider fields, rate limits in Admin Security. `.env` credentials removed. |
-| [SECURITY.md](SECURITY.md) | OIDC subsection updated: multi-provider, encrypted secrets, callback URL with slug, state binding, security invariants. |
-| [`.env.sample`](../.env.sample) | OIDC provider credentials removed. Replaced with a pointer to Admin > SSO / OIDC. |
+| [CONFIGURATION.md](CONFIGURATION.md) | OIDC section rewritten: multi-provider, Admin UI, per-provider fields, rate limits in Admin Security. `.env` credentials removed. New **Identity Proxy authentication** section: concept, OIDC vs Identity Proxy comparison, Cloudflare Access setup (steps A/B/C), admin config fields, user behavior, rate limits. |
+| [SECURITY.md](SECURITY.md) | OIDC subsection updated: multi-provider, encrypted secrets, callback URL with slug, state binding, security invariants. New **Identity Proxy authentication** subsection: JWT validation, JWKS, no JWT logged, session model, proxy trust, auto-create, single-user mode. |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | New **Identity Proxy / Cloudflare Access** section: 6 cases — 403 from Cloudflare, 401 Authentication failed (5 sub-causes), test OK but login fails, curl 403 expected behavior, auto-login loop, log security check. |
+| [`.env.sample`](../.env.sample) | Identity Proxy rate limit variables added as optional commented overrides. |
 | [`.env.docker.sample`](../.env.docker.sample) | Same. |
 | [`.env.docker.postgres.sample`](../.env.docker.postgres.sample) | Same. |
 

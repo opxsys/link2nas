@@ -159,6 +159,89 @@ These counters are hidden in single-user mode. Default values can be overridden 
 
 ---
 
+## Identity Proxy authentication
+
+Link2NAS supports **Identity Proxy** authentication as an optional login method. In this mode, a trusted reverse proxy — such as Cloudflare Access — authenticates the user before the request reaches Link2NAS. The proxy attaches a signed JWT to each request; Link2NAS validates it to identify the user without requiring password input.
+
+### OIDC vs Identity Proxy
+
+| Feature | OIDC | Identity Proxy |
+|---|---|---|
+| User interaction | Redirect to provider login page | Transparent — proxy handles auth |
+| Credential entry | At the OIDC provider | At the proxy (e.g. Cloudflare Access) |
+| Token exchange | Authorization Code Flow | JWT in HTTP header (`Cf-Access-Jwt-Assertion`) |
+| Login page button | Yes — one per enabled provider | Optional — `auto_login` can bypass the login page |
+| Typical use case | External identity providers, SSO | Cloudflare Access, VPN-gated internal access |
+
+**Identity Proxy is not available in single-user mode.** When `LINK2NAS_SINGLE_USER_MODE=true`, the Identity Proxy section is hidden in the Admin UI and all Identity Proxy endpoints return `404`.
+
+### Cloudflare Access — setup
+
+**Step A — Create a Cloudflare Zero Trust application**
+
+1. Log in to the Cloudflare Zero Trust dashboard (`one.dash.cloudflare.com`).
+2. Navigate to **Access > Applications** and click **Add an application**.
+3. Choose **Self-hosted**.
+4. Set the **Application domain** to the domain or subdomain where Link2NAS is accessible — for example, `link2nas.example.com`.
+5. Configure an **Access policy** to control which users or groups can reach the application.
+6. Save the application.
+
+**Step B — Retrieve the team domain**
+
+Your team domain identifies your Cloudflare Zero Trust account. It is visible in the Zero Trust dashboard under **Settings > Custom Pages** or in the application detail page.
+
+It takes the form `{team-name}.cloudflareaccess.com`. Example: `example.cloudflareaccess.com`.
+
+**Step C — Retrieve the application audience (AUD)**
+
+1. In **Access > Applications**, open the application you created.
+2. The **Application Audience (AUD) Tag** is shown in the detail view — copy it. It is a 64-character hex string.
+
+Example (fictitious): `0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef`
+
+### Provider configuration (Admin > Identity Proxy)
+
+Identity Proxy is configured from the Admin UI — not via `.env`. The team domain and audience are stored in the database, encrypted with `V2_SECRET_ENCRYPTION_KEY`.
+
+| Field | Description |
+|---|---|
+| Enabled | Whether Identity Proxy authentication is active. |
+| Button label | Text on the login button when auto-login is disabled (e.g. "Sign in with Cloudflare Access"). |
+| Auto-login | If enabled, the login page is bypassed automatically when the proxy provides a valid JWT. |
+| Auto-create users | If enabled, a new Link2NAS account is created on first sign-in when no matching account exists. Auto-created accounts are always assigned the `user` role. |
+| Allowed email domains | Restrict auto-creation to specific email domains (comma-separated). Leave empty to allow any domain. Only applies when auto-create is enabled. |
+| Team domain | Your Cloudflare Zero Trust team domain (e.g. `example.cloudflareaccess.com`). |
+| Audience (AUD) | The AUD tag from your Cloudflare Access application. |
+
+Use the **Test** button in the Admin UI to confirm that Link2NAS can reach the Cloudflare JWKS endpoint and that the audience is syntactically valid before enabling the integration.
+
+### User behavior
+
+**Auto-login disabled (default):**
+The login page shows a button with the configured label. Clicking it sends `POST /api/v2/auth/identity-proxy/login`. If the reverse proxy has attached a valid JWT, the user is signed in immediately.
+
+**Auto-login enabled:**
+The login page attempts authentication automatically on load. If the JWT is valid, the user is signed in transparently. If authentication fails, a manual fallback button is shown.
+
+### Rate limiting
+
+| Counter | Default limit | Window |
+|---|---|---|
+| Identity Proxy Login | 20 requests | 300 s |
+
+This counter is hidden in single-user mode and visible in **Admin > Security > Anti-abuse / Rate limits** in multi-user mode.
+
+Default values can be overridden via environment variables if needed:
+
+| Variable | Default | Description |
+|---|---|---|
+| `V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_MAX` | `20` | Max login attempts per window per source. |
+| `V2_RATE_LIMIT_IDENTITY_PROXY_LOGIN_WINDOW_SECONDS` | `300` | Window duration in seconds. |
+
+These variables are optional and not required in `.env` unless the defaults need adjustment.
+
+---
+
 ## Storage paths
 
 | Variable | Default | Description |
