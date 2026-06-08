@@ -509,6 +509,7 @@ export const en = {
   badgeRevoked:        'Revoked',
   badgeDisabled:       'Disabled',
   badgeExpired:        'Expired',
+  badgeExpiresSoon:    'Expires soon',
   badgeApiKeySet:      'API key set',
   badgePasswordSet:    'Password set',
   badgeSmtpUnavailable:'SMTP unavailable',

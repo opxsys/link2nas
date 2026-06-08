@@ -136,7 +136,7 @@ export default function AccountProfileCard({ me, onUpdate }: Props) {
           </select>
         </div>
 
-        {me.email_sending_available && (
+        {!me.single_user_mode && me.announcements_enabled && me.email_sending_available && (
           <div className="sm:col-span-1">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
               <input type="checkbox" checked={receiveEmails} disabled={saving}

@@ -156,6 +156,35 @@ New public auth endpoint:
 
 ---
 
+## v3.5.0-beta.14
+
+### Summary
+
+UI/UX stabilisation and provider improvements. No backend business-logic changes.
+
+---
+
+### Fixed
+
+- **Settings — announcement email preference**: the "Receive application emails" option is now hidden in single-user mode, when announcements are globally disabled, or when email sending is unavailable. Previously it appeared in all three cases regardless of relevance.
+
+- **Notifications — SMTP/Email channel availability**: after saving SMTP settings in Admin, the Email notification channel now appears in the channel creation modal without a full browser reload. The `useMe` cache is now invalidated alongside `useSmtpStatus` after a successful SMTP save.
+
+- **Prowlarr page — redundant helper text removed**: the descriptor "Browse and submit via your Prowlarr instance. Configure the integration in Settings → Prowlarr." has been removed from the Prowlarr page header. The text was always visible and was redundant with the empty-state card that already links to Settings.
+
+- **Providers — account expiration display (RealDebrid / AllDebrid)**:
+  - The provider row now calls `onReload` after a successful connection test so the expiration date saved to the database appears immediately without a manual page refresh.
+  - Unix second timestamps (e.g. `1781973241`) returned by the provider API are now parsed correctly. Previously `new Date("1781973241")` produced `Invalid Date`.
+  - Expiration status is shown with a colour-coded badge: expired (red), ≤ 7 days (red/orange "Expires soon"), ≤ 30 days (orange "Expires soon"), > 30 days (neutral), not yet tested (no badge).
+
+---
+
+### Tests
+
+- **`scripts/tests/unit/test_notification_rule_channel_change.py`** — four unit tests covering the notification rule channel-change scenario: event uses initial config; event uses new config after rule update; updated `config_id` persisted in DB; disabled config excluded from rule matching. All four pass.
+
+---
+
 ## v3.5.0-beta.13
 
 ### Summary
