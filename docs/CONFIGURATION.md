@@ -163,6 +163,8 @@ These counters are hidden in single-user mode. Default values can be overridden 
 
 Link2NAS supports **Identity Proxy** authentication as an optional login method. In this mode, a trusted reverse proxy — such as Cloudflare Access — authenticates the user before the request reaches Link2NAS. The proxy attaches a signed JWT to each request; Link2NAS validates it to identify the user without requiring password input.
 
+**Supported provider in v3.6:** Cloudflare Access (`cloudflare_access`) is the only Identity Proxy provider supported and validated in this release. The provider-type architecture is intentionally extensible, but other providers are not supported unless explicitly documented in a future release.
+
 ### OIDC vs Identity Proxy
 
 | Feature | OIDC | Identity Proxy |

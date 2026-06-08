@@ -100,7 +100,7 @@ Link2NAS now supports Identity Proxy authentication as a second optional login m
 
 Key properties:
 
-- **Cloudflare Access** is the first supported provider (`cloudflare_access`). JWT validated via JWKS at `https://{team_domain}/cdn-cgi/access/certs` — no shared secret stored in Link2NAS.
+- **Cloudflare Access** (`cloudflare_access`) is the only Identity Proxy provider supported and validated in this release. JWT validated via JWKS at `https://{team_domain}/cdn-cgi/access/certs` — no shared secret stored in Link2NAS. The provider-type architecture is intentionally extensible for future providers.
 - **Admin UI:** configured from **Admin > Identity Proxy**. Fields: enabled, button label, auto-login, auto-create users, allowed email domains, team domain, audience (AUD). No Identity Proxy credentials in `.env`.
 - **Manual login button:** when auto-login is disabled, the login page shows a button. Clicking it calls `POST /api/v2/auth/identity-proxy/login`.
 - **Auto-login:** when enabled, the login page attempts authentication automatically on load. A manual fallback button is shown on failure.

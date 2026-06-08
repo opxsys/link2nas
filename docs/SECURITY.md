@@ -70,6 +70,8 @@ Link2NAS supports multiple OIDC providers configured via **Admin > SSO / OIDC**.
 
 Link2NAS supports Identity Proxy authentication as an optional login method. A trusted reverse proxy (such as Cloudflare Access) authenticates the user and attaches a signed JWT in the `Cf-Access-Jwt-Assertion` header; Link2NAS validates the JWT to identify the user.
 
+**Supported provider in v3.6:** Cloudflare Access (`cloudflare_access`) is the only supported and validated Identity Proxy provider. Other provider types are not supported unless explicitly documented in a future release.
+
 **JWT validation (Cloudflare Access):**
 - The JWT signature is verified against the JWKS endpoint at `https://{team_domain}/cdn-cgi/access/certs` — no shared secret is stored in Link2NAS.
 - Link2NAS checks the signature algorithm (RS256 / ES256), the `iss` claim (must equal `https://{team_domain}`), the `aud` claim (must match the configured audience), and the `exp` claim.
