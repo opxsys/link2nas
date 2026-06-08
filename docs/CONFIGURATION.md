@@ -173,6 +173,13 @@ Link2NAS supports **Identity Proxy** authentication as an optional login method.
 | Login page button | Yes — one per enabled provider | Optional — `auto_login` can bypass the login page |
 | Typical use case | External identity providers, SSO | Cloudflare Access, VPN-gated internal access |
 
+**Mutual exclusivity.** OIDC and Identity Proxy are mutually exclusive at activation time. Both configurations can coexist in the database, but only one external authentication family can be active at once:
+- Multiple OIDC providers may be enabled together.
+- Identity Proxy cannot be enabled while any OIDC provider is active.
+- An OIDC provider cannot be enabled while Identity Proxy is active.
+- Disable the active mode first, then enable the other one.
+- Local email + password login is always available regardless of which mode is active.
+
 **Identity Proxy is not available in single-user mode.** When `LINK2NAS_SINGLE_USER_MODE=true`, the Identity Proxy section is hidden in the Admin UI and all Identity Proxy endpoints return `404`.
 
 ### Cloudflare Access — setup

@@ -148,6 +148,8 @@ New public auth endpoint:
 
 ### Technical improvements
 
+- **OIDC and Identity Proxy are mutually exclusive at activation time.** Both configurations can coexist in the database, but only one external authentication family can be enabled at a time. Admin routes now enforce this: enabling Identity Proxy is rejected if any OIDC provider is active, and enabling an OIDC provider is rejected if Identity Proxy is active. Disabling the active mode before enabling the other is the intended flow. Multiple OIDC providers may be enabled together. Local login is always available regardless.
+
 - **REDIS_URL support for RQ workers and local download queues.** `worker.py`, `local_download_worker.py`, and `local_download_queue.py` now prefer `REDIS_URL` for Redis connections, with fallback to `REDIS_HOST` / `REDIS_PORT` / `REDIS_DB`. A shared helper `backend/services_v2/redis_connection.py` (`build_redis_connection`) centralises this logic. This aligns Docker deployments with the rest of the application configuration.
 
 ---
