@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ApiError } from '@/api/client'
 import { createAdminOidcProvider, updateAdminOidcProvider } from '@/api/admin-oidc-providers'
 import { useI18n } from '@/i18n'
+import AdminSsoInfoBlock from './AdminSsoInfoBlock'
 import type { AdminOidcProvider, OidcProviderPayload } from './admin.types'
 
 const LABEL = 'mb-1 block text-xs font-medium text-foreground'
@@ -73,7 +74,11 @@ export default function AdminSsoProviderForm({ provider, onSaved, onClose }: Pro
 
       onSaved(saved)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('adminSsoSaveFailed'))
+      if (err instanceof ApiError && err.status === 409) {
+        setError(t('adminSsoIdentityProxyConflict'))
+      } else {
+        setError(err instanceof ApiError ? err.message : t('adminSsoSaveFailed'))
+      }
     } finally {
       setSaving(false)
     }
@@ -183,6 +188,8 @@ export default function AdminSsoProviderForm({ provider, onSaved, onClose }: Pro
               {t('adminSsoAutoCreateUsers')}
             </label>
           </div>
+
+          <AdminSsoInfoBlock slug={slug} issuer={issuer} clientId={clientId} scopes={scopes} />
 
           {error && (
             <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>

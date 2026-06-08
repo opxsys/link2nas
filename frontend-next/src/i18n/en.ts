@@ -121,6 +121,7 @@ export const en = {
   adminIpAudience:             'Audience (AUD)',
   adminIpTestOk:               'Configuration test passed.',
   adminIpLoadFailed:           'Failed to load identity proxy configuration',
+  adminIdentityProxyOidcConflict: 'Cannot enable Identity Proxy while OIDC providers are active. Disable all active OIDC providers first.',
 
   // Admin SSO / OIDC providers
   adminNavSso:                  'SSO / OIDC',
@@ -166,7 +167,27 @@ export const en = {
   adminSsoDeleteSuccess:        'Provider deleted.',
   adminSsoLoadFailed:           'Failed to load OIDC providers.',
   adminSsoSaveFailed:           'Failed to save provider.',
+  adminSsoIdentityProxyConflict: 'Cannot enable this OIDC provider while Identity Proxy is active. Disable Identity Proxy first.',
   adminSsoDeleteFailed:         'Failed to delete provider.',
+
+  // SSO / OIDC — provider form info block
+  adminSsoInfoTitle:             'Provider configuration reference',
+  adminSsoInfoEffectiveUrl:      'Effective public base URL',
+  adminSsoInfoCallbackUrl:       'Redirect URI / Callback URL',
+  adminSsoInfoCallbackHint:      'Register this URL in your OIDC provider as Valid redirect URI, Callback URL or Redirect URI.',
+  adminSsoInfoKeycloakHint:      'Keycloak: Clients > <client> > Settings > Valid redirect URIs. Add the Callback URL shown above.',
+  adminSsoInfoRecommendedScopes: 'Recommended scopes',
+  adminSsoInfoSlugEmpty:         'Enter the slug above to generate the Callback URL.',
+
+  // Identity Proxy — Cloudflare Access info block
+  adminIpInfoTitle:      'Cloudflare Access configuration reference',
+  adminIpInfoDesc:       'In Cloudflare Zero Trust, configure a Self-hosted application that protects the Link2NAS public URL. Link2NAS will validate the JWT transmitted in the Cf-Access-Jwt-Assertion header.',
+  adminIpInfoPublicUrl:  'Link2NAS public URL',
+  adminIpInfoAppUrl:     'Application URL (Self-hosted application URL)',
+  adminIpInfoCallback:   'Callback URL',
+  adminIpInfoCallbackNA: 'Not applicable for Cloudflare Access — Cloudflare protects the application upstream and passes a signed JWT to Link2NAS.',
+  adminIpInfoHeader:     'Expected header',
+  adminIpInfoCfFields:   'Cloudflare fields to copy into Link2NAS',
 
   // Shared UI
   loading:   'Loading…',

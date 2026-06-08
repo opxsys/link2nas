@@ -9,6 +9,7 @@ import {
   testAdminIdentityProxyConfig,
 } from '@/api/admin-identity-proxy'
 import { useI18n } from '@/i18n'
+import AdminIdentityProxyInfoBlock from './AdminIdentityProxyInfoBlock'
 import type { AdminIdentityProxyConfig } from './admin.types'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
@@ -93,7 +94,11 @@ export default function AdminIdentityProxy() {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : t('saveFailed'))
+      if (err instanceof ApiError && err.status === 409) {
+        setSaveError(t('adminIdentityProxyOidcConflict'))
+      } else {
+        setSaveError(err instanceof ApiError ? err.message : t('saveFailed'))
+      }
     } finally {
       setSaving(false)
     }
@@ -197,6 +202,8 @@ export default function AdminIdentityProxy() {
             {testResult.ok ? t('adminIpTestOk') : (testResult.error ?? t('testFailed'))}
           </div>
         )}
+
+        <AdminIdentityProxyInfoBlock />
 
         <div className="flex gap-2">
           <Button size="sm" onClick={handleSave} disabled={busy}>

@@ -123,6 +123,7 @@ export const fr: Translations = {
   adminIpAudience:             'Audience (AUD)',
   adminIpTestOk:               'Test de configuration réussi.',
   adminIpLoadFailed:           "Échec du chargement de la configuration du proxy d'identité",
+  adminIdentityProxyOidcConflict: "Impossible d'activer le Proxy d'identité tant que des fournisseurs OIDC sont actifs. Désactivez d'abord tous les fournisseurs OIDC actifs.",
 
   // Admin SSO / OIDC providers
   adminNavSso:                  'SSO / OIDC',
@@ -168,7 +169,27 @@ export const fr: Translations = {
   adminSsoDeleteSuccess:        'Fournisseur supprimé.',
   adminSsoLoadFailed:           'Échec du chargement des fournisseurs OIDC.',
   adminSsoSaveFailed:           'Échec de l\'enregistrement du fournisseur.',
+  adminSsoIdentityProxyConflict: "Impossible d\'activer ce fournisseur OIDC tant que le Proxy d\'identité est actif. Désactivez d\'abord le Proxy d\'identité.",
   adminSsoDeleteFailed:         'Échec de la suppression du fournisseur.',
+
+  // SSO / OIDC — bloc d'informations du formulaire fournisseur
+  adminSsoInfoTitle:             'Référence de configuration du fournisseur',
+  adminSsoInfoEffectiveUrl:      'URL publique effective',
+  adminSsoInfoCallbackUrl:       'URI de redirection / Callback URL',
+  adminSsoInfoCallbackHint:      'Renseignez cette URL dans votre fournisseur OIDC comme Valid redirect URI, Callback URL ou Redirect URI.',
+  adminSsoInfoKeycloakHint:      'Keycloak : Clients > <client> > Paramètres > Valid redirect URIs. Ajoutez la Callback URL affichée ci-dessus.',
+  adminSsoInfoRecommendedScopes: 'Scopes recommandés',
+  adminSsoInfoSlugEmpty:         'Renseignez le slug ci-dessus pour générer la Callback URL.',
+
+  // Proxy d'identité — bloc d'informations Cloudflare Access
+  adminIpInfoTitle:      'Référence de configuration Cloudflare Access',
+  adminIpInfoDesc:       "Dans Cloudflare Zero Trust, configurez une application Self-hosted qui protège l'URL publique Link2NAS. Link2NAS validera ensuite le JWT transmis dans l'en-tête Cf-Access-Jwt-Assertion.",
+  adminIpInfoPublicUrl:  'URL publique Link2NAS',
+  adminIpInfoAppUrl:     "URL d'application (Self-hosted application URL)",
+  adminIpInfoCallback:   'Callback URL',
+  adminIpInfoCallbackNA: "Non applicable pour Cloudflare Access — Cloudflare protège l'application en amont et transmet un JWT signé à Link2NAS.",
+  adminIpInfoHeader:     'En-tête attendu',
+  adminIpInfoCfFields:   'Champs Cloudflare à reporter dans Link2NAS',
 
   // Shared UI
   loading:   'Chargement…',

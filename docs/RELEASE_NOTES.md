@@ -42,6 +42,7 @@ Callback URL to register with your provider (per-provider slug):
 **Admin > SSO / OIDC**
 
 New admin section for managing OIDC providers:
+- Shows provider-side configuration references directly in the Admin UI, including the exact OIDC redirect URI / callback URL to register with the provider.
 - Create, edit, delete providers.
 - Enable / disable individual providers.
 - Test discovery endpoint (`POST /api/v2/admin/oidc-providers/{id}/test-discovery`).
