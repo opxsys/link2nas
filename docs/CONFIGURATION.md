@@ -275,11 +275,11 @@ The database schema is applied automatically on startup.
 | `REDIS_HOST` | `127.0.0.1` | Redis hostname. |
 | `REDIS_PORT` | `6379` | Redis port. |
 | `REDIS_DB` | `0` | Redis database index. |
-| `REDIS_URL` | *(empty)* | Full Redis DSN — takes precedence over `HOST`/`PORT`/`DB` for the rate limiter if set. |
+| `REDIS_URL` | *(empty)* | Full Redis DSN — takes precedence over `HOST`/`PORT`/`DB` for all RQ workers and the rate limiter if set. Example: `redis://redis:6379/0` or `redis://:password@redis:6379/0`. |
 | `RQ_QUEUE_NAME` | `link2nas` | Name of the main RQ job queue. |
 | `RQ_LOCAL_DOWNLOAD_QUEUE_NAME` | `link2nas-local-downloads` | Name of the local-download RQ queue. |
 
-Both `worker.py` and `local_download_worker` use `REDIS_HOST`/`PORT`/`DB` directly. The rate limiter uses `REDIS_URL` if set, otherwise falls back to the same host/port/db.
+`REDIS_URL` is preferred for all RQ workers (`worker.py`, `local_download_worker`, `local_download_queue`) and the rate limiter. `REDIS_HOST` / `REDIS_PORT` / `REDIS_DB` remain supported as fallback when `REDIS_URL` is not set.
 
 ---
 

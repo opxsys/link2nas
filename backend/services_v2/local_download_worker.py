@@ -1,10 +1,10 @@
 import json
 import time
-from redis import Redis
 from rq import Queue, Worker
 
 from app import create_app
 from config import Settings
+from backend.services_v2.redis_connection import build_redis_connection
 from backend.services_v2.job_service import now
 from backend.services_v2.destinations.local_destination import LocalDownloadCancelled
 from backend.services_v2.job_support.destination_error import apply_destination_failure
@@ -190,12 +190,7 @@ def main() -> None:
         f"poll_interval_seconds={local_worker_settings.get('poll_interval_seconds')}"
     )
 
-    redis_conn = Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=settings.REDIS_DB,
-        decode_responses=False,
-    )
+    redis_conn = build_redis_connection(settings, decode_responses=False)
 
     queue = Queue(settings.RQ_LOCAL_DOWNLOAD_QUEUE_NAME, connection=redis_conn)
     worker = Worker([queue], connection=redis_conn)

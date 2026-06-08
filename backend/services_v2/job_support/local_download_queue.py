@@ -1,7 +1,7 @@
-from redis import Redis
 from rq import Queue
 
 from backend.models.job import Job
+from backend.services_v2.redis_connection import build_redis_connection
 from backend.services_v2.user_context import UserContext
 
 
@@ -11,12 +11,7 @@ def enqueue_local_download(
     job: Job,
     destination_config_id: str | None,
 ) -> None:
-    redis_conn = Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=settings.REDIS_DB,
-        decode_responses=False,
-    )
+    redis_conn = build_redis_connection(settings, decode_responses=False)
 
     queue = Queue(
         settings.RQ_LOCAL_DOWNLOAD_QUEUE_NAME,

@@ -146,6 +146,12 @@ New public auth endpoint:
 
 ---
 
+### Technical improvements
+
+- **REDIS_URL support for RQ workers and local download queues.** `worker.py`, `local_download_worker.py`, and `local_download_queue.py` now prefer `REDIS_URL` for Redis connections, with fallback to `REDIS_HOST` / `REDIS_PORT` / `REDIS_DB`. A shared helper `backend/services_v2/redis_connection.py` (`build_redis_connection`) centralises this logic. This aligns Docker deployments with the rest of the application configuration.
+
+---
+
 ### Known limitations / Notes
 
 - **No OIDC-initiated logout (RP-Initiated Logout).** Clicking "Sign out" in Link2NAS revokes the local session token only. The session with the OIDC provider is not terminated. Users must sign out from the provider separately if needed.
