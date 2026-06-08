@@ -99,6 +99,7 @@ Current coverage:
 - `test_destination_registry.py` — `DESTINATION_KEYS`, `DESTINATION_ALIAS_KEYS`, `DESTINATION_ALL_KEYS`, and display name completeness
 - `test_single_user_mode.py` — `SingleUserService` and setup/status behaviour: fresh DB creates the single-user account; account reused by canonical ID or email; promotion to super_admin; reactivation of a disabled account; idempotence; multi-user fresh DB reports `setup_required=True`
 - `test_logout_revokes_session_token.py` — session token revocation: token active before deactivate; invalid after deactivate; idempotent deactivation; other tokens for the same user are not revoked; magic-login token treated identically to a session token; unknown token returns None without error
+- `test_notification_rule_channel_change.py` — verifies that updating a notification rule's `config_id` causes subsequent events to use the new channel config, not the old one; also covers disabled-config exclusion from rule matching
 
 To run a single test file directly:
 ```bash
@@ -280,6 +281,7 @@ Uses `docker-compose.yml` + `docker-compose.postgres.yml`. Waits up to 450 secon
 | After qBittorrent/Prowlarr changes | `scripts/tests/qbittorrent/test_qbittorrent_compat.sh` |
 | After single-user mode changes | `check_unit_tests.sh` + manual H1 checklist |
 | After logout / session token changes | `check_unit_tests.sh` + Authentication / Session checklist |
+| After notification rule or channel changes | `check_unit_tests.sh` + `test_v3_full.sh` |
 
 ---
 
@@ -297,6 +299,9 @@ python3 -m unittest scripts/tests/unit/test_single_user_mode -v
 
 # Logout / token revocation unit tests
 python3 -m unittest scripts/tests/unit/test_logout_revokes_session_token -v
+
+# Notification rule channel-change unit tests
+python3 -m unittest scripts/tests/unit/test_notification_rule_channel_change -v
 
 # Frontend type-check and build (no app required)
 cd frontend-next && npm run type-check && npm run build

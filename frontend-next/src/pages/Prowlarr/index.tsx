@@ -31,7 +31,7 @@ export default function Prowlarr() {
   if (loading) {
     return (
       <>
-        <PageHeader title={t('navProwlarr')} description={t('prowlarrDesc')} />
+        <PageHeader title={t('navProwlarr')} />
         <div className="flex items-center gap-2 py-12 text-muted-foreground">
           <Loader2 size={18} className="animate-spin" aria-hidden="true" />
           <span className="text-sm">{t('loading')}</span>
@@ -50,7 +50,6 @@ export default function Prowlarr() {
     <>
       <PageHeader
         title={t('navProwlarr')}
-        description={t('prowlarrDesc')}
       />
 
       <div className="flex flex-col gap-6">

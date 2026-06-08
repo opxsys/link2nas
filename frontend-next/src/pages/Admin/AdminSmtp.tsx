@@ -4,6 +4,7 @@ import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
 import { getSmtpSettings, saveSmtpSettings, testSmtpSettings } from '@/api/admin-smtp'
 import { invalidateSmtpStatus } from '@/lib/useSmtpStatus'
+import { invalidateMe } from '@/lib/useMe'
 import type { RealSmtpSettings } from './admin.types'
 import AdminSmtpFields, { type SmtpFields } from './AdminSmtpFields'
 import { useI18n } from '@/i18n'
@@ -85,6 +86,7 @@ export default function AdminSmtp() {
       setSaveStatus('saved')
       setSaveMessage(t('adminSmtpSaved'))
       invalidateSmtpStatus()
+      invalidateMe()
       saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
     } catch (err) {
       setSaveStatus('error')

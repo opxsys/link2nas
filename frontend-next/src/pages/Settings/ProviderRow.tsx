@@ -12,11 +12,53 @@ import { PROVIDER_ICON as TYPE_ICON, PROVIDER_LABEL as TYPE_LABEL } from '@/lib/
 
 type TestStatus = 'idle' | 'testing' | 'ok' | 'error'
 
-function formatProviderExpiry(value: string | null): string | null {
+function parseExpiry(value: string | null): Date | null {
   if (!value) return null
-  const d = new Date(value)
-  if (isNaN(d.getTime())) return value
+  const iso = new Date(value)
+  if (!isNaN(iso.getTime())) return iso
+  const n = Number(value)
+  if (!isNaN(n) && n > 0) {
+    // Unix seconds (10-digit, up to ~2286) vs milliseconds (13-digit)
+    const ms = n < 1e10 ? n * 1000 : n
+    const d = new Date(ms)
+    if (!isNaN(d.getTime())) return d
+  }
+  return null
+}
+
+function formatProviderExpiry(value: string | null): string | null {
+  const d = parseExpiry(value)
+  if (!d) return null
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
+}
+
+type ExpiryStatus = 'unknown' | 'expired' | 'critical' | 'warning' | 'ok'
+
+function getExpiryStatus(value: string | null): ExpiryStatus {
+  const d = parseExpiry(value)
+  if (!d) return 'unknown'
+  const now = new Date()
+  const diffDays = (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  if (diffDays < 0) return 'expired'
+  if (diffDays <= 7) return 'critical'
+  if (diffDays <= 30) return 'warning'
+  return 'ok'
+}
+
+const EXPIRY_BADGE_CLASS: Record<ExpiryStatus, string> = {
+  unknown:  'border-border bg-muted text-muted-foreground',
+  expired:  'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400',
+  critical: 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400',
+  warning:  'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400',
+  ok:       'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400',
+}
+
+const EXPIRY_TEXT_CLASS: Record<ExpiryStatus, string> = {
+  unknown:  'text-muted-foreground',
+  expired:  'text-red-600 dark:text-red-400',
+  critical: 'text-red-600 dark:text-red-400',
+  warning:  'text-amber-600 dark:text-amber-400',
+  ok:       'text-muted-foreground',
 }
 
 interface Props {
@@ -32,7 +74,7 @@ interface Props {
 
 export default function ProviderRow({
   config, actingAction, isLastActiveDefault,
-  onEdit, onToggleEnabled, onSetDefault, onDelete,
+  onEdit, onToggleEnabled, onSetDefault, onDelete, onReload,
 }: Props) {
   const { t } = useI18n()
   const acting = actingAction !== null
@@ -42,8 +84,8 @@ export default function ProviderRow({
   const Icon = TYPE_ICON[config.provider_type] ?? Cloud
   const typeLabel = TYPE_LABEL[config.provider_type] ?? config.provider_type
   const expiryLabel = formatProviderExpiry(config.account_expires_at)
-  const expiresAt = config.account_expires_at ? new Date(config.account_expires_at) : null
-  const isExpired = expiresAt && !isNaN(expiresAt.getTime()) ? expiresAt < new Date() : false
+  const expiryStatus = getExpiryStatus(config.account_expires_at)
+  const isExpired = expiryStatus === 'expired'
 
   async function handleTest() {
     setTestStatus('testing')
@@ -53,6 +95,7 @@ export default function ProviderRow({
       const username = result.provider_user?.['username'] as string | undefined
       setTestStatus('ok')
       setTestMessage(username ? `${t('providerConnected')} — ${username}` : t('providerConnected'))
+      onReload()
     } catch (err) {
       setTestStatus('error')
       setTestMessage(err instanceof ApiError ? err.message : t('testFailed'))
@@ -80,15 +123,21 @@ export default function ProviderRow({
               <KeyRound size={10} aria-hidden="true" /> {t('badgeApiKeySet')}
             </span>
           )}
-          {isExpired && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-              <AlertTriangle size={10} aria-hidden="true" /> {t('badgeExpired')}
+          {(expiryStatus === 'expired' || expiryStatus === 'critical') && (
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${EXPIRY_BADGE_CLASS[expiryStatus]}`}>
+              <AlertTriangle size={10} aria-hidden="true" />
+              {expiryStatus === 'expired' ? t('badgeExpired') : t('badgeExpiresSoon')}
+            </span>
+          )}
+          {expiryStatus === 'warning' && (
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${EXPIRY_BADGE_CLASS.warning}`}>
+              <AlertTriangle size={10} aria-hidden="true" /> {t('badgeExpiresSoon')}
             </span>
           )}
         </div>
 
         {expiryLabel && (
-          <p className={`mt-0.5 text-xs ${isExpired ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+          <p className={`mt-0.5 text-xs ${EXPIRY_TEXT_CLASS[expiryStatus]}`}>
             {isExpired ? t('badgeExpired') : t('labelExpires')}: {expiryLabel}
           </p>
         )}

@@ -441,6 +441,7 @@ export const fr: Translations = {
   badgeRevoked:         'Révoqué',
   badgeDisabled:        'Désactivé',
   badgeExpired:         'Expiré',
+  badgeExpiresSoon:     'Expire bientôt',
   badgeApiKeySet:       'Clé API définie',
   badgePasswordSet:     'Mot de passe défini',
   badgeSmtpUnavailable: 'SMTP indisponible',
