@@ -87,6 +87,8 @@ Link2NAS supports Identity Proxy authentication as an optional login method. A t
 
 **Single-user mode:** Identity Proxy is not available when `LINK2NAS_SINGLE_USER_MODE=true`. All Identity Proxy endpoints return `404` in single-user mode.
 
+**Mutual exclusivity with OIDC:** OIDC and Identity Proxy cannot be active simultaneously. Allowing both would create ambiguous authentication flows, conflicting identity mappings, and auto-login conflicts. Backend admin routes enforce this rule — enabling one is rejected while the other is active. `GET /api/v2/public/app-info` additionally suppresses OIDC data when Identity Proxy is active, as a defense-in-depth layer.
+
 ---
 
 ## 3. CSRF

@@ -225,6 +225,9 @@ class OidcProviderService:
         self._repo.update(provider)
         return provider
 
+    def has_enabled_providers(self) -> bool:
+        return len(self._repo.list_enabled()) > 0
+
     def delete_provider(self, provider_id: str) -> None:
         provider = self.get_provider_or_raise(provider_id)
         count = self._ext_id_repo.count_by_issuer(provider.issuer)

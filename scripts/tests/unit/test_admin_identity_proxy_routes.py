@@ -25,6 +25,11 @@ Covers:
   Security:
     12. Response never contains raw JWT, token, or client_secret fields
 
+  Mutual exclusivity — Identity Proxy vs OIDC:
+    13. Enable IP when OIDC providers are active → 409
+    14. Enable IP when OIDC service is absent → 200 (check skipped)
+    15. Disable IP (enabled=False) with active OIDC providers → 200 (no check)
+
 Run from project root:
     python3 scripts/tests/unit/test_admin_identity_proxy_routes.py
 """
@@ -155,9 +160,19 @@ class _FakeConfigService:
         }
 
 
+# ── Fake OIDC provider service (minimal, for mutex tests) ─────────────────────
+
+class _FakeOidcProviderService:
+    def __init__(self, has_enabled: bool = False):
+        self._has_enabled = has_enabled
+
+    def has_enabled_providers(self) -> bool:
+        return self._has_enabled
+
+
 # ── App factory ───────────────────────────────────────────────────────────────
 
-def _make_app(svc=None) -> Flask:
+def _make_app(svc=None, oidc_provider_svc=None) -> Flask:
     app = Flask(__name__)
     app.config["TESTING"] = True
     app.config["SETTINGS"] = _FakeSettings()
@@ -165,6 +180,7 @@ def _make_app(svc=None) -> Flask:
     app.config["USER_REPO_V2"] = _FakeUserRepo()
     app.config["SINGLE_USER_SERVICE_V2"] = None
     app.config["IDENTITY_PROXY_CONFIG_SERVICE_V2"] = svc
+    app.config["OIDC_PROVIDER_SERVICE_V2"] = oidc_provider_svc
     app.register_blueprint(admin_identity_proxy_bp)
     return app
 
@@ -304,6 +320,52 @@ class TestPostTest(unittest.TestCase):
         )
         data = resp.get_json()
         self.assertFalse(data["ok"])
+
+
+class TestMutualExclusivity(unittest.TestCase):
+
+    # 13. Enabling IP with active OIDC providers → 409
+    def test_enable_ip_with_active_oidc_returns_409(self):
+        oidc_svc = _FakeOidcProviderService(has_enabled=True)
+        resp = _make_app(
+            svc=_FakeConfigService(None),
+            oidc_provider_svc=oidc_svc,
+        ).test_client().patch(
+            "/api/v2/admin/identity-proxy/config",
+            json={"provider_type": "cloudflare_access", "enabled": True,
+                  "config": {"team_domain": "x.cloudflareaccess.com", "audience": "a"}},
+            **_auth(),
+        )
+        self.assertEqual(resp.status_code, 409)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertIn("OIDC", data["error"])
+
+    # 14. Enabling IP with no OIDC service present → 200 (check skipped)
+    def test_enable_ip_without_oidc_service_succeeds(self):
+        resp = _make_app(
+            svc=_FakeConfigService(None),
+            oidc_provider_svc=None,
+        ).test_client().patch(
+            "/api/v2/admin/identity-proxy/config",
+            json={"provider_type": "cloudflare_access", "enabled": True,
+                  "config": {"team_domain": "x.cloudflareaccess.com", "audience": "a"}},
+            **_auth(),
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    # 15. Disabling IP (enabled=False) with active OIDC → 200 (no check triggered)
+    def test_disable_ip_with_active_oidc_allowed(self):
+        oidc_svc = _FakeOidcProviderService(has_enabled=True)
+        resp = _make_app(
+            svc=_FakeConfigService(_make_config(enabled=True)),
+            oidc_provider_svc=oidc_svc,
+        ).test_client().patch(
+            "/api/v2/admin/identity-proxy/config",
+            json={"enabled": False},
+            **_auth(),
+        )
+        self.assertEqual(resp.status_code, 200)
 
 
 class TestAdminSecurity(unittest.TestCase):

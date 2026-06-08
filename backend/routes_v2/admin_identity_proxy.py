@@ -74,6 +74,22 @@ def upsert_config():
 
     existing = svc.get_first_config()
 
+    # Determine effective enabled value before writing.
+    if existing is None:
+        new_enabled = bool(data.get("enabled", False))
+    else:
+        new_enabled = bool(data.get("enabled", existing.enabled))
+
+    if new_enabled:
+        oidc_svc = current_app.config.get("OIDC_PROVIDER_SERVICE_V2")
+        if oidc_svc is not None and oidc_svc.has_enabled_providers():
+            return jsonify({
+                "error": (
+                    "Cannot enable Identity Proxy while OIDC providers are active. "
+                    "Disable all active OIDC providers first."
+                )
+            }), 409
+
     try:
         if existing is None:
             config = svc.create_config(

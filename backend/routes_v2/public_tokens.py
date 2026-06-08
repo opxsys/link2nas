@@ -40,12 +40,17 @@ def get_app_info():
     if oidc_provider_svc:
         oidc_providers = oidc_provider_svc.list_public_enabled_providers(single_user_mode)
 
-    oidc_enabled = len(oidc_providers) > 0
-    oidc_label = oidc_providers[0]["button_label"] if oidc_providers else ""
-
     ip_status: dict = {}
     if identity_proxy_auth_svc:
         ip_status = identity_proxy_auth_svc.get_public_status(single_user_mode)
+
+    # Defense-in-depth: admin config should prevent both being enabled simultaneously,
+    # but suppress OIDC at read time if Identity Proxy is already active.
+    if ip_status.get("enabled"):
+        oidc_providers = []
+
+    oidc_enabled = len(oidc_providers) > 0
+    oidc_label = oidc_providers[0]["button_label"] if oidc_providers else ""
 
     return jsonify({
         "app_name": app_name,

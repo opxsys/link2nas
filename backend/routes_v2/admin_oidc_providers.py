@@ -24,6 +24,18 @@ def _oidc_svc():
     return current_app.config.get("OIDC_SERVICE_V2")
 
 
+def _ip_config_svc():
+    return current_app.config.get("IDENTITY_PROXY_CONFIG_SERVICE_V2")
+
+
+def _identity_proxy_is_enabled() -> bool:
+    svc = _ip_config_svc()
+    if svc is None:
+        return False
+    cfg = svc.get_first_config()
+    return cfg is not None and bool(cfg.enabled)
+
+
 def _serialize(svc, provider) -> dict:
     """Admin dict with allowed_domains as list[str], no secret fields."""
     d = svc.to_admin_dict(provider)
@@ -61,6 +73,14 @@ def create_provider():
 
     data = request.get_json(silent=True) or {}
     raw_secret = str(data.get("client_secret", "") or "")
+
+    if bool(data.get("enabled", True)) and _identity_proxy_is_enabled():
+        return jsonify({
+            "error": (
+                "Cannot enable this OIDC provider while Identity Proxy is active. "
+                "Disable Identity Proxy first."
+            )
+        }), 409
 
     try:
         ad = data.get("allowed_domains", [])
@@ -137,6 +157,14 @@ def update_provider(provider_id: str):
     if "client_secret" in data:
         raw = str(data["client_secret"] or "")
         kwargs["client_secret"] = raw or None
+
+    if kwargs.get("enabled") is True and _identity_proxy_is_enabled():
+        return jsonify({
+            "error": (
+                "Cannot enable this OIDC provider while Identity Proxy is active. "
+                "Disable Identity Proxy first."
+            )
+        }), 409
 
     try:
         provider = svc.update_provider(provider_id, **kwargs)

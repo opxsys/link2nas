@@ -33,6 +33,12 @@ Covers:
     14. Discovery OK → {ok: true}
     15. Discovery unreachable → {ok: false}, generic error, no secrets
 
+  Mutual exclusivity — OIDC vs Identity Proxy:
+    16. Create enabled OIDC when IP is active → 409
+    17. Create disabled OIDC when IP is active → 201 (no check)
+    18. Update to enabled=True when IP is active → 409
+    19. Update to enabled=False when IP is active → 200 (no check)
+
 Run from project root:
     python3 scripts/tests/unit/test_admin_oidc_provider_routes.py
 """
@@ -221,9 +227,21 @@ class FakeSettings:
     LINK2NAS_SINGLE_USER_MODE = False
 
 
+class FakeIdentityProxyConfigService:
+    """Minimal fake for mutual exclusivity tests."""
+
+    def __init__(self, enabled: bool = False):
+        import types
+        self._cfg = types.SimpleNamespace(enabled=enabled) if enabled else None
+
+    def get_first_config(self):
+        return self._cfg
+
+
 def _make_app(
     provider_svc: FakeOidcProviderService | None = None,
     oidc_svc: FakeOidcService | None = None,
+    ip_config_svc: FakeIdentityProxyConfigService | None = None,
 ) -> Flask:
     app = Flask(__name__)
     app.config["TESTING"] = True
@@ -232,6 +250,7 @@ def _make_app(
     app.config["USER_REPO_V2"] = FakeUserRepo()
     app.config["OIDC_PROVIDER_SERVICE_V2"] = provider_svc or FakeOidcProviderService()
     app.config["OIDC_SERVICE_V2"] = oidc_svc or FakeOidcService()
+    app.config["IDENTITY_PROXY_CONFIG_SERVICE_V2"] = ip_config_svc
     app.register_blueprint(admin_oidc_providers_bp)
     return app
 
@@ -429,6 +448,60 @@ class TestAdminOidcTestDiscovery(unittest.TestCase):
             "/api/v2/admin/oidc-providers/does-not-exist/test-discovery", **_auth()
         )
         self.assertEqual(resp.status_code, 404)
+
+
+class TestOidcMutualExclusivity(unittest.TestCase):
+
+    def _create(self, ip_enabled: bool, oidc_enabled: bool = True):
+        return _make_app(
+            ip_config_svc=FakeIdentityProxyConfigService(enabled=ip_enabled),
+        ).test_client().post(
+            "/api/v2/admin/oidc-providers/",
+            json={
+                "name": "Keycloak",
+                "slug": "keycloak",
+                "issuer": "https://idp.example.com",
+                "client_id": "my-client",
+                "client_secret": "super-secret",
+                "enabled": oidc_enabled,
+            },
+            **_auth(),
+        )
+
+    def _patch(self, ip_enabled: bool, enabled_value: bool):
+        return _make_app(
+            ip_config_svc=FakeIdentityProxyConfigService(enabled=ip_enabled),
+        ).test_client().patch(
+            f"/api/v2/admin/oidc-providers/{_PROVIDER_ID}",
+            json={"enabled": enabled_value},
+            **_auth(),
+        )
+
+    # 16. Create enabled OIDC when IP is active → 409
+    def test_create_enabled_oidc_with_ip_active_returns_409(self):
+        resp = self._create(ip_enabled=True, oidc_enabled=True)
+        self.assertEqual(resp.status_code, 409)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertIn("Identity Proxy", data["error"])
+
+    # 17. Create disabled OIDC when IP is active → 201 (no mutex check)
+    def test_create_disabled_oidc_with_ip_active_succeeds(self):
+        resp = self._create(ip_enabled=True, oidc_enabled=False)
+        self.assertEqual(resp.status_code, 201)
+
+    # 18. Update to enabled=True when IP is active → 409
+    def test_update_to_enabled_with_ip_active_returns_409(self):
+        resp = self._patch(ip_enabled=True, enabled_value=True)
+        self.assertEqual(resp.status_code, 409)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertIn("Identity Proxy", data["error"])
+
+    # 19. Update to enabled=False when IP is active → 200 (no mutex check)
+    def test_update_to_disabled_with_ip_active_succeeds(self):
+        resp = self._patch(ip_enabled=True, enabled_value=False)
+        self.assertEqual(resp.status_code, 200)
 
 
 if __name__ == "__main__":
