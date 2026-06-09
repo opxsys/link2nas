@@ -258,7 +258,7 @@ export function useJobsState() {
 
         case 'unrestrict_file':
           if (payload?.file_id === undefined) {
-            throw new Error('Missing file id.')
+            throw new Error(t('missingFileId'))
           }
           updated = await unrestrictJobFile(jobId, payload.file_id)
           break
@@ -320,7 +320,7 @@ export function useJobsState() {
         clearSelection()
       }
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : 'Delete failed.')
+      setActionError(err instanceof ApiError ? err.message : t('deleteFailed'))
     } finally {
       setActionPending(null)
       setDeletePendingId(null)

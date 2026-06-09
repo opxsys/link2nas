@@ -236,6 +236,7 @@ export const en = {
 
   // Dashboard
   dashboardDesc:          'Activity overview and recent jobs.',
+  dashboardLoadFailed:    'Failed to load dashboard. Please try again.',
   dashActiveJobs:         'Active Jobs',
   dashRunningNow:         'Running now',
   dashWaiting:            'Waiting',
@@ -550,6 +551,7 @@ export const en = {
   resetFailed:   'Reset failed.',
   previewFailed: 'Preview failed.',
   deleteFailed:  'Delete failed.',
+  missingFileId: 'Missing file id.',
   nameRequired: 'Name is required.',
   testing:      'Testing…',
   testFailed:   'Test failed',
