@@ -88,6 +88,12 @@ from backend.repositories.sqlite.identity_proxy_config_repository import (
 from backend.repositories.postgres.identity_proxy_config_repository import (
     IdentityProxyConfigRepository as PostgresIdentityProxyConfigRepository,
 )
+from backend.repositories.sqlite.prowlarr_config_repository import (
+    ProwlarrConfigRepository,
+)
+from backend.repositories.postgres.prowlarr_config_repository import (
+    ProwlarrConfigRepository as PostgresProwlarrConfigRepository,
+)
 
 
 class UnsupportedRepositoryBackendError(Exception):
@@ -117,6 +123,7 @@ class Repositories:
     oidc_state_repository: object
     oidc_provider_repository: object
     identity_proxy_config_repository: object
+    prowlarr_config_repository: object
 
 def build_repositories(settings) -> Repositories:
     backend = settings.V2_DATABASE_BACKEND
@@ -149,6 +156,7 @@ def build_repositories(settings) -> Repositories:
             oidc_state_repository=OidcStateRepository(db),
             oidc_provider_repository=OidcProviderRepository(db),
             identity_proxy_config_repository=IdentityProxyConfigRepository(db),
+            prowlarr_config_repository=ProwlarrConfigRepository(db),
         )
 
     if backend == "postgres":
@@ -178,6 +186,7 @@ def build_repositories(settings) -> Repositories:
             oidc_state_repository=PostgresOidcStateRepository(db),
             oidc_provider_repository=PostgresOidcProviderRepository(db),
             identity_proxy_config_repository=PostgresIdentityProxyConfigRepository(db),
+            prowlarr_config_repository=PostgresProwlarrConfigRepository(db),
         )
 
 

@@ -560,3 +560,31 @@ CREATE TABLE IF NOT EXISTS identity_proxy_configs (
 
 CREATE INDEX IF NOT EXISTS idx_identity_proxy_configs_enabled
 ON identity_proxy_configs (enabled, created_at);
+
+
+CREATE TABLE IF NOT EXISTS prowlarr_configs (
+    id                TEXT    PRIMARY KEY,
+    scope             TEXT    NOT NULL,
+    user_id           TEXT    REFERENCES users(id) ON DELETE CASCADE,
+    enabled           BOOLEAN NOT NULL DEFAULT FALSE,
+    base_url          TEXT,
+    encrypted_api_key TEXT,
+    label             TEXT,
+    tested_at         TEXT,
+    last_test_status  TEXT,
+    last_test_message TEXT,
+    created_at        TEXT    NOT NULL,
+    updated_at        TEXT    NOT NULL,
+    CONSTRAINT prowlarr_scope_valid CHECK (scope IN ('global', 'user')),
+    CONSTRAINT prowlarr_scope_user_id_coherent CHECK (
+        (scope = 'global' AND user_id IS NULL)
+        OR
+        (scope = 'user' AND user_id IS NOT NULL)
+    )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prowlarr_configs_global
+ON prowlarr_configs (scope) WHERE scope = 'global';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prowlarr_configs_user_id
+ON prowlarr_configs (user_id) WHERE scope = 'user' AND user_id IS NOT NULL;

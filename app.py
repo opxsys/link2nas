@@ -60,6 +60,7 @@ from backend.services_v2.identity_proxy_config_service import IdentityProxyConfi
 from backend.services_v2.identity_proxy_auth_service import IdentityProxyAuthService
 from backend.routes_v2.auth_identity_proxy import auth_identity_proxy_v2_bp
 from backend.routes_v2.admin_identity_proxy import admin_identity_proxy_bp
+from backend.services_v2.prowlarr_config_service import ProwlarrConfigService
 
 
 def create_app() -> Flask:
@@ -195,6 +196,11 @@ def create_app() -> Flask:
 
     app.config["IDENTITY_PROXY_CONFIG_SERVICE_V2"] = IdentityProxyConfigService(
         repositories_v2.identity_proxy_config_repository
+    )
+
+    app.config["PROWLARR_CONFIG_SERVICE_V2"] = ProwlarrConfigService(
+        repository=repositories_v2.prowlarr_config_repository,
+        crypto_service=crypto_service_v2,
     )
     app.config["IDENTITY_PROXY_AUTH_SERVICE_V2"] = IdentityProxyAuthService(
         settings=settings,
