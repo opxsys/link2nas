@@ -1156,6 +1156,24 @@ export const en = {
   prowlarrApiSourceUser:           'Your personal Prowlarr configuration is active.',
   prowlarrApiSourceGlobal:         'Using global Prowlarr configuration — you can override it with a personal one below.',
   prowlarrApiSourceNone:           'No Prowlarr configuration is available. Configure one below or ask an administrator.',
+  // Prowlarr native search page
+  prowlarrSearchTitle:             'Search',
+  prowlarrSearchQuery:             'Search query',
+  prowlarrSearchQueryPlaceholder:  'Movie, series, game…',
+  prowlarrSearchBtn:               'Search',
+  prowlarrSearchError:             'Search failed. Please try again.',
+  prowlarrNoResults:               'No results for this search.',
+  prowlarrResultTitle:             'Title',
+  prowlarrResultIndexer:           'Indexer',
+  prowlarrResultSize:              'Size',
+  prowlarrResultSeeders:           'Seeders',
+  prowlarrResultLinks:             'Links',
+  prowlarrResultAdd:               'Add',
+  prowlarrMagnet:                  'Magnet',
+  prowlarrDirect:                  'Direct',
+  prowlarrAddJobFailed:            'Could not create the job.',
+  prowlarrGoToJob:                 'View job',
+  prowlarrIndexerCount:            'indexers',
 } as const
 
 export type TranslationKey = keyof typeof en

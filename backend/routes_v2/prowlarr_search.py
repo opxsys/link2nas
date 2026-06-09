@@ -4,6 +4,14 @@ from flask import Blueprint, current_app, jsonify, request
 
 from backend.routes_v2._context import get_user_context
 from backend.clients.prowlarr_client import ProwlarrClient, ProwlarrClientError
+from backend.services_v2.job_support.source_helpers import detect_source_type
+from backend.routes_v2.jobs_support.request_validation import _resolve_destination_ref_for_request
+from backend.routes_v2.jobs_support.errors import _handle_provider_exception, _handle_destination_exception
+from backend.services_v2.destination_factory import (
+    DestinationConfigDisabledError,
+    DestinationConfigNotFoundError,
+    UnknownDestinationError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -147,3 +155,72 @@ def search_prowlarr():
         "source": effective.source,
         "results": safe_results,
     })
+
+
+# ── POST /jobs ─────────────────────────────────────────────────────────────────
+
+@prowlarr_search_bp.post("/jobs")
+def create_job_from_prowlarr_result():
+    ctx = get_user_context()
+
+    cache = _cache()
+    if cache is None:
+        return _error("Search is temporarily unavailable", 503, "PROWLARR_CACHE_UNAVAILABLE")
+
+    data = request.get_json(silent=True) or {}
+    result_id = str(data.get("result_id") or "").strip()
+    if not result_id:
+        return _error("result_id is required")
+
+    cached = cache.get_for_user(result_id, ctx.user_id)
+    if cached is None:
+        return _error("Result not found or has expired. Please search again.", 404, "PROWLARR_RESULT_NOT_FOUND")
+
+    # Prefer magnet (no provider token) over direct download URL.
+    source_value = cached.magnet_url or cached.download_url
+    if not source_value:
+        return _error("This result has no downloadable URL.", 400, "PROWLARR_NO_URL")
+
+    try:
+        source_type = detect_source_type(source_value)
+    except ValueError as exc:
+        return _error(str(exc), 400, "PROWLARR_INVALID_URL")
+
+    provider_name = data.get("provider_name") or None
+    provider_config_id = data.get("provider_config_id") or None
+    destination_name = data.get("destination_name") or None
+    destination_config_id = data.get("destination_config_id") or None
+
+    svc = current_app.config["JOB_SERVICE_V2"]
+
+    try:
+        # Try to resolve the user's default destination.
+        # If none is configured, fall back to links-only (not an error).
+        try:
+            resolved_dest_name, resolved_dest_config_id = _resolve_destination_ref_for_request(
+                ctx, destination_name, destination_config_id, send_to_destination=True
+            )
+        except DestinationConfigNotFoundError:
+            resolved_dest_name, resolved_dest_config_id = None, None
+
+        job = svc.create_job(
+            context=ctx,
+            source_type=source_type,
+            source_value=source_value,
+            provider_name=provider_name,
+            provider_config_id=provider_config_id,
+            destination_name=resolved_dest_name,
+            destination_config_id=resolved_dest_config_id,
+        )
+
+        logger.info("Prowlarr job created: id=%s source_type=%s user=%s", job.id, source_type, ctx.user_id)
+        return jsonify({"id": job.id, "status": job.status, "source_type": job.source_type}), 201
+
+    except Exception as exc:
+        if isinstance(exc, (
+            DestinationConfigNotFoundError,
+            DestinationConfigDisabledError,
+            UnknownDestinationError,
+        )):
+            return _handle_destination_exception(exc)
+        return _handle_provider_exception(exc)
