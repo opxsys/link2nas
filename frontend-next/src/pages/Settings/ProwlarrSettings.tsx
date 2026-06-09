@@ -1,77 +1,130 @@
-import { useState, useEffect, useRef } from 'react'
-import { Info, CheckCircle2, XCircle, Loader2, AlertCircle, KeyRound, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { CheckCircle2, XCircle, Loader2, AlertCircle, KeyRound, Plug, Info, X } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
 import { Button } from '@/components/ui/button'
-import { updateIntegrationSettings } from '@/api/integration-settings'
-import { useIntegrationSettings, invalidateIntegrationSettings } from '@/lib/useIntegrationSettings'
-import { useQbtWriteKeyStatus, invalidateQbtWriteKeyStatus } from '@/lib/useQbtWriteKeyStatus'
-import type { ProwlarrOpenMode } from '@/api/integration-settings'
-import ProwlarrQbittorrentGuide from '@/pages/Prowlarr/ProwlarrQbittorrentGuide'
-import { useAppInfo } from '@/lib/useAppInfo'
+import {
+  getMeProwlarr,
+  saveMeProwlarr,
+  testMeProwlarr,
+} from '@/api/prowlarr'
+import type { ProwlarrConfigSafe, ProwlarrMeState } from '@/api/prowlarr'
 import { useI18n } from '@/i18n'
+import ProwlarrQbittorrentGuide from '@/pages/Prowlarr/ProwlarrQbittorrentGuide'
 
 const INPUT = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
-const SELECT = 'h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
 const LABEL = 'mb-1.5 block text-xs font-medium text-foreground'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+type TestStatus = 'idle' | 'testing' | 'ok' | 'failed'
 
-interface Props {
-  onGoToApiKeys?: () => void
+interface Fields {
+  enabled: boolean
+  base_url: string
+  api_key: string
 }
 
-export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
-  const { t } = useI18n()
-  const { settings, loading } = useIntegrationSettings()
-  const keyStatus = useQbtWriteKeyStatus()
-  const { appInfo } = useAppInfo()
-  const appName = appInfo.app_name || 'Link2NAS'
+function defaultFields(): Fields {
+  return { enabled: false, base_url: '', api_key: '' }
+}
 
-  const [enabled, setEnabled]   = useState(false)
-  const [url, setUrl]           = useState('')
-  const [openMode, setOpenMode] = useState<ProwlarrOpenMode>('both')
+function configToFields(c: ProwlarrConfigSafe): Fields {
+  return { enabled: c.enabled, base_url: c.base_url ?? '', api_key: '' }
+}
+
+export default function ProwlarrSettings() {
+  const { t } = useI18n()
+  const [fields, setFields] = useState<Fields>(defaultFields())
+  const [hasApiKey, setHasApiKey] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [meState, setMeState] = useState<ProwlarrMeState | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveMessage, setSaveMessage] = useState('')
-  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [testStatus, setTestStatus] = useState<TestStatus>('idle')
+  const [testMessage, setTestMessage] = useState('')
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    if (!settings) return
-    setEnabled(settings.prowlarr_enabled)
-    setUrl(settings.prowlarr_url)
-    setOpenMode(settings.prowlarr_open_mode)
-  }, [settings])
+  const load = useCallback(async () => {
+    setLoading(true)
+    setFetchError(null)
+    try {
+      const data = await getMeProwlarr()
+      setMeState(data)
+      if (data.user_config) {
+        setFields(configToFields(data.user_config))
+        setHasApiKey(data.user_config.has_api_key)
+      }
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : t('prowlarrApiLoadFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => () => { if (successTimer.current) clearTimeout(successTimer.current) }, [])
+  useEffect(() => { load() }, [load])
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current) }, [])
 
-  const canEnable = keyStatus === 'ok'
+  function handleChange<K extends keyof Fields>(key: K, value: Fields[K]) {
+    setFields((prev) => ({ ...prev, [key]: value }))
+    setDirty(true)
+    if (saveStatus !== 'idle') { setSaveStatus('idle'); setSaveMessage('') }
+    if (testStatus !== 'idle') { setTestStatus('idle'); setTestMessage('') }
+  }
 
-  async function handleSave() {
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (saveTimer.current) clearTimeout(saveTimer.current)
     setSaveStatus('saving')
     setSaveMessage('')
+    setTestStatus('idle')
+    setTestMessage('')
     try {
-      await updateIntegrationSettings({
-        prowlarr_enabled: canEnable ? enabled : false,
-        prowlarr_url: url.trim(),
-        prowlarr_open_mode: openMode,
-      })
-      invalidateIntegrationSettings()
-      setSaveStatus('saved')
-      setSaveMessage(t('prowlarrSaved'))
-      if (successTimer.current) clearTimeout(successTimer.current)
-      successTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t('saveFailed')
-      setSaveStatus('error')
-      setSaveMessage(message)
-      if (message.toLowerCase().includes('qbittorrent:write') || message.toLowerCase().includes('api key')) {
-        setEnabled(false)
-        invalidateQbtWriteKeyStatus()
+      const payload: Parameters<typeof saveMeProwlarr>[0] = {
+        enabled: fields.enabled,
+        base_url: fields.base_url.trim(),
       }
+      if (fields.api_key.trim()) payload.api_key = fields.api_key.trim()
+      const updated = await saveMeProwlarr(payload)
+      setFields(configToFields(updated))
+      setHasApiKey(updated.has_api_key)
+      setDirty(false)
+      // Refresh effective state
+      getMeProwlarr().then(setMeState).catch(() => {})
+      setSaveStatus('saved')
+      setSaveMessage(t('prowlarrApiSaved'))
+      saveTimer.current = setTimeout(() => setSaveStatus('idle'), 4000)
+    } catch (err) {
+      setSaveStatus('error')
+      setSaveMessage(err instanceof Error ? err.message : t('saveFailed'))
     }
   }
 
-  if (loading && !settings) {
+  async function handleTest() {
+    setSaveStatus('idle')
+    setSaveMessage('')
+    setTestStatus('testing')
+    setTestMessage('')
+    try {
+      const result = await testMeProwlarr()
+      if (result.ok) {
+        setTestStatus('ok')
+        setTestMessage(
+          result.version
+            ? `${t('prowlarrApiTestOk')} — v${result.version} — ${result.active_indexers ?? 0} indexers`
+            : t('prowlarrApiTestOk'),
+        )
+      } else {
+        setTestStatus('failed')
+        setTestMessage(result.message ?? t('prowlarrApiTestFailed'))
+      }
+    } catch (err) {
+      setTestStatus('failed')
+      setTestMessage(err instanceof Error ? err.message : t('prowlarrApiTestFailed'))
+    }
+  }
+
+  if (loading) {
     return (
       <div className="flex items-center gap-2 py-8 text-muted-foreground">
         <Loader2 size={18} className="animate-spin" aria-hidden="true" />
@@ -80,116 +133,190 @@ export default function ProwlarrSettings({ onGoToApiKeys }: Props) {
     )
   }
 
+  if (fetchError) {
+    return (
+      <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+        <AlertCircle size={15} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <div>
+          <p className="font-medium">{t('prowlarrApiLoadFailed')}</p>
+          <p className="mt-0.5 text-xs">{fetchError}</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={load}>{t('retry')}</Button>
+        </div>
+      </div>
+    )
+  }
+
   const busy = saveStatus === 'saving'
-  const checkboxDisabled = busy || !canEnable
+  const testable = !dirty && (meState?.search_available || (fields.enabled && fields.base_url.trim() !== '' && (hasApiKey || fields.api_key.trim() !== '')))
 
   return (
     <div className="flex flex-col gap-6">
-      <SectionCard title={t('sectionProwlarrIntegration')}>
-        <div className="flex flex-col gap-5">
+      <EffectiveSourceBadge meState={meState} />
 
-          {keyStatus === 'missing' && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
-              <KeyRound size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-              <span>
-                {t('noQbtKeyPre')}{' '}
-                <code className="font-mono">qbittorrent:write</code>{' '}
-                {t('noQbtKeyPost')}{' '}
-                {onGoToApiKeys ? (
-                  <button
-                    type="button"
-                    onClick={onGoToApiKeys}
-                    className="underline underline-offset-2 hover:opacity-80"
-                  >
-                    {t('goToApiKeys')} →
-                  </button>
-                ) : null}
-              </span>
-            </div>
-          )}
+      <SectionCard title={t('prowlarrApiTitle')} description={t('prowlarrApiDesc')}>
+        <form onSubmit={handleSave} className="flex flex-col gap-5">
 
-          {keyStatus === 'error' && (
-            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-              <AlertCircle size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-              {t('apiKeyLoadError')}
-            </div>
-          )}
-
-          <label className={cn('flex items-start gap-3', checkboxDisabled && !busy ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}>
+          <label className={`flex items-start gap-3 ${busy ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
             <input
               type="checkbox"
-              checked={enabled && canEnable}
-              disabled={checkboxDisabled}
-              onChange={(e) => setEnabled(e.target.checked)}
+              checked={fields.enabled}
+              disabled={busy}
+              onChange={(e) => handleChange('enabled', e.target.checked)}
               className="mt-0.5 h-4 w-4 rounded border-input accent-primary disabled:opacity-50"
             />
             <div>
-              <p className="text-sm font-medium text-foreground">{t('prowlarrEnableLabel')}</p>
-              <p className="text-xs text-muted-foreground">
-                {t('prowlarrEnableDesc')}
-              </p>
+              <p className="text-sm font-medium text-foreground">{t('prowlarrApiEnabled')}</p>
+              <p className="text-xs text-muted-foreground">{t('prowlarrApiEnabledDesc')}</p>
             </div>
           </label>
 
           <div>
-            <label htmlFor="prowlarr-url" className={LABEL}>{t('prowlarrUrlLabel')}</label>
-            <input id="prowlarr-url" type="url" value={url} disabled={!enabled || busy}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="http://nas.local:9696" className={INPUT} />
+            <label htmlFor="prowlarr-api-url" className={LABEL}>{t('prowlarrApiBaseUrl')}</label>
+            <input
+              id="prowlarr-api-url"
+              type="url"
+              value={fields.base_url}
+              disabled={busy}
+              onChange={(e) => handleChange('base_url', e.target.value)}
+              placeholder="http://nas.local:9696"
+              className={INPUT}
+            />
           </div>
 
           <div>
-            <label htmlFor="prowlarr-open-mode" className={cn(LABEL, !enabled && 'opacity-50')}>
-              {t('prowlarrOpenModeLabel')}
-            </label>
-            <select id="prowlarr-open-mode" value={openMode} disabled={!enabled || busy}
-              onChange={(e) => setOpenMode(e.target.value as ProwlarrOpenMode)}
-              className={SELECT}>
-              <option value="iframe">{t('prowlarrOpenModeIframe')}</option>
-              <option value="new_tab">{t('prowlarrOpenModeTab')}</option>
-              <option value="both">{t('prowlarrOpenModeBoth')}</option>
-            </select>
+            <label htmlFor="prowlarr-api-key" className={LABEL}>{t('prowlarrApiApiKey')}</label>
+            <input
+              id="prowlarr-api-key"
+              type="password"
+              value={fields.api_key}
+              disabled={busy}
+              onChange={(e) => handleChange('api_key', e.target.value)}
+              placeholder={hasApiKey ? t('adminProwlarrApiKeyPlaceholder') : t('adminProwlarrApiKeyPlaceholderNew')}
+              autoComplete="new-password"
+              className={INPUT}
+            />
+            <div className="mt-1.5 flex items-center gap-2">
+              {hasApiKey ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                  <KeyRound size={10} aria-hidden="true" />
+                  {t('adminProwlarrHasApiKey')}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                  <KeyRound size={10} aria-hidden="true" />
+                  {t('adminProwlarrNoApiKey')}
+                </span>
+              )}
+              <span className="text-xs text-muted-foreground">{t('adminProwlarrApiKeyHint')}</span>
+            </div>
           </div>
 
-          <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-            <Info size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-            {t('prowlarrNoCredentialsPre')} {appName}{t('prowlarrNoCredentialsPost')}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit" size="sm" disabled={busy}>
+                {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
+                {t('saveChanges')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!testable || busy || testStatus === 'testing'}
+                onClick={handleTest}
+              >
+                {testStatus === 'testing'
+                  ? <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />
+                  : <Plug size={13} className="mr-1.5" aria-hidden="true" />}
+                {t('prowlarrApiTestConnection')}
+              </Button>
+            </div>
+            {dirty && (
+              <p className="text-xs text-muted-foreground">
+                {t('prowlarrSaveBeforeTest')}
+              </p>
+            )}
           </div>
-        </div>
+
+          {saveStatus === 'saved' && (
+            <ProwlarrBanner color="green" message={saveMessage} onDismiss={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }} />
+          )}
+          {saveStatus === 'error' && (
+            <ProwlarrBanner color="red" message={saveMessage} onDismiss={() => setSaveStatus('idle')} />
+          )}
+          {testStatus === 'ok' && (
+            <ProwlarrBanner color="green" message={testMessage} onDismiss={() => setTestStatus('idle')} />
+          )}
+          {testStatus === 'failed' && (
+            <ProwlarrBanner color="red" message={testMessage} onDismiss={() => setTestStatus('idle')} />
+          )}
+        </form>
       </SectionCard>
 
-      <div className="flex flex-col gap-3">
-        <div>
-          <Button size="sm" onClick={handleSave} disabled={busy}>
-            {busy && <Loader2 size={13} className="mr-1.5 animate-spin" aria-hidden="true" />}
-            {t('saveChanges')}
-          </Button>
-        </div>
-        {saveStatus === 'saved' && (
-          <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
-            <span className="flex items-center gap-2">
-              <CheckCircle2 size={14} aria-hidden="true" />
-              {saveMessage}
-            </span>
-            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
-              <X size={14} aria-hidden="true" />
-            </button>
-          </div>
-        )}
-        {saveStatus === 'error' && (
-          <div className="flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
-            <span className="flex items-center gap-2">
-              <XCircle size={14} aria-hidden="true" />
-              {saveMessage}
-            </span>
-            <button onClick={() => setSaveStatus('idle')} className="shrink-0 opacity-60 hover:opacity-100" aria-label={t('dismiss')}>
-              <X size={14} aria-hidden="true" />
-            </button>
-          </div>
-        )}
-      </div>
-
       <ProwlarrQbittorrentGuide />
+    </div>
+  )
+}
+
+function EffectiveSourceBadge({ meState }: { meState: ProwlarrMeState | null }) {
+  const { t } = useI18n()
+  if (!meState) return null
+
+  const source = meState.effective_config_source
+  const available = meState.search_available
+
+  if (source === 'none' || !available) {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
+        <Info size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <span>{t('prowlarrApiSourceNone')}</span>
+      </div>
+    )
+  }
+
+  if (source === 'global') {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400">
+        <Info size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <span>{t('prowlarrApiSourceGlobal')}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+      <CheckCircle2 size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <span>{t('prowlarrApiSourceUser')}</span>
+    </div>
+  )
+}
+
+function ProwlarrBanner({
+  color,
+  message,
+  onDismiss,
+}: {
+  color: 'green' | 'red'
+  message: string
+  onDismiss: () => void
+}) {
+  const { t } = useI18n()
+  const Icon = color === 'green' ? CheckCircle2 : XCircle
+  const cls =
+    color === 'green'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
+      : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'
+  return (
+    <div className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm ${cls}`}>
+      <Icon size={15} className="shrink-0" aria-hidden="true" />
+      <span className="flex-1">{message}</span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        aria-label={t('dismiss')}
+      >
+        <X size={13} aria-hidden="true" />
+      </button>
     </div>
   )
 }

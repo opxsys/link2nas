@@ -12,6 +12,7 @@ export type AdminSection =
   | 'timeouts'
   | 'sso'
   | 'identity-proxy'
+  | 'prowlarr'
 
 export type UserRole = 'admin' | 'user' | 'viewer'
 export type UserStatus = 'active' | 'disabled' | 'pending'
