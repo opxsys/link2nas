@@ -61,6 +61,11 @@ from backend.services_v2.identity_proxy_auth_service import IdentityProxyAuthSer
 from backend.routes_v2.auth_identity_proxy import auth_identity_proxy_v2_bp
 from backend.routes_v2.admin_identity_proxy import admin_identity_proxy_bp
 from backend.services_v2.prowlarr_config_service import ProwlarrConfigService
+from backend.services_v2.prowlarr_result_cache import ProwlarrResultCache
+from backend.routes_v2.admin_prowlarr import admin_prowlarr_bp
+from backend.routes_v2.me_prowlarr import me_prowlarr_bp
+from backend.routes_v2.prowlarr_search import prowlarr_search_bp
+from backend.clients.prowlarr_client import ProwlarrClient
 
 
 def create_app() -> Flask:
@@ -202,6 +207,8 @@ def create_app() -> Flask:
         repository=repositories_v2.prowlarr_config_repository,
         crypto_service=crypto_service_v2,
     )
+    app.config["PROWLARR_CLIENT_FACTORY"] = ProwlarrClient
+    app.config["PROWLARR_RESULT_CACHE_V2"] = ProwlarrResultCache()
     app.config["IDENTITY_PROXY_AUTH_SERVICE_V2"] = IdentityProxyAuthService(
         settings=settings,
         config_repo=repositories_v2.identity_proxy_config_repository,
@@ -317,6 +324,9 @@ def create_app() -> Flask:
     app.register_blueprint(admin_oidc_providers_bp)
     app.register_blueprint(auth_identity_proxy_v2_bp)
     app.register_blueprint(admin_identity_proxy_bp)
+    app.register_blueprint(admin_prowlarr_bp)
+    app.register_blueprint(me_prowlarr_bp)
+    app.register_blueprint(prowlarr_search_bp)
 
     if settings.DEBUG and settings.V2_DEV_ROUTES_ENABLED:
         app.register_blueprint(dev_v2_bp)
