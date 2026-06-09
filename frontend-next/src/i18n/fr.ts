@@ -1115,4 +1115,9 @@ export const fr: Translations = {
   maintStatusOk:              'OK',
   maintStatusError:           'Erreur',
   maintStatusUnknown:         'Inconnu',
+  uploadFailed: 'Échec de l’envoi du fichier.',
+  submissionFailed: 'Échec de la soumission.',
+  generateDirectLinkTooltip: 'Générer un lien de téléchargement direct depuis le fournisseur.',
+  regenerateDirectLinkTooltip: 'Générer un nouveau lien de téléchargement direct depuis le fournisseur.',
+  smtpTestEmailSent: 'Email de test envoyé — vérifiez votre boîte de réception.',
 }

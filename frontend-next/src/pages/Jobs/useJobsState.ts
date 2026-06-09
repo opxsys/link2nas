@@ -301,7 +301,7 @@ export function useJobsState() {
 
       updateJob(updated)
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : `${action} failed.`)
+      setActionError(err instanceof ApiError ? err.message : t('actionFailed'))
     } finally {
       setActionPending(null)
     }

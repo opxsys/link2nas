@@ -1113,6 +1113,11 @@ export const en = {
   maintStatusOk:              'OK',
   maintStatusError:           'Error',
   maintStatusUnknown:         'Unknown',
+  uploadFailed: 'Upload failed.',
+  submissionFailed: 'Submission failed.',
+  generateDirectLinkTooltip: 'Generate a direct download link from the provider.',
+  regenerateDirectLinkTooltip: 'Generate a fresh direct download link from the provider.',
+  smtpTestEmailSent: 'Test email sent — check your inbox.',
 } as const
 
 export type TranslationKey = keyof typeof en
