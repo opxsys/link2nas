@@ -123,40 +123,42 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml ps
 
 **Important:** The PostgreSQL password is written into the `postgres_data` volume the first time the container starts. See [PostgreSQL password management](#postgresql-password-management) below for what happens if you need to change it after that.
 
-#### PostgreSQL — first startup delay
+#### Background service startup delay
 
-On a **fresh `postgres_data` volume**, the `web` container initializes the database schema on startup. The background services (`worker`, `scheduler`, `local-download-worker`) also call `create_app()` and can race against `web` before the schema is ready.
+On a fresh deployment, the `web` container may need a few seconds to initialize the database schema before background workers start.
 
-`docker-compose.postgres.yml` adds a configurable delay to the three background services:
+The Compose files apply a configurable delay to the three background services:
 
-```
+```env
 LINK2NAS_STARTUP_DELAY_SECONDS=20   # default — set in .env
 ```
 
+This delay applies to:
+
+- `worker`
+- `scheduler`
+- `local-download-worker`
+
+It is present in `docker-compose.yml`, `docker-compose.ghcr.yml`, and `docker-compose.postgres.yml`. It is especially important for fresh PostgreSQL deployments, but harmless for SQLite deployments.
+
 This gives `web` time to complete schema initialization before the background services start. It is a temporary safeguard. The correct long-term fix is a `pg_advisory_xact_lock()` guard in the schema init path — tracked in [BACKLOG.md](BACKLOG.md).
 
-If you prefer not to use the delay, start the services in two steps instead:
+If your host is slow, increase the value temporarily. Set it to `0` only if schema initialization ordering is otherwise guaranteed.
+
+If you prefer to start services manually, use two steps:
 
 ```bash
 # Step 1 — start infrastructure and web only
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
   up -d postgres redis web
 
-# Wait for web to become healthy (check with: docker compose ... ps)
+# Wait for web to become healthy
 sleep 20
 
 # Step 2 — start background services
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml \
   up -d worker scheduler local-download-worker
 ```
-
-To stop:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.postgres.yml down
-```
-
----
 
 ## PostgreSQL password management
 

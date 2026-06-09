@@ -23,7 +23,7 @@ export default function AdminUserDeleteModal({ user, onDeleted, onClose }: Props
       await deleteUser(user.id)
       onDeleted(user.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.')
+      setError(err instanceof Error ? err.message : t('deleteFailed'))
       setDeleting(false)
     }
   }

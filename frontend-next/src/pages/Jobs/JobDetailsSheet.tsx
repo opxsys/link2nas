@@ -161,7 +161,7 @@ export default function JobDetailsSheet({ job, actionPending, actionError, onClo
         )}
         {cap.canUnrestrict && (
           <Button variant="outline" size="sm" disabled={busy}
-            title={allLinks.length > 0 ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
+            title={allLinks.length > 0 ? t('regenerateDirectLinkTooltip') : t('generateDirectLinkTooltip')}
             onClick={() => onAction('unrestrict', job.id)}>
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Unlock size={13} />}
             {allLinks.length > 0 ? t('regenerate') : t('generateLink')}

@@ -1,5 +1,47 @@
 # Release Notes
 
+## v3.6.1-beta.1
+
+### Summary
+
+Maintenance polish beta based on `v3.6.0-beta.2`.
+
+### Fixed
+
+- Replaced remaining hardcoded UI fallback messages with i18n keys.
+- Localized remaining action fallback messages in job, new-job, and SMTP flows.
+- Clarified Docker startup delay documentation across Compose files, troubleshooting, and backlog.
+
+### Validation
+
+- Frontend type-check: OK.
+- Frontend production build: OK.
+- Targeted Redis worker, OIDC admin provider, and Identity Proxy admin route unit tests: OK.
+- UI hardcoded-message grep checks: OK.
+
+---
+
+## v3.6.0-beta.2
+
+### Summary
+
+This beta fixes Docker startup ordering for fresh deployments, especially PostgreSQL installs using the published Compose files.
+
+### Fixed
+
+- Applied `LINK2NAS_STARTUP_DELAY_SECONDS` to background services in `docker-compose.yml` and `docker-compose.ghcr.yml`, in addition to `docker-compose.postgres.yml`.
+- This gives the `web` container time to initialize the database schema before `worker`, `scheduler`, and `local-download-worker` start on fresh installs.
+- Keeps the default delay at 20 seconds and allows setting `LINK2NAS_STARTUP_DELAY_SECONDS=0` to disable it.
+
+### Validation
+
+- Fresh PostgreSQL + Redis Docker deployment validated with `ghcr.io/opxsys/link2nas:v3.6.0-beta.2`.
+- `web`, `worker`, `scheduler`, `local-download-worker`, `postgres`, and `redis` start cleanly.
+- `/health` returns `{"ok": true}`.
+- No Redis connection errors, PostgreSQL schema race errors, or worker startup errors observed in logs.
+
+---
+
 ## v3.6.0-beta.1
 
 ### Summary
@@ -220,7 +262,7 @@ Multi-user mode is strictly unchanged.
 
 **PostgreSQL startup delay (`LINK2NAS_STARTUP_DELAY_SECONDS`)**
 
-A configurable startup delay (default: 20 seconds) is applied to the three background services (`worker`, `scheduler`, `local-download-worker`) on PostgreSQL deployments. This gives the `web` service time to complete schema initialization on a fresh `postgres_data` volume before the other services start. Configured via `LINK2NAS_STARTUP_DELAY_SECONDS` in `.env`, applied in `docker-compose.postgres.yml`.
+A configurable startup delay (default: 20 seconds) is applied to the three background services (`worker`, `scheduler`, `local-download-worker`) on PostgreSQL deployments. This gives the `web` service time to complete schema initialization on a fresh `postgres_data` volume before the other services start. Configured via `LINK2NAS_STARTUP_DELAY_SECONDS` in `.env`. It was originally applied in `docker-compose.postgres.yml`; v3.6.0-beta.2 extends the same delay to `docker-compose.yml` and `docker-compose.ghcr.yml`.
 
 **New unit tests**
 

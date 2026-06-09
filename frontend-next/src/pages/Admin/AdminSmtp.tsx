@@ -103,7 +103,7 @@ export default function AdminSmtp() {
       const result = await testSmtpSettings()
       if (result.ok) {
         setTestStatus('sent')
-        setTestMessage(result.message ?? 'Test email sent — check your inbox.')
+        setTestMessage(result.message ?? t('smtpTestEmailSent'))
       } else {
         setTestStatus('failed')
         setTestMessage(result.error ?? t('testFailed'))

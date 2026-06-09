@@ -10,6 +10,7 @@ import type { RealJob } from '@/api/jobs'
 import type { MaintenanceStatus } from '@/pages/Admin/admin.types'
 import type { ProviderConfig } from '@/api/provider-configs'
 import type { DestinationConfig } from '@/api/destination-configs'
+import { useI18n } from '@/i18n'
 
 const POLL_MS = 5_000
 
@@ -35,6 +36,7 @@ async function fetchMaintenance(): Promise<{ data: MaintenanceStatus | null; can
 }
 
 export function useDashboardData(): DashboardState {
+  const { t } = useI18n()
   const [controlCenter, setControlCenter] = useState<ControlCenter | null>(null)
   const [jobs, setJobs] = useState<RealJob[] | null>(null)
   const [maintenance, setMaintenance] = useState<MaintenanceStatus | null>(null)
@@ -78,7 +80,7 @@ export function useDashboardData(): DashboardState {
       // ProtectedRoute will redirect to login, no need to show a banner.
       const isAuthError = err instanceof ApiError && err.status === 401
       if (!isAuthError) {
-        setError('Failed to load dashboard. Please try again.')
+        setError(t('dashboardLoadFailed'))
       }
     } finally {
       setLoading(false)

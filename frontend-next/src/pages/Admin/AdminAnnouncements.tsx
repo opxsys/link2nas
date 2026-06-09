@@ -153,7 +153,7 @@ export default function AdminAnnouncements({ openCreate }: Props) {
       setBanner(t('adminAnnDeleted'))
       successTimer.current = setTimeout(() => setBanner(null), 4000)
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Delete failed.')
+      setDeleteError(err instanceof Error ? err.message : t('deleteFailed'))
     } finally {
       setDeleting(false)
     }

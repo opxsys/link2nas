@@ -273,7 +273,7 @@ DETAIL: Key (typname, typnamespace)=(users, 2200) already exists.
 
 **Fix — prevent the race:**
 
-`docker-compose.postgres.yml` applies a startup delay to the background services via `LINK2NAS_STARTUP_DELAY_SECONDS` (default: 20 seconds). If you are not using this override, add it or start services in two steps:
+The Docker Compose files apply a startup delay to the background services via `LINK2NAS_STARTUP_DELAY_SECONDS` (default: 20 seconds). This delay is present in `docker-compose.yml`, `docker-compose.ghcr.yml`, and `docker-compose.postgres.yml`. If you use a custom Compose file, reproduce this delay or start services in two steps:
 
 ```bash
 # Step 1 — web and infrastructure only

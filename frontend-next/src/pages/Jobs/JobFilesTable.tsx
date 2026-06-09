@@ -94,7 +94,7 @@ export default function JobFilesTable({
                         onClick={() => onUnrestrictFile(file.id)}
                         disabled={fileBusy}
                         className="text-xs text-muted-foreground hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                        title={file.download_url ? 'Generate a fresh direct download link from the provider.' : 'Generate a direct download link from the provider.'}
+                        title={file.download_url ? t('regenerateDirectLinkTooltip') : t('generateDirectLinkTooltip')}
                       >
                         {file.download_url ? t('regenerate') : t('generateLink')}
                       </button>

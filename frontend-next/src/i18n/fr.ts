@@ -238,6 +238,7 @@ export const fr: Translations = {
 
   // Dashboard
   dashboardDesc:          "Vue d'ensemble de l'activité et des jobs récents.",
+  dashboardLoadFailed:    "Impossible de charger le tableau de bord. Veuillez réessayer.",
   dashActiveJobs:         'Jobs actifs',
   dashRunningNow:         'En cours',
   dashWaiting:            'En attente',
@@ -552,6 +553,7 @@ export const fr: Translations = {
   resetFailed:    'Échec de la réinitialisation.',
   previewFailed:  'Échec de la prévisualisation.',
   deleteFailed:   'Échec de la suppression.',
+  missingFileId:  'Identifiant de fichier manquant.',
   nameRequired:   'Le nom est requis.',
   testing:        'Test en cours…',
   testFailed:     'Test échoué',
@@ -1113,4 +1115,9 @@ export const fr: Translations = {
   maintStatusOk:              'OK',
   maintStatusError:           'Erreur',
   maintStatusUnknown:         'Inconnu',
+  uploadFailed: 'Échec de l’envoi du fichier.',
+  submissionFailed: 'Échec de la soumission.',
+  generateDirectLinkTooltip: 'Générer un lien de téléchargement direct depuis le fournisseur.',
+  regenerateDirectLinkTooltip: 'Générer un nouveau lien de téléchargement direct depuis le fournisseur.',
+  smtpTestEmailSent: 'Email de test envoyé — vérifiez votre boîte de réception.',
 }

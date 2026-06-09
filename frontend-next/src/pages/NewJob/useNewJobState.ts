@@ -96,7 +96,7 @@ export function useNewJobState() {
               id: `err-${file.name}`,
               input: file.name,
               status: 'failed',
-              error: err instanceof ApiError ? err.message : 'Upload failed.',
+              error: err instanceof ApiError ? err.message : t('uploadFailed'),
             })
           }
         }
@@ -124,7 +124,7 @@ export function useNewJobState() {
       const created = items.filter(i => i.status !== 'failed').length
       setResult({ submitted: items.length, created, failed: items.length - created, items })
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Submission failed.'
+      const msg = err instanceof ApiError ? err.message : t('submissionFailed')
       const input = activeTab === 'torrent' ? (torrentFileName ?? 'torrent') : 'submission'
       setResult({ submitted: 1, created: 0, failed: 1, items: [{ id: 'err', input, status: 'failed', error: msg }] })
     } finally {
