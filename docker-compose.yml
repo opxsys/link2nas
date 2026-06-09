@@ -56,7 +56,7 @@ services:
     depends_on:
       - redis
       - web
-    command: ["python", "worker.py"]
+    command: ["sh", "-c", "sleep \"$${LINK2NAS_STARTUP_DELAY_SECONDS:-20}\" && exec python worker.py"]
 
   scheduler:
     build: .
@@ -77,7 +77,7 @@ services:
     depends_on:
       - redis
       - web
-    command: ["python", "-m", "backend.services_v2.scheduler_loop"]
+    command: ["sh", "-c", "sleep \"$${LINK2NAS_STARTUP_DELAY_SECONDS:-20}\" && exec python -m backend.services_v2.scheduler_loop"]
 
   local-download-worker:
     build: .
@@ -98,7 +98,7 @@ services:
     depends_on:
       - redis
       - web
-    command: ["python", "-m", "backend.services_v2.local_download_worker"]
+    command: ["sh", "-c", "sleep \"$${LINK2NAS_STARTUP_DELAY_SECONDS:-20}\" && exec python -m backend.services_v2.local_download_worker"]
 
 volumes:
   redis_data:
