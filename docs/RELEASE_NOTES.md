@@ -1,5 +1,26 @@
 # Release Notes
 
+## v3.6.1-beta.1
+
+### Summary
+
+Maintenance polish beta based on `v3.6.0-beta.2`.
+
+### Fixed
+
+- Replaced remaining hardcoded UI fallback messages with i18n keys.
+- Localized remaining action fallback messages in job, new-job, and SMTP flows.
+- Clarified Docker startup delay documentation across Compose files, troubleshooting, and backlog.
+
+### Validation
+
+- Frontend type-check: OK.
+- Frontend production build: OK.
+- Targeted Redis worker, OIDC admin provider, and Identity Proxy admin route unit tests: OK.
+- UI hardcoded-message grep checks: OK.
+
+---
+
 ## v3.6.0-beta.2
 
 ### Summary
