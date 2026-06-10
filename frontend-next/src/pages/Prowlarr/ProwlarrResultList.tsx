@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, Magnet, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Download, Magnet, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createJobFromProwlarr } from '@/api/prowlarr'
 import { useI18n } from '@/i18n'
@@ -24,8 +24,16 @@ export default function ProwlarrResultList({ results }: Props) {
     setJobErrors((prev) => { const m = new Map(prev); m.delete(result.result_id); return m })
     try {
       const job = await createJobFromProwlarr({ result_id: result.result_id })
-      setJobStates((prev) => new Map(prev).set(result.result_id, 'ok'))
       setJobIds((prev) => new Map(prev).set(result.result_id, job.id))
+      if (job.started) {
+        setJobStates((prev) => new Map(prev).set(result.result_id, 'ok'))
+      } else {
+        setJobStates((prev) => new Map(prev).set(result.result_id, 'partial_ok'))
+        setJobErrors((prev) => new Map(prev).set(
+          result.result_id,
+          job.start_error ?? t('prowlarrAddJobFailed'),
+        ))
+      }
     } catch (err) {
       setJobStates((prev) => new Map(prev).set(result.result_id, 'error'))
       setJobErrors((prev) => new Map(prev).set(
@@ -90,6 +98,20 @@ export default function ProwlarrResultList({ results }: Props) {
                       <CheckCircle2 size={12} aria-hidden="true" />
                       {t('prowlarrGoToJob')}
                     </button>
+                  ) : state === 'partial_ok' && jobId ? (
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                        <AlertCircle size={12} aria-hidden="true" />
+                        {t('prowlarrJobNotStarted')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleViewJob(jobId)}
+                        className="text-xs text-muted-foreground hover:underline"
+                      >
+                        {t('prowlarrGoToJob')}
+                      </button>
+                    </div>
                   ) : state === 'error' ? (
                     <span
                       className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400"
@@ -107,7 +129,7 @@ export default function ProwlarrResultList({ results }: Props) {
                     >
                       {state === 'loading'
                         ? <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-                        : t('prowlarrResultAdd')}
+                        : t('prowlarrResultAddStart')}
                     </Button>
                   )}
                 </td>

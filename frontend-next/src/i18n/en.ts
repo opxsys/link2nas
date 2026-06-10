@@ -413,9 +413,9 @@ export const en = {
   resultFailed:          'Failed',
 
   // Prowlarr page
-  prowlarrDesc:              'Browse and submit via your Prowlarr instance. Configure the integration in Settings → Prowlarr.',
+  prowlarrDesc:              'Search your Prowlarr indexers and add results directly as jobs.',
   prowlarrNotConfigured:     'Prowlarr is not configured',
-  prowlarrNotConfiguredDesc: 'Enable Prowlarr and set a URL in Settings to use this page.',
+  prowlarrNotConfiguredDesc: 'Configure your Prowlarr connection in Settings → Prowlarr to enable native search.',
   goToSettingsProwlarr:      'Go to Settings → Prowlarr',
   openProwlarrNewTab:        'Open Prowlarr in new tab',
   prowlarrSetupGuide:        'Setup Guide',
@@ -1141,9 +1141,11 @@ export const en = {
   adminProwlarrTestFailed:         'Connection failed',
   adminProwlarrNotTestable:        'Enter a base URL and API key before testing.',
   prowlarrSaveBeforeTest:          'Save changes before testing the connection.',
+  prowlarrTabSearch:               'Native Search',
+  prowlarrTabSend:                 'Submit from Prowlarr',
   // Settings — Prowlarr API user config
-  prowlarrApiTitle:                'Personal Prowlarr API',
-  prowlarrApiDesc:                 'Configure your personal Prowlarr instance. Takes priority over the global configuration.',
+  prowlarrApiTitle:                'Native Link2NAS Search',
+  prowlarrApiDesc:                 'Configure your personal Prowlarr instance to enable native search from Link2NAS. Takes priority over the global configuration.',
   prowlarrApiEnabled:              'Enable personal Prowlarr integration',
   prowlarrApiEnabledDesc:          'When enabled, your URL and key are used instead of the global configuration.',
   prowlarrApiBaseUrl:              'Base URL',
@@ -1173,6 +1175,8 @@ export const en = {
   prowlarrDirect:                  'Direct',
   prowlarrAddJobFailed:            'Could not create the job.',
   prowlarrGoToJob:                 'View job',
+  prowlarrResultAddStart:          'Add & start',
+  prowlarrJobNotStarted:           'Created — not started',
   prowlarrIndexerCount:            'indexers',
 } as const
 

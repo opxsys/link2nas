@@ -8,7 +8,6 @@ import { getProwlarrStatus, searchProwlarr } from '@/api/prowlarr'
 import { useI18n } from '@/i18n'
 import ProwlarrSearchForm from './ProwlarrSearchForm'
 import ProwlarrResultList from './ProwlarrResultList'
-import ProwlarrQbittorrentGuide from './ProwlarrQbittorrentGuide'
 import type { ProwlarrStatusResult, ProwlarrSearchResult } from '@/api/prowlarr'
 import type { SearchStatus } from './prowlarr.types'
 
@@ -80,7 +79,6 @@ export default function Prowlarr() {
           </>
         )}
 
-        <ProwlarrQbittorrentGuide />
       </div>
     </>
   )

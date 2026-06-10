@@ -415,9 +415,9 @@ export const fr: Translations = {
   resultFailed:          'Échoué',
 
   // Prowlarr page
-  prowlarrDesc:              "Parcourez et soumettez via votre instance Prowlarr. Configurez l'intégration dans Paramètres → Prowlarr.",
+  prowlarrDesc:              'Recherchez vos indexeurs Prowlarr et ajoutez directement les résultats en téléchargements.',
   prowlarrNotConfigured:     "Prowlarr n'est pas configuré",
-  prowlarrNotConfiguredDesc: 'Activez Prowlarr et définissez une URL dans les paramètres pour utiliser cette page.',
+  prowlarrNotConfiguredDesc: 'Configurez votre connexion Prowlarr dans Paramètres → Prowlarr pour activer la recherche native.',
   goToSettingsProwlarr:      'Aller dans Paramètres → Prowlarr',
   openProwlarrNewTab:        'Ouvrir Prowlarr dans un nouvel onglet',
   prowlarrSetupGuide:        'Guide de configuration',
@@ -1143,9 +1143,11 @@ export const fr: Translations = {
   adminProwlarrTestFailed:         'Échec de la connexion',
   adminProwlarrNotTestable:        'Saisissez une URL de base et une clé API avant de tester.',
   prowlarrSaveBeforeTest:          'Enregistrez les modifications avant de tester la connexion.',
+  prowlarrTabSearch:               'Recherche native',
+  prowlarrTabSend:                 'Envoyer depuis Prowlarr',
   // Settings — Prowlarr API user config
-  prowlarrApiTitle:                'Prowlarr API personnel',
-  prowlarrApiDesc:                 'Configurez votre instance Prowlarr personnelle. Prioritaire sur la configuration globale.',
+  prowlarrApiTitle:                'Recherche native Link2NAS',
+  prowlarrApiDesc:                 'Configurez votre instance Prowlarr personnelle pour activer la recherche native depuis Link2NAS. Prioritaire sur la configuration globale.',
   prowlarrApiEnabled:              "Activer l'intégration Prowlarr personnelle",
   prowlarrApiEnabledDesc:          "Lorsqu'activée, votre URL et clé sont utilisées à la place de la configuration globale.",
   prowlarrApiBaseUrl:              'URL de base',
@@ -1175,5 +1177,7 @@ export const fr: Translations = {
   prowlarrDirect:                  'Direct',
   prowlarrAddJobFailed:            'Impossible de créer le téléchargement.',
   prowlarrGoToJob:                 'Voir le téléchargement',
+  prowlarrResultAddStart:          'Ajouter et démarrer',
+  prowlarrJobNotStarted:           'Créé — démarrage échoué',
   prowlarrIndexerCount:            'indexeurs',
 }

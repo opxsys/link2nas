@@ -1,7 +1,7 @@
 import type { ProwlarrSearchResult, ProwlarrStatusResult } from '@/api/prowlarr'
 
 export type SearchStatus = 'idle' | 'searching' | 'done' | 'error'
-export type JobStatus = 'idle' | 'loading' | 'ok' | 'error'
+export type JobStatus = 'idle' | 'loading' | 'ok' | 'partial_ok' | 'error'
 
 export interface SearchState {
   status: SearchStatus

@@ -125,6 +125,8 @@ export interface ProwlarrCreatedJob {
   id: string
   status: string
   source_type: string
+  started: boolean
+  start_error?: string
 }
 
 export function getProwlarrStatus(): Promise<ProwlarrStatusResult> {
