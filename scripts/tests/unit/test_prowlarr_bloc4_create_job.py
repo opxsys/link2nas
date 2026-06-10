@@ -9,9 +9,10 @@ Covers:
     3.  Explicit destination_config_id in request → used directly.
     4.  Destination disabled → 400.
 
-  URL handling (magnet):
-    5.  magnet_url present → magnet job created (never direct_link).
-    6.  magnet preferred over download_url when both present.
+  URL handling (magnet — real magnet:? URI only):
+    5.  magnet_url is a real magnet:? URI → magnet job created (never direct_link).
+    6.  real magnet preferred over download_url when both present.
+    (fake-magnet edge cases covered in TestFakeMagnetUrl)
 
   URL handling (download_url only — server-side torrent fetch):
     7.  download_url present, backend fetches valid .torrent → torrent_file job.
@@ -36,7 +37,7 @@ Covers:
 
   Security:
     20. Response never contains download_url, magnet_url, info_url.
-    21. Response fields are exactly {id, status, source_type}.
+    21. Response fields include {id, status, source_type, started}; no sensitive fields.
 
   Service errors:
     22. ValueError from job service → 400.
@@ -255,10 +256,11 @@ def _make_cache_with_result(
     download_url: str | None = None,
     info_url: str | None = None,
     title: str = "Test Release",
+    guid: str = "test-guid-1",
 ) -> tuple[ProwlarrResultCache, str]:
     cache = ProwlarrResultCache(ttl_minutes=5)
     raw = [{
-        "guid": "test-guid-1",
+        "guid": guid,
         "title": title,
         "indexer": "TestIndexer",
         "size": 1_500_000_000,
@@ -664,6 +666,176 @@ class TestAutoStart(unittest.TestCase):
         called_job = svc.job_repository.update_provider_state.call_args[0][0]
         payload = json.loads(called_job.provider_payload_json or "{}")
         self.assertEqual(payload.get("name"), "Dune Part Two")
+
+
+# ── Tests: real magnet extraction from guid / download_url ────────────────────
+
+_GUID_MAGNET = (
+    "magnet:?xt=urn:btih:beefdead00000000000000000000000000000000"
+    "&dn=test-from-guid&tr=udp%3A%2F%2Ftracker.example.com"
+)
+_DL_MAGNET = (
+    "magnet:?xt=urn:btih:cafebabe00000000000000000000000000000000"
+    "&dn=test-from-download"
+)
+
+
+class TestRealMagnetExtraction(unittest.TestCase):
+    """
+    Prowlarr sometimes stores the real magnet URI in guid or download_url
+    while magnet_url is an HTTPS redirect.  The cache resolves real_magnet_url
+    server-side; /prowlarr/jobs must use it to create a correct magnet job.
+    """
+
+    def test_guid_magnet_creates_magnet_job(self):
+        """guid=magnet:? with magnet_url=https redirect → job created from guid value."""
+        cache, result_id = _make_cache_with_result(
+            guid=_GUID_MAGNET,
+            magnet_url="https://indexer.example.com/redirect?apikey=SECRET",
+            download_url=None,
+        )
+        svc = FakeJobService()
+        app = _make_app(cache=cache, job_service=svc)
+        with app.test_client() as c:
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.get_json()["source_type"], "magnet")
+        self.assertEqual(svc.last_create_kwargs["source_type"], "magnet")
+        self.assertEqual(svc.last_create_kwargs["source_value"], _GUID_MAGNET)
+
+    def test_download_url_magnet_creates_magnet_job(self):
+        """download_url=magnet:? with empty magnet_url → job created from download_url value."""
+        cache, result_id = _make_cache_with_result(
+            magnet_url=None,
+            download_url=_DL_MAGNET,
+        )
+        svc = FakeJobService()
+        app = _make_app(cache=cache, job_service=svc)
+        with app.test_client() as c:
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(svc.last_create_kwargs["source_type"], "magnet")
+        self.assertEqual(svc.last_create_kwargs["source_value"], _DL_MAGNET)
+
+    def test_fake_magnet_url_guid_magnet_no_prowlarr_no_url(self):
+        """magnet_url=HTTPS + download_url=empty + guid=magnet:? → no PROWLARR_NO_URL."""
+        cache, result_id = _make_cache_with_result(
+            guid=_GUID_MAGNET,
+            magnet_url="https://indexer.example.com/redirect?apikey=SECRET",
+            download_url=None,
+        )
+        app = _make_app(cache=cache)
+        with app.test_client() as c:
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertNotEqual(r.status_code, 400)
+        self.assertNotEqual(r.get_json().get("code"), "PROWLARR_NO_URL")
+
+    def test_real_magnet_value_never_in_json_response(self):
+        """The real magnet URI must never appear in the HTTP response body."""
+        cache, result_id = _make_cache_with_result(
+            guid=_GUID_MAGNET,
+            magnet_url="https://indexer.example.com/redirect?apikey=SECRET",
+            download_url=None,
+        )
+        app = _make_app(cache=cache)
+        with app.test_client() as c:
+            r = _post_jobs(c, {"result_id": result_id})
+        raw_response = r.data.decode()
+        self.assertNotIn("magnet:?", raw_response)
+        self.assertNotIn("xt=urn:btih", raw_response)
+        self.assertNotIn("SECRET", raw_response)
+
+    def test_magnet_url_priority_over_guid(self):
+        """When magnet_url is a genuine magnet:?, it is used even if guid is also a magnet."""
+        cache, result_id = _make_cache_with_result(
+            guid=_GUID_MAGNET,
+            magnet_url=_MAGNET,
+            download_url=None,
+        )
+        svc = FakeJobService()
+        app = _make_app(cache=cache, job_service=svc)
+        with app.test_client() as c:
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(svc.last_create_kwargs["source_value"], _MAGNET)
+
+
+# ── Tests: fake magnet URL (indexer redirect, not a real magnet:?) ─────────────
+
+class TestFakeMagnetUrl(unittest.TestCase):
+    """
+    Prowlarr indexers sometimes return HTTPS redirect URLs in the magnet_url
+    field (e.g. https://indexer/redirect?apikey=SECRET).  These must NOT be
+    treated as real magnets (would cause wrong_parameter at Real-Debrid and
+    leak the embedded credentials).  The route must fall through to download_url.
+    """
+
+    _FAKE_MAGNET = (
+        "https://indexer.example.com/redirect/magnet?apikey=SECRETTOKEN&passkey=HIDDEN"
+    )
+
+    def test_fake_magnet_falls_through_to_download_url(self):
+        """https:// in magnet_url is not a real magnet; torrent is fetched via download_url."""
+        cache, result_id = _make_cache_with_result(
+            magnet_url=self._FAKE_MAGNET,
+            download_url=_DOWNLOAD_URL,
+        )
+        svc = FakeJobService()
+        app = _make_app(cache=cache, job_service=svc)
+        with app.test_client() as c, \
+             patch("backend.routes_v2.prowlarr_search.requests.get", _mock_http_ok()):
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertEqual(r.status_code, 201)
+        # Must be torrent_file, not magnet or direct_link
+        self.assertEqual(r.get_json()["source_type"], "torrent_file")
+        self.assertIn("uploaded_path", svc.last_torrent_kwargs)
+        # create_job (magnet path) must NOT have been called
+        self.assertEqual(svc.last_create_kwargs, {})
+
+    def test_fake_magnet_no_download_url_returns_no_url_error(self):
+        """Fake magnet_url with no download_url → 400 PROWLARR_NO_URL."""
+        cache, result_id = _make_cache_with_result(
+            magnet_url=self._FAKE_MAGNET,
+            download_url=None,
+        )
+        app = _make_app(cache=cache)
+        with app.test_client() as c:
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.get_json().get("code"), "PROWLARR_NO_URL")
+
+    def test_fake_magnet_url_never_sent_to_provider(self):
+        """The fake magnet URL (with embedded API keys) must never reach create_job or create_torrent_file_job."""
+        cache, result_id = _make_cache_with_result(
+            magnet_url=self._FAKE_MAGNET,
+            download_url=_DOWNLOAD_URL,
+        )
+        svc = FakeJobService()
+        app = _make_app(cache=cache, job_service=svc)
+        with app.test_client() as c, \
+             patch("backend.routes_v2.prowlarr_search.requests.get", _mock_http_ok()):
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertEqual(r.status_code, 201)
+        all_kwargs = str(svc.last_create_kwargs) + str(svc.last_torrent_kwargs)
+        self.assertNotIn("SECRETTOKEN", all_kwargs)
+        self.assertNotIn("HIDDEN", all_kwargs)
+        self.assertNotIn("apikey", all_kwargs)
+        self.assertNotIn(self._FAKE_MAGNET, all_kwargs)
+
+    def test_real_magnet_still_preferred_when_both_present(self):
+        """A genuine magnet:? URI is still used even when download_url is also present."""
+        cache, result_id = _make_cache_with_result(
+            magnet_url=_MAGNET,
+            download_url=_DOWNLOAD_URL,
+        )
+        svc = FakeJobService()
+        app = _make_app(cache=cache, job_service=svc)
+        with app.test_client() as c:
+            r = _post_jobs(c, {"result_id": result_id})
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(svc.last_create_kwargs["source_type"], "magnet")
+        self.assertEqual(svc.last_create_kwargs["source_value"], _MAGNET)
+        self.assertEqual(svc.last_torrent_kwargs, {})
 
 
 if __name__ == "__main__":

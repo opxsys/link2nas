@@ -98,6 +98,10 @@ export interface ProwlarrSearchResult {
   has_download: boolean
   has_magnet: boolean
   has_info_url: boolean
+  /** True only when a genuine magnet:? URI exists (may come from any Prowlarr field). */
+  has_real_magnet: boolean
+  /** True only when download_url is an HTTP(S) URL fetchable as a .torrent file. */
+  has_torrent_download: boolean
 }
 
 export interface ProwlarrSearchResponse {

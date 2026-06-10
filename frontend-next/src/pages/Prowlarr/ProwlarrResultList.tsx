@@ -71,6 +71,7 @@ export default function ProwlarrResultList({ results }: Props) {
             const state = jobStates.get(r.result_id) ?? 'idle'
             const jobId = jobIds.get(r.result_id)
             const errMsg = jobErrors.get(r.result_id)
+            const canAdd = r.has_real_magnet || r.has_torrent_download
             return (
               <tr key={r.result_id} className="hover:bg-muted/20">
                 <td className="px-3 py-2.5">
@@ -124,7 +125,7 @@ export default function ProwlarrResultList({ results }: Props) {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={state === 'loading' || (!r.has_download && !r.has_magnet)}
+                      disabled={state === 'loading' || !canAdd}
                       onClick={() => handleAdd(r)}
                     >
                       {state === 'loading'
@@ -146,13 +147,13 @@ function LinkBadges({ result }: { result: ProwlarrSearchResult }) {
   const { t } = useI18n()
   return (
     <div className="flex flex-wrap gap-1">
-      {result.has_magnet && (
+      {result.has_real_magnet && (
         <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-300">
           <Magnet size={10} aria-hidden="true" />
           {t('prowlarrMagnet')}
         </span>
       )}
-      {result.has_download && (
+      {result.has_torrent_download && (
         <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
           <Download size={10} aria-hidden="true" />
           {t('prowlarrDirect')}

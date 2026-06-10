@@ -38,6 +38,15 @@ Covers:
     28. POST /search — client error → 502 PROWLARR_SEARCH_FAILED
     29. POST /search — missing query → 400
 
+  Public source flags (no raw URLs ever exposed):
+    30. source_debug absent from results (regression)
+    31. has_real_magnet=True when magnet_url is a real magnet:?
+    32. has_real_magnet=True when guid is the real magnet:? (not magnet_url)
+    33. has_real_magnet=False when magnet_url is an HTTPS redirect
+    34. has_torrent_download=True when download_url is HTTP(S)
+    35. has_torrent_download=False when download_url is a magnet:? URI
+    36. has_real_magnet=False, has_torrent_download=False when all fields empty
+
 Run from project root:
     python3 scripts/tests/unit/test_prowlarr_bloc2_routes.py
 """
@@ -534,6 +543,10 @@ class TestProwlarrSearch(unittest.TestCase):
         self.assertIn("has_download", first)
         self.assertIn("has_magnet", first)
         self.assertIn("has_info_url", first)
+        self.assertIn("has_real_magnet", first)
+        self.assertIn("has_torrent_download", first)
+        # source_debug must NOT appear in the public response
+        self.assertNotIn("source_debug", first)
         # result_id must be cached server-side and user-isolated
         cached = cache.get(first["result_id"])
         self.assertIsNotNone(cached)
@@ -556,7 +569,7 @@ class TestProwlarrSearch(unittest.TestCase):
             self.assertNotIn("info_url", result)
 
     def test_search_boolean_flags_reflect_presence(self):
-        """has_download/has_magnet/has_info_url must be True when URLs are present."""
+        """All boolean source flags must be True when corresponding URLs are present."""
         svc, _, _ = _make_svc()
         svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
         client = _make_app(svc, FakeProwlarrClientOk).test_client()
@@ -566,10 +579,14 @@ class TestProwlarrSearch(unittest.TestCase):
             **_json({"query": "ubuntu"}),
         )
         first = r.get_json()["results"][0]
-        # FakeProwlarrClientOk now supplies non-None URLs for all three fields
+        # FakeProwlarrClientOk supplies non-None URLs for all three fields:
+        #   magnet_url=real magnet:?, download_url=HTTP, info_url=HTTP
         self.assertTrue(first["has_download"])
         self.assertTrue(first["has_magnet"])
         self.assertTrue(first["has_info_url"])
+        # Clean source flags
+        self.assertTrue(first["has_real_magnet"])
+        self.assertTrue(first["has_torrent_download"])
 
     def test_get_for_user_isolates_by_user(self):
         """get_for_user() must return None when result belongs to a different user."""
@@ -720,6 +737,113 @@ class TestProwlarrCacheUnavailable(unittest.TestCase):
         self.assertNotIn("download_url", body)
         self.assertNotIn("magnet_url", body)
         self.assertNotIn("info_url", body)
+
+
+# ── Public source flags tests ─────────────────────────────────────────────────
+
+class TestPublicSourceFlags(unittest.TestCase):
+    """
+    has_real_magnet and has_torrent_download must accurately reflect actual
+    magnet:? availability and HTTP torrent download availability.
+    source_debug must NOT appear in any search result.
+    """
+
+    def _search_first(
+        self,
+        *,
+        guid: str = "guid-001",
+        magnet_url: str | None = None,
+        download_url: str | None = None,
+        info_url: str | None = None,
+    ) -> dict:
+        """Run a search with a controlled single result and return the result dict."""
+        class _FakeClient:
+            def __init__(self, base_url, api_key): pass
+            def search(self, query, **kw):
+                return [{
+                    "guid": guid,
+                    "title": "Test Release",
+                    "indexer": "Test Indexer",
+                    "indexer_id": 1,
+                    "size": 1_000_000,
+                    "seeders": 10,
+                    "leechers": 2,
+                    "publish_date": "2026-06-10T00:00:00Z",
+                    "categories": [],
+                    "magnet_url": magnet_url,
+                    "download_url": download_url,
+                    "info_url": info_url,
+                }]
+
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        app = _make_app(svc, client_factory=_FakeClient)
+        with app.test_client() as c:
+            r = c.post(
+                "/api/v2/prowlarr/search",
+                **_json({"query": "test"}),
+                **_auth(_USER_TOKEN),
+            )
+        self.assertEqual(r.status_code, 200)
+        results = r.get_json()["results"]
+        self.assertEqual(len(results), 1)
+        return results[0]
+
+    def test_source_debug_absent_from_results(self):
+        """Regression: source_debug must NOT appear in any search result."""
+        result = self._search_first(
+            magnet_url="magnet:?xt=urn:btih:abc&tr=udp://tracker.example.com",
+        )
+        self.assertNotIn("source_debug", result)
+
+    def test_real_magnet_in_magnet_url(self):
+        """magnet_url contains a real magnet:? → has_real_magnet=True."""
+        result = self._search_first(
+            magnet_url="magnet:?xt=urn:btih:abc123&dn=test",
+            download_url="https://indexer.example.com/download?apikey=SECRET",
+        )
+        self.assertTrue(result["has_real_magnet"])
+        self.assertTrue(result["has_torrent_download"])
+
+    def test_real_magnet_in_guid(self):
+        """guid contains the real magnet:? (not magnet_url) → has_real_magnet=True."""
+        result = self._search_first(
+            guid="magnet:?xt=urn:btih:abc123&dn=test",
+            magnet_url=None,
+            download_url=None,
+        )
+        self.assertTrue(result["has_real_magnet"])
+        self.assertFalse(result["has_torrent_download"])
+
+    def test_https_redirect_in_magnet_url_is_not_real_magnet(self):
+        """HTTPS redirect URL in magnet_url → has_real_magnet=False."""
+        result = self._search_first(
+            magnet_url="https://indexer.example.com/redirect?apikey=SECRETTOKEN",
+            download_url=None,
+        )
+        self.assertFalse(result["has_real_magnet"])
+
+    def test_http_download_url_sets_torrent_download(self):
+        """HTTP(S) download_url → has_torrent_download=True."""
+        result = self._search_first(
+            download_url="https://indexer.example.com/download?token=SECRET",
+        )
+        self.assertTrue(result["has_torrent_download"])
+
+    def test_magnet_in_download_url_not_torrent_download(self):
+        """magnet:? in download_url → has_torrent_download=False but has_real_magnet=True."""
+        result = self._search_first(
+            magnet_url=None,
+            download_url="magnet:?xt=urn:btih:abc123&dn=test",
+        )
+        self.assertFalse(result["has_torrent_download"])
+        self.assertTrue(result["has_real_magnet"])
+
+    def test_all_empty_both_false(self):
+        """No URLs anywhere → has_real_magnet=False, has_torrent_download=False."""
+        result = self._search_first(guid="not-a-url", magnet_url=None, download_url=None)
+        self.assertFalse(result["has_real_magnet"])
+        self.assertFalse(result["has_torrent_download"])
 
 
 if __name__ == "__main__":

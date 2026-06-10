@@ -236,7 +236,11 @@ def create_job_from_prowlarr_result():
     if cached is None:
         return _error("Result not found or has expired. Please search again.", 404, "PROWLARR_RESULT_NOT_FOUND")
 
-    if not cached.magnet_url and not cached.download_url:
+    # real_magnet_url is the first genuine magnet:? URI found across magnet_url,
+    # download_url, and guid (resolved server-side by the cache).
+    # real_torrent_url is download_url only when it's an HTTP(S) URL — never a redirect.
+    is_real_magnet = bool(cached.real_magnet_url)
+    if not is_real_magnet and not cached.real_torrent_url:
         return _error("This result has no downloadable URL.", 400, "PROWLARR_NO_URL")
 
     provider_name = data.get("provider_name") or None
@@ -255,22 +259,22 @@ def create_job_from_prowlarr_result():
         except DestinationConfigNotFoundError:
             resolved_dest_name, resolved_dest_config_id = None, None
 
-        if cached.magnet_url:
-            # Magnet: send directly to the debrid provider.
+        if is_real_magnet:
+            # Validated magnet:? URI (may come from magnet_url, download_url, or guid).
             job = svc.create_job(
                 context=ctx,
                 source_type="magnet",
-                source_value=cached.magnet_url,
+                source_value=cached.real_magnet_url,
                 provider_name=provider_name,
                 provider_config_id=provider_config_id,
                 destination_name=resolved_dest_name,
                 destination_config_id=resolved_dest_config_id,
             )
         else:
-            # download_url only: fetch the .torrent server-side so the provider
-            # never receives the Prowlarr URL or its embedded API credentials.
+            # No real magnet found: fetch the .torrent server-side via real_torrent_url
+            # so the provider never receives the Prowlarr URL or its embedded credentials.
             try:
-                torrent_bytes = _fetch_prowlarr_torrent(cached.download_url)
+                torrent_bytes = _fetch_prowlarr_torrent(cached.real_torrent_url)
             except _ProwlarrFetchError as exc:
                 logger.warning("Prowlarr torrent fetch failed: code=%s", exc.code)
                 return _error(exc.message, 502, exc.code)
