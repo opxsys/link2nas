@@ -1,5 +1,77 @@
 # Release Notes
 
+## v3.7.0-beta.1
+
+### Summary
+
+Native Prowlarr search integration. Users can now search Prowlarr indexers directly from the Link2NAS interface and create jobs from results, without leaving Link2NAS.
+
+This is an addition alongside the existing qBittorrent-compatible send flow. Both modes remain available.
+
+---
+
+### Added
+
+**Native Prowlarr search page (`/prowlarr`)**
+
+A new search interface lets users query Prowlarr indexers directly from Link2NAS.
+
+- Free-text query with period filter (Today / Last 7 days / Last 30 days / All dates).
+- Category filter (Movies, TV, Audio, PC, Books — Newznab categories).
+- Indexer filter — restrict the search to selected active indexers, or query all.
+- Sortable result table: Title, Age, Indexer, Size, Seeders.
+- Link availability badges: **Magnet**, **Torrent**, **Info** — based on what is actually available for each result, not on field names alone.
+- **Add & start** button — creates and starts a job from the result using a temporary `result_id`. No sensitive URL is sent to the browser.
+- Real server-side pagination via Prowlarr's `limit` / `offset` parameters. Page sizes: 10 / 25 / 50 (default 25).
+- Results default to newest first.
+
+**Saved searches (browser localStorage)**
+
+Users can save a named search (query, period, categories, indexers, sort) for quick reuse. Saved searches are local to the browser; they are not stored server-side.
+
+**Global and per-user Prowlarr API configuration**
+
+- Super admins configure a global Prowlarr URL and API key in **Admin > Prowlarr**.
+- Each user can override with their own configuration in **Settings > Prowlarr**.
+- User configuration takes priority when both are active.
+- The Prowlarr API key is encrypted at rest. It is not returned in plain text after saving.
+
+---
+
+### Changed
+
+- The Prowlarr integration page now separates the **native search** tab from the **Send from Prowlarr** (qBittorrent-compatible) setup guide. The two flows are independent.
+- Default sort order for native search results is **newest first** (by publish date, descending).
+
+---
+
+### Security
+
+- Prowlarr result URLs (`download_url`, `magnet_url`, `info_url`), API keys, passkeys, and tokens are **never exposed to the frontend**.
+- The frontend interacts only with temporary `result_id` identifiers cached server-side (TTL: 20 minutes, user-isolated).
+- Real usable sources are resolved entirely on the backend:
+  - **Real magnet URI** — searched across `magnet_url`, `download_url`, and `guid`. HTTPS redirect URLs that masquerade as magnets are not treated as valid magnet URIs.
+  - **HTTP(S) torrent URL** — `download_url` only, when it is an actual HTTP(S) address.
+- When the source is a `.torrent` URL, Link2NAS fetches it server-side. The URL is never sent to the debrid provider or the browser.
+- Backend logs do not contain Prowlarr URLs, full magnet content, passkeys, or tokens.
+
+---
+
+### Fixed
+
+- Prowlarr results whose real magnet URI is stored in `guid` (not in `magnet_url`) are now handled correctly.
+- HTTPS redirect URLs stored in `magnet_url` are no longer mistakenly treated as real magnet links and sent to debrid providers.
+
+---
+
+### Documentation
+
+| File | What changed |
+|---|---|
+| [PROWLARR.md](PROWLARR.md) | Fully restructured: two integration modes (qBittorrent-compatible and native search), prerequisites, configuration, native search features (filters, period rules, pagination, saved searches), security model, expanded troubleshooting. |
+
+---
+
 ## v3.6.1-beta.1
 
 ### Summary
