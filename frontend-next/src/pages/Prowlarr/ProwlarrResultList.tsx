@@ -3,16 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle, Download, Magnet, Info,
   CheckCircle2, XCircle, Loader2, ChevronUp, ChevronDown,
-  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createJobFromProwlarr } from '@/api/prowlarr'
 import { useI18n } from '@/i18n'
 import { formatBytes, formatAge } from './prowlarr.utils'
+import ProwlarrPaginationBar from './ProwlarrPaginationBar'
 import type { ProwlarrSearchResult } from '@/api/prowlarr'
 import type { JobStatus, SortState, SortField } from './prowlarr.types'
-
-const PAGE_SIZE_OPTIONS = [10, 25, 50]
 
 interface Props {
   results: ProwlarrSearchResult[]
@@ -72,8 +70,6 @@ export default function ProwlarrResultList({
     )
   }
 
-  const hasPrev = page > 0
-  const hasNext = rawCount >= pageSize
   const TH = 'px-3 py-2.5 font-medium cursor-pointer select-none hover:text-foreground'
 
   return (
@@ -170,43 +166,14 @@ export default function ProwlarrResultList({
           })}
         </tbody>
       </table>
-      <div className="flex items-center justify-between border-t border-border bg-muted/20 px-3 py-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">{t('prowlarrPageSize')}</span>
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            disabled={searching}
-            className="h-7 rounded border border-input bg-background px-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-          >
-            {PAGE_SIZE_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onPageChange(page - 1)}
-            disabled={!hasPrev || searching}
-            aria-label={t('prowlarrPagePrev')}
-            className="inline-flex h-7 items-center gap-1 rounded border border-input bg-background px-2 text-xs text-foreground hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <ChevronLeft size={12} aria-hidden="true" />
-            {t('prowlarrPagePrev')}
-          </button>
-          <button
-            type="button"
-            onClick={() => onPageChange(page + 1)}
-            disabled={!hasNext || searching}
-            aria-label={t('prowlarrPageNext')}
-            className="inline-flex h-7 items-center gap-1 rounded border border-input bg-background px-2 text-xs text-foreground hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {t('prowlarrPageNext')}
-            <ChevronRight size={12} aria-hidden="true" />
-          </button>
-        </div>
-      </div>
+      <ProwlarrPaginationBar
+        page={page}
+        pageSize={pageSize}
+        rawCount={rawCount}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        disabled={searching}
+      />
     </div>
   )
 }
