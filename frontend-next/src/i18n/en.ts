@@ -1178,6 +1178,35 @@ export const en = {
   prowlarrResultAddStart:          'Add & start',
   prowlarrJobNotStarted:           'Created — not started',
   prowlarrIndexerCount:            'indexers',
+  // Prowlarr search filters
+  prowlarrResultAge:               'Age',
+  prowlarrBadgeTorrent:            'Torrent',
+  prowlarrBadgeInfo:               'Info',
+  prowlarrPeriodLabel:             'Period',
+  prowlarrPeriodAll:               'All dates',
+  prowlarrPeriodToday:             'Today',
+  prowlarrPeriodWeek:              'Last 7 days',
+  prowlarrPeriodMonth:             'Last 30 days',
+  prowlarrCategoryLabel:           'Categories',
+  prowlarrCategoryAll:             'All categories',
+  prowlarrIndexerLabel:            'Indexers',
+  prowlarrIndexerAll:              'All indexers',
+  prowlarrIndexerLoading:          'Loading indexers…',
+  prowlarrFiltersClear:            'Clear filters',
+  prowlarrResultsCount:            'results',
+  prowlarrSearchHintFiltered:      'Searches recent torrents using the selected period.',
+  prowlarrSearchHintEmpty:         'Enter a search term or choose a recent period.',
+  prowlarrSearchBlockedMsg:        'Enter a search term or limit the search to the last 30 days at most.',
+  // Prowlarr saved searches
+  prowlarrSavedLabel:              'Saved searches',
+  prowlarrSaveSearchBtn:           'Save search',
+  prowlarrSaveSearchName:          'Search name',
+  prowlarrSaveSearchConfirm:       'Save',
+  prowlarrDeleteSaved:             'Delete saved search',
+  // Prowlarr pagination
+  prowlarrPagePrev:                'Previous',
+  prowlarrPageNext:                'Next',
+  prowlarrPageSize:                'Per page',
 } as const
 
 export type TranslationKey = keyof typeof en

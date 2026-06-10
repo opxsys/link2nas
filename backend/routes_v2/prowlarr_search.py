@@ -175,8 +175,9 @@ def search_prowlarr():
 
     data = request.get_json(silent=True) or {}
     query = str(data.get("query", "")).strip()
-    if not query:
-        return _error("query is required")
+    # An empty query is valid — Prowlarr returns recent results for the selected scope.
+    # The frontend enforces that at least one limiter (period, categories, indexers)
+    # is active before submitting an empty query.
 
     categories = data.get("categories") or []
     indexer_ids = data.get("indexer_ids") or []
@@ -186,6 +187,12 @@ def search_prowlarr():
             limit = 50
     except (ValueError, TypeError):
         limit = 50
+    try:
+        offset = int(data.get("offset") or 0)
+        if offset < 0:
+            offset = 0
+    except (ValueError, TypeError):
+        offset = 0
     min_seeders = data.get("min_seeders")
     if min_seeders is not None:
         try:
@@ -204,6 +211,7 @@ def search_prowlarr():
             categories=categories or None,
             indexer_ids=indexer_ids or None,
             limit=limit,
+            offset=offset,
             min_seeders=min_seeders,
         )
     except ProwlarrClientError as exc:

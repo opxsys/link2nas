@@ -36,7 +36,12 @@ Covers:
     26. POST /search — valid query → {source, results}
     27. POST /search — not configured → 400 PROWLARR_NOT_CONFIGURED
     28. POST /search — client error → 502 PROWLARR_SEARCH_FAILED
-    29. POST /search — missing query → 400
+    29. POST /search — empty query → 200 (recent results, Prowlarr accepts Query='')
+
+  Pagination (limit / offset):
+    37. limit=25, offset=0 → client receives offset=0 (not sent as param)
+    38. limit=25, offset=25 → client receives offset=25
+    39. invalid offset → defaults to 0, search succeeds
 
   Public source flags (no raw URLs ever exposed):
     30. source_debug absent from results (regression)
@@ -650,7 +655,8 @@ class TestProwlarrSearch(unittest.TestCase):
         self.assertEqual(r.status_code, 502)
         self.assertEqual(r.get_json().get("code"), "PROWLARR_SEARCH_FAILED")
 
-    def test_missing_query_returns_400(self):
+    def test_empty_query_returns_results(self):
+        """Empty query is valid — Prowlarr accepts Query='' and returns recent results."""
         svc, _, _ = _make_svc()
         svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
         client = _make_app(svc, FakeProwlarrClientOk).test_client()
@@ -659,7 +665,8 @@ class TestProwlarrSearch(unittest.TestCase):
             **_auth(_USER_TOKEN),
             **_json({}),
         )
-        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.status_code, 200)
+        self.assertIsInstance(r.get_json()["results"], list)
 
     def test_user_config_search_uses_user_source(self):
         svc, _, _ = _make_svc()
@@ -677,6 +684,53 @@ class TestProwlarrSearch(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         data = r.get_json()
         self.assertEqual(data["source"], "user")
+
+
+class TestProwlarrPagination(unittest.TestCase):
+    """
+    Tests 37–39: limit/offset pagination passed to ProwlarrClient.search().
+    """
+
+    def _search_with_kw(self, payload: dict) -> dict:
+        """Run a search and return the kwargs captured by the fake client."""
+        captured: dict = {}
+
+        class _CapturingClient:
+            def __init__(self, base_url, api_key): pass
+            def search(self, query, **kw):
+                captured.update(kw)
+                return []
+
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        client = _make_app(svc, client_factory=_CapturingClient).test_client()
+        r = client.post(
+            "/api/v2/prowlarr/search",
+            **_auth(_USER_TOKEN),
+            **_json(payload),
+        )
+        self.assertEqual(r.status_code, 200)
+        return captured
+
+    def test_offset_zero_not_sent_to_prowlarr(self):
+        """offset=0 (default) → Offset param not added to Prowlarr request (clean URL)."""
+        kw = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": 0})
+        self.assertEqual(kw.get("limit"), 25)
+        self.assertEqual(kw.get("offset"), 0)
+
+    def test_offset_25_passed_to_client(self):
+        """limit=25, offset=25 → client.search receives offset=25 (page 2)."""
+        kw = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": 25})
+        self.assertEqual(kw.get("limit"), 25)
+        self.assertEqual(kw.get("offset"), 25)
+
+    def test_invalid_offset_defaults_to_zero(self):
+        """Non-numeric or negative offset → defaults to 0, search succeeds."""
+        kw = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": "bad"})
+        self.assertEqual(kw.get("offset"), 0)
+
+        kw_neg = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": -10})
+        self.assertEqual(kw_neg.get("offset"), 0)
 
 
 class TestProwlarrClientValidation(unittest.TestCase):

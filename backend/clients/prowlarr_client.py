@@ -97,9 +97,12 @@ class ProwlarrClient:
         categories: list[int] | None = None,
         indexer_ids: list[int] | None = None,
         limit: int = 50,
+        offset: int = 0,
         min_seeders: int | None = None,
     ) -> list[dict]:
         params: dict = {"Query": query, "Limit": min(limit, 100)}
+        if offset > 0:
+            params["Offset"] = offset
         if categories:
             params["Categories[]"] = [str(c) for c in categories]
         if indexer_ids:

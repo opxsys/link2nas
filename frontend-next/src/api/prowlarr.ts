@@ -92,8 +92,11 @@ export interface ProwlarrSearchResult {
   result_id: string
   title: string
   indexer: string
+  indexer_id: number | null
   size: number | null
   seeders: number | null
+  leechers: number | null
+  publish_date: string | null
   categories: number[]
   has_download: boolean
   has_magnet: boolean
@@ -114,6 +117,7 @@ export interface ProwlarrSearchPayload {
   categories?: number[]
   indexer_ids?: number[]
   limit?: number
+  offset?: number
   min_seeders?: number
 }
 
