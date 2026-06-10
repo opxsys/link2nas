@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CheckCircle2, XCircle, Loader2, AlertCircle, KeyRound, Plug, X } from 'lucide-react'
+import { Loader2, AlertCircle, Plug } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
+import StatusBanner from '@/components/common/StatusBanner'
+import ApiKeyBadge from '@/components/common/ApiKeyBadge'
 import { Button } from '@/components/ui/button'
 import {
   getAdminProwlarr,
@@ -180,33 +182,19 @@ export default function AdminProwlarr() {
         </div>
 
         <div>
-          <label htmlFor="admin-prowlarr-key" className={LABEL}>
-            {t('adminProwlarrApiKey')}
-          </label>
-          <div className="relative">
-            <input
-              id="admin-prowlarr-key"
-              type="password"
-              value={fields.api_key}
-              disabled={busy}
-              onChange={(e) => handleChange('api_key', e.target.value)}
-              placeholder={hasApiKey ? t('adminProwlarrApiKeyPlaceholder') : t('adminProwlarrApiKeyPlaceholderNew')}
-              autoComplete="new-password"
-              className={INPUT}
-            />
-          </div>
+          <label htmlFor="admin-prowlarr-key" className={LABEL}>{t('adminProwlarrApiKey')}</label>
+          <input
+            id="admin-prowlarr-key"
+            type="password"
+            value={fields.api_key}
+            disabled={busy}
+            onChange={(e) => handleChange('api_key', e.target.value)}
+            placeholder={hasApiKey ? t('adminProwlarrApiKeyPlaceholder') : t('adminProwlarrApiKeyPlaceholderNew')}
+            autoComplete="new-password"
+            className={INPUT}
+          />
           <div className="mt-1.5 flex items-center gap-2">
-            {hasApiKey ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-                <KeyRound size={10} aria-hidden="true" />
-                {t('adminProwlarrHasApiKey')}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
-                <KeyRound size={10} aria-hidden="true" />
-                {t('adminProwlarrNoApiKey')}
-              </span>
-            )}
+            <ApiKeyBadge hasKey={hasApiKey} />
             <span className="text-xs text-muted-foreground">{t('adminProwlarrApiKeyHint')}</span>
           </div>
         </div>
@@ -244,14 +232,10 @@ export default function AdminProwlarr() {
             </Button>
           </div>
           {dirty && (
-            <p className="text-xs text-muted-foreground">
-              {t('prowlarrSaveBeforeTest')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('prowlarrSaveBeforeTest')}</p>
           )}
           {!dirty && !testable && fields.enabled && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              {t('adminProwlarrNotTestable')}
-            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">{t('adminProwlarrNotTestable')}</p>
           )}
         </div>
 
@@ -270,36 +254,5 @@ export default function AdminProwlarr() {
 
       </form>
     </SectionCard>
-  )
-}
-
-function StatusBanner({
-  color,
-  message,
-  onDismiss,
-}: {
-  color: 'green' | 'red'
-  message: string
-  onDismiss: () => void
-}) {
-  const { t } = useI18n()
-  const Icon = color === 'green' ? CheckCircle2 : XCircle
-  const cls =
-    color === 'green'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
-      : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'
-  return (
-    <div className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm ${cls}`}>
-      <Icon size={15} className="shrink-0" aria-hidden="true" />
-      <span className="flex-1">{message}</span>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        aria-label={t('dismiss')}
-      >
-        <X size={13} aria-hidden="true" />
-      </button>
-    </div>
   )
 }

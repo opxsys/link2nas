@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CheckCircle2, XCircle, Loader2, AlertCircle, KeyRound, Plug, Info, X } from 'lucide-react'
+import { CheckCircle2, Loader2, AlertCircle, Info, Plug } from 'lucide-react'
 import SectionCard from '@/components/common/SectionCard'
+import StatusBanner from '@/components/common/StatusBanner'
+import ApiKeyBadge from '@/components/common/ApiKeyBadge'
 import { Button } from '@/components/ui/button'
 import {
   getMeProwlarr,
@@ -91,7 +93,6 @@ export default function ProwlarrSettings() {
       setFields(configToFields(updated))
       setHasApiKey(updated.has_api_key)
       setDirty(false)
-      // Refresh effective state and sidebar visibility
       getMeProwlarr().then(setMeState).catch(() => {})
       invalidateProwlarrSearchAvailable()
       setSaveStatus('saved')
@@ -222,17 +223,7 @@ export default function ProwlarrSettings() {
                   className={INPUT}
                 />
                 <div className="mt-1.5 flex items-center gap-2">
-                  {hasApiKey ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-                      <KeyRound size={10} aria-hidden="true" />
-                      {t('adminProwlarrHasApiKey')}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">
-                      <KeyRound size={10} aria-hidden="true" />
-                      {t('adminProwlarrNoApiKey')}
-                    </span>
-                  )}
+                  <ApiKeyBadge hasKey={hasApiKey} />
                   <span className="text-xs text-muted-foreground">{t('adminProwlarrApiKeyHint')}</span>
                 </div>
               </div>
@@ -257,23 +248,21 @@ export default function ProwlarrSettings() {
                   </Button>
                 </div>
                 {dirty && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('prowlarrSaveBeforeTest')}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('prowlarrSaveBeforeTest')}</p>
                 )}
               </div>
 
               {saveStatus === 'saved' && (
-                <ProwlarrBanner color="green" message={saveMessage} onDismiss={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }} />
+                <StatusBanner color="green" message={saveMessage} onDismiss={() => { if (saveTimer.current) clearTimeout(saveTimer.current); setSaveStatus('idle') }} />
               )}
               {saveStatus === 'error' && (
-                <ProwlarrBanner color="red" message={saveMessage} onDismiss={() => setSaveStatus('idle')} />
+                <StatusBanner color="red" message={saveMessage} onDismiss={() => setSaveStatus('idle')} />
               )}
               {testStatus === 'ok' && (
-                <ProwlarrBanner color="green" message={testMessage} onDismiss={() => setTestStatus('idle')} />
+                <StatusBanner color="green" message={testMessage} onDismiss={() => setTestStatus('idle')} />
               )}
               {testStatus === 'failed' && (
-                <ProwlarrBanner color="red" message={testMessage} onDismiss={() => setTestStatus('idle')} />
+                <StatusBanner color="red" message={testMessage} onDismiss={() => setTestStatus('idle')} />
               )}
             </form>
           </SectionCard>
@@ -314,37 +303,6 @@ function EffectiveSourceBadge({ meState }: { meState: ProwlarrMeState | null }) 
     <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
       <CheckCircle2 size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
       <span>{t('prowlarrApiSourceUser')}</span>
-    </div>
-  )
-}
-
-function ProwlarrBanner({
-  color,
-  message,
-  onDismiss,
-}: {
-  color: 'green' | 'red'
-  message: string
-  onDismiss: () => void
-}) {
-  const { t } = useI18n()
-  const Icon = color === 'green' ? CheckCircle2 : XCircle
-  const cls =
-    color === 'green'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
-      : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400'
-  return (
-    <div className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm ${cls}`}>
-      <Icon size={15} className="shrink-0" aria-hidden="true" />
-      <span className="flex-1">{message}</span>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="ml-1 shrink-0 rounded hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        aria-label={t('dismiss')}
-      >
-        <X size={13} aria-hidden="true" />
-      </button>
     </div>
   )
 }
