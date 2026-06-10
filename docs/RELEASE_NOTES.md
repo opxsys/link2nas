@@ -1,5 +1,31 @@
 # Release Notes
 
+## v3.7.0-beta.2
+
+### Summary
+
+Small cleanup release after `v3.7.0-beta.1`. No functional change.
+
+---
+
+### Refactored
+
+- Extracted shared Prowlarr UI components:
+  - `StatusBanner`
+  - `ApiKeyBadge`
+  - `ProwlarrPaginationBar`
+- Reduced duplication between Admin Prowlarr settings and user Prowlarr settings.
+- Reduced the size of the native Prowlarr result list component.
+
+---
+
+### Compatibility
+
+- No API change.
+- No database schema change.
+- No configuration change.
+- No user-facing behaviour change expected.
+
 ## v3.7.0-beta.1
 
 ### Summary
