@@ -19,12 +19,13 @@ import AdminGeneral from './AdminGeneral'
 import AdminTimeouts from './AdminTimeouts'
 import AdminSso from './AdminSso'
 import AdminIdentityProxy from './AdminIdentityProxy'
+import AdminProwlarr from './AdminProwlarr'
 import type { AdminSection } from './admin.types'
 
 const VALID_SECTIONS: AdminSection[] = [
   'overview', 'general', 'users', 'announcements', 'emails',
   'security', 'timeouts', 'runtime', 'cleanup', 'system-events', 'maintenance', 'sso',
-  'identity-proxy',
+  'identity-proxy', 'prowlarr',
 ]
 
 function toSection(raw: string | null): AdminSection {
@@ -114,6 +115,7 @@ export default function Admin() {
           {activeSection === 'timeouts'      && <AdminTimeouts />}
           {activeSection === 'sso'             && <AdminSso />}
           {activeSection === 'identity-proxy' && <AdminIdentityProxy />}
+          {activeSection === 'prowlarr'       && <AdminProwlarr />}
         </div>
       </div>
     </>

@@ -3,7 +3,8 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/nav'
-import { useIntegrationSettings, isProwlarrAvailable, resolveHomePath } from '@/lib/useIntegrationSettings'
+import { useIntegrationSettings, resolveHomePath } from '@/lib/useIntegrationSettings'
+import { useProwlarrSearchAvailable } from '@/lib/useProwlarrSearchAvailable'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useAppInfo } from '@/lib/useAppInfo'
 import { useMe } from '@/lib/useMe'
@@ -16,6 +17,7 @@ interface Props {
 
 export default function MobileNav({ open, onClose }: Props) {
   const { settings: integrationSettings } = useIntegrationSettings()
+  const { available: prowlarrAvailable } = useProwlarrSearchAvailable()
   const { count: announcementCount } = useAnnouncementBadge()
   const location = useLocation()
   const navigate = useNavigate()
@@ -30,7 +32,7 @@ export default function MobileNav({ open, onClose }: Props) {
   const announcementsEnabled = me?.announcements_enabled !== false
 
   const visibleItems = NAV_ITEMS.filter((item) => {
-    if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
+    if (item.to === '/prowlarr' && !prowlarrAvailable) return false
     if (item.superAdminOnly && !isSuperAdmin) return false
     if (item.hideWhenAnnouncementsDisabled && !announcementsEnabled) return false
     if (item.hideInSingleUserMode && singleUserMode) return false

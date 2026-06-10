@@ -12,6 +12,7 @@ import {
   Timer,
   KeyRound,
   ShieldAlert,
+  Search,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'maintenance',   labelKey: 'adminNavMaintenance',   icon: Wrench },
   { id: 'sso',             labelKey: 'adminNavSso',             icon: KeyRound },
   { id: 'identity-proxy', labelKey: 'adminNavIdentityProxy',   icon: ShieldAlert },
+  { id: 'prowlarr',       labelKey: 'adminNavProwlarr',        icon: Search },
 ]
 
 const SINGLE_USER_HIDDEN_SECTIONS = new Set<AdminSection>(['users', 'announcements', 'sso', 'identity-proxy'])

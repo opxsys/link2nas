@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { NAV_ITEMS } from '@/lib/nav'
 import SidebarNavItem from './SidebarNavItem'
-import { useIntegrationSettings, isProwlarrAvailable, resolveHomePath } from '@/lib/useIntegrationSettings'
+import { useIntegrationSettings, resolveHomePath } from '@/lib/useIntegrationSettings'
+import { useProwlarrSearchAvailable } from '@/lib/useProwlarrSearchAvailable'
 import { useAnnouncementBadge } from '@/context/AnnouncementBadgeContext'
 import { useMe } from '@/lib/useMe'
 import { useAppInfo } from '@/lib/useAppInfo'
@@ -17,6 +18,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { settings: integrationSettings } = useIntegrationSettings()
+  const { available: prowlarrAvailable } = useProwlarrSearchAvailable()
   const { count: announcementCount } = useAnnouncementBadge()
   const navigate = useNavigate()
   const { me } = useMe()
@@ -29,7 +31,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const announcementsEnabled = me?.announcements_enabled !== false
 
   const visibleItems = NAV_ITEMS.filter((item) => {
-    if (item.to === '/prowlarr' && !isProwlarrAvailable(integrationSettings)) return false
+    if (item.to === '/prowlarr' && !prowlarrAvailable) return false
     if (item.superAdminOnly && !isSuperAdmin) return false
     if (item.hideWhenAnnouncementsDisabled && !announcementsEnabled) return false
     if (item.hideInSingleUserMode && singleUserMode) return false

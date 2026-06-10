@@ -16,18 +16,20 @@ import Settings from '@/pages/Settings'
 import Admin from '@/pages/Admin'
 import Announcements from '@/pages/Announcements'
 import Maintenance from '@/pages/Maintenance'
-import { useIntegrationSettings, isProwlarrAvailable } from '@/lib/useIntegrationSettings'
+import { useIntegrationSettings } from '@/lib/useIntegrationSettings'
+import { useProwlarrSearchAvailable } from '@/lib/useProwlarrSearchAvailable'
 
 // Resolves the user's home_page preference and immediately redirects.
 // Renders null while settings load so Dashboard never flashes before a redirect.
 function HomeRedirect() {
-  const { settings, loading } = useIntegrationSettings()
+  const { settings, loading: settingsLoading } = useIntegrationSettings()
+  const { available: prowlarrAvailable, loading: prowlarrLoading } = useProwlarrSearchAvailable()
 
-  if (loading) return null
+  if (settingsLoading || prowlarrLoading) return null
 
   const page = settings?.home_page || 'dashboard'
   if (page === 'jobs') return <Navigate to="/jobs" replace />
-  if (page === 'prowlarr' && isProwlarrAvailable(settings)) return <Navigate to="/prowlarr" replace />
+  if (page === 'prowlarr' && prowlarrAvailable) return <Navigate to="/prowlarr" replace />
   return <Navigate to="/dashboard" replace />
 }
 

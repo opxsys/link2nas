@@ -52,9 +52,7 @@ export default function Settings() {
           {activeSection === 'destinations' && <DestinationSettings />}
           {activeSection === 'api-keys' && <ApiKeysSettings />}
           {activeSection === 'notifications' && <NotificationSettings />}
-          {activeSection === 'prowlarr' && (
-            <ProwlarrSettings onGoToApiKeys={() => setActiveSection('api-keys')} />
-          )}
+          {activeSection === 'prowlarr' && <ProwlarrSettings />}
           {activeSection === 'accessibility' && <AccessibilitySettings />}
           {activeSection === 'space' && canUseSpace && <UserSpaceSettings />}
         </div>

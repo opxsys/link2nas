@@ -9,6 +9,7 @@ from backend.models.job import Job
 from backend.models.oidc_provider import OidcProvider
 from backend.models.oidc_state import OidcState
 from backend.models.provider_config import ProviderConfig
+from backend.models.prowlarr_config import ProwlarrConfig
 from backend.models.user import User
 
 
@@ -251,3 +252,20 @@ class IdentityProxyConfigRepository(ABC):
 
     @abstractmethod
     def delete(self, config_id: str) -> None: ...
+
+
+class ProwlarrConfigRepository(ABC):
+    @abstractmethod
+    def get_global(self) -> ProwlarrConfig | None: ...
+
+    @abstractmethod
+    def get_for_user(self, user_id: str) -> ProwlarrConfig | None: ...
+
+    @abstractmethod
+    def upsert(self, config: ProwlarrConfig) -> None: ...
+
+    @abstractmethod
+    def delete_global(self) -> None: ...
+
+    @abstractmethod
+    def delete_for_user(self, user_id: str) -> None: ...
