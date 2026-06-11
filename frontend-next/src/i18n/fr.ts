@@ -1169,6 +1169,7 @@ export const fr: Translations = {
   prowlarrNoResults:               'Aucun résultat pour cette recherche.',
   prowlarrResultTitle:             'Titre',
   prowlarrResultIndexer:           'Indexeur',
+  prowlarrResultCategories:        'Catégories',
   prowlarrResultSize:              'Taille',
   prowlarrResultSeeders:           'Seeders',
   prowlarrResultLinks:             'Liens',

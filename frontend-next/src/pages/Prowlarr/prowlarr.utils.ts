@@ -1,6 +1,11 @@
 import type { ProwlarrSearchResult } from '@/api/prowlarr'
 import type { PeriodFilter, SortState } from './prowlarr.types'
 
+export function formatCategories(cats: string[] | null | undefined): string {
+  if (!cats || cats.length === 0) return '—'
+  return cats.join(', ')
+}
+
 export function formatBytes(bytes: number | null | undefined): string {
   if (bytes == null || bytes <= 0) return '—'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']

@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { createJobFromProwlarr } from '@/api/prowlarr'
 import { useI18n } from '@/i18n'
-import { formatBytes, formatAge } from './prowlarr.utils'
+import { formatBytes, formatAge, formatCategories } from './prowlarr.utils'
 import ProwlarrPaginationBar from './ProwlarrPaginationBar'
 import type { ProwlarrSearchResult } from '@/api/prowlarr'
 import type { JobStatus, SortState, SortField } from './prowlarr.types'
@@ -94,6 +94,9 @@ export default function ProwlarrResultList({
             <SortTh field="indexer" sort={sort} onSort={onSort} className={`hidden ${TH} text-left md:table-cell`}>
               {t('prowlarrResultIndexer')}
             </SortTh>
+            <th className="hidden px-3 py-2.5 text-left font-medium md:table-cell">
+              {t('prowlarrResultCategories')}
+            </th>
             <SortTh field="size"    sort={sort} onSort={onSort} className={`hidden ${TH} text-right md:table-cell`}>
               {t('prowlarrResultSize')}
             </SortTh>
@@ -121,6 +124,10 @@ export default function ProwlarrResultList({
                   {formatAge(r.publish_date)}
                 </td>
                 <td className="hidden px-3 py-2.5 text-muted-foreground md:table-cell">{r.indexer}</td>
+                <td className="hidden max-w-[10rem] truncate px-3 py-2.5 text-muted-foreground md:table-cell"
+                  title={formatCategories(r.categories)}>
+                  {formatCategories(r.categories)}
+                </td>
                 <td className="hidden px-3 py-2.5 text-right tabular-nums text-muted-foreground md:table-cell">
                   {formatBytes(r.size)}
                 </td>

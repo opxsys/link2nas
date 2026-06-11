@@ -97,7 +97,7 @@ export interface ProwlarrSearchResult {
   seeders: number | null
   leechers: number | null
   publish_date: string | null
-  categories: number[]
+  categories: string[]
   has_download: boolean
   has_magnet: boolean
   has_info_url: boolean

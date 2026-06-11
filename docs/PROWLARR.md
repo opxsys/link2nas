@@ -163,6 +163,8 @@ Columns for Size, Seeders, and Age default to descending order on first click (l
 
 Results are paginated locally by Link2NAS after period filtering and date sorting. Prowlarr is queried once without an offset; the full filtered result set is then sliced into pages server-side.
 
+> **Indexer result limits:** Prowlarr and individual indexers may cap the number of results returned by a search. Link2NAS respects the capabilities reported by Prowlarr; in many setups this limit is 100 results per query/indexer. Empty searches therefore scan only the recent result feed returned by Prowlarr, not the complete historical index.
+
 | Setting | Value |
 |---|---|
 | **Page size options** | 10 / 25 / 50 |
@@ -179,6 +181,7 @@ The result counter shows the number of results on the current page alongside the
 | **Title** | Release title |
 | **Age** | Time since publish date (e.g. `2h`, `3d`, `1y`) |
 | **Indexer** | Source indexer name |
+| **Categories** | Prowlarr categories returned for the result, when available |
 | **Size** | Release size |
 | **Seeders** | Seeder count |
 | **Links** | Availability badges: **Magnet**, **Torrent**, **Info** |

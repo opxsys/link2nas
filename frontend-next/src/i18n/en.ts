@@ -1167,6 +1167,7 @@ export const en = {
   prowlarrNoResults:               'No results for this search.',
   prowlarrResultTitle:             'Title',
   prowlarrResultIndexer:           'Indexer',
+  prowlarrResultCategories:        'Categories',
   prowlarrResultSize:              'Size',
   prowlarrResultSeeders:           'Seeders',
   prowlarrResultLinks:             'Links',

@@ -32,7 +32,7 @@ class ProwlarrClient:
 
     # ── internal ────────────────────────────────────────────────────────────────
 
-    def _get(self, path: str, params: dict | None = None, *, read_timeout: int = _READ_TIMEOUT) -> object:
+    def _get(self, path: str, params: list | dict | None = None, *, read_timeout: int = _READ_TIMEOUT) -> object:
         url = f"{self._base}{path}"
         try:
             resp = requests.get(
@@ -99,13 +99,18 @@ class ProwlarrClient:
         limit: int = 100,
         min_seeders: int | None = None,
     ) -> list[dict]:
-        # Offset is deliberately omitted — Prowlarr ignores it in practice;
-        # pagination is applied server-side after period filtering.
-        params: dict = {"Query": query, "Limit": limit}
-        if categories:
-            params["Categories[]"] = [str(c) for c in categories]
-        if indexer_ids:
-            params["IndexerIds[]"] = [str(i) for i in indexer_ids]
+        # Build as a list of tuples so repeated keys are preserved in the URL
+        # (requests collapses duplicate dict keys).  Prowlarr requires repeated
+        # params: indexerIds=1&indexerIds=2 and categories=2000&categories=5000.
+        # Offset is deliberately omitted — pagination is applied locally.
+        params: list[tuple[str, str]] = [
+            ("query", query),
+            ("limit", str(limit)),
+        ]
+        for cat in (categories or []):
+            params.append(("categories", str(cat)))
+        for iid in (indexer_ids or []):
+            params.append(("indexerIds", str(iid)))
 
         try:
             raw = self._get("/api/v1/search", params, read_timeout=_SEARCH_READ_TIMEOUT)

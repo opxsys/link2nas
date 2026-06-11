@@ -59,6 +59,13 @@ Covers:
     48. empty query + period=all + categories/indexer_ids → still 400 (client never called)
     49. no filters selected → client receives categories=None, indexer_ids=None (= all)
 
+  HTTP param encoding (ProwlarrClient.search → requests.get):
+    50. indexer_ids=[1,2] → two separate indexerIds params in HTTP request
+    51. categories=[2000,5000] → two separate categories params in HTTP request
+    52. indexer_ids=[1,2] + categories=[2000,5000] → four repeated params total
+    53. offset never sent to Prowlarr
+    54. wrong param names (Categories[], IndexerIds[], categories, indexer_ids) never sent
+
   Public source flags (no raw URLs ever exposed):
     30. source_debug absent from results (regression)
     31. has_real_magnet=True when magnet_url is a real magnet:?
@@ -77,6 +84,7 @@ import os
 import sys
 import unittest
 from datetime import datetime, timezone, timedelta
+from unittest.mock import MagicMock, patch
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 if _PROJECT_ROOT not in sys.path:
@@ -1250,6 +1258,77 @@ class TestPublicSourceFlags(unittest.TestCase):
         result = self._search_first(guid="not-a-url", magnet_url=None, download_url=None)
         self.assertFalse(result["has_real_magnet"])
         self.assertFalse(result["has_torrent_download"])
+
+
+class TestProwlarrClientSearchParams(unittest.TestCase):
+    """
+    Tests 50–54: ProwlarrClient.search() must encode multi-value filters as
+    repeated HTTP query params, not comma-separated values or bracket notation.
+
+    Prowlarr rejects indexerIds=1,2 (400) but accepts indexerIds=1&indexerIds=2 (200).
+    Same rule applies to categories params (categories=2000&categories=5000).
+    """
+
+    def _capture_params(self, **search_kwargs) -> list[tuple[str, str]]:
+        """
+        Call ProwlarrClient.search() with a mocked requests.get.
+        Returns the params list received by the mock.
+        """
+        from backend.clients.prowlarr_client import ProwlarrClient
+
+        captured: list = []
+
+        def _fake_get(url, *, params=None, headers=None, timeout=None):
+            if params is not None:
+                captured.extend(params)
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = []
+            mock_resp.raise_for_status.return_value = None
+            return mock_resp
+
+        client = ProwlarrClient("http://prowlarr.test:9696", "test-key")
+        with patch("backend.clients.prowlarr_client.requests.get", side_effect=_fake_get):
+            client.search("test", **search_kwargs)
+
+        return captured
+
+    def test_indexer_ids_sent_as_repeated_params(self):
+        """50. indexer_ids=[1,2] → two separate indexerIds params, not indexerIds=1,2."""
+        params = self._capture_params(indexer_ids=[1, 2])
+        ids = [(k, v) for k, v in params if k == "indexerIds"]
+        self.assertEqual(len(ids), 2)
+        self.assertIn(("indexerIds", "1"), ids)
+        self.assertIn(("indexerIds", "2"), ids)
+
+    def test_categories_sent_as_repeated_params(self):
+        """51. categories=[2000,5000] → two separate categories params, not categories=2000,5000."""
+        params = self._capture_params(categories=[2000, 5000])
+        cats = [(k, v) for k, v in params if k == "categories"]
+        self.assertEqual(len(cats), 2)
+        self.assertIn(("categories", "2000"), cats)
+        self.assertIn(("categories", "5000"), cats)
+
+    def test_mixed_filters_four_repeated_params(self):
+        """52. indexer_ids=[1,2] + categories=[2000,5000] → four repeated params total."""
+        params = self._capture_params(indexer_ids=[1, 2], categories=[2000, 5000])
+        ids = [(k, v) for k, v in params if k == "indexerIds"]
+        cats = [(k, v) for k, v in params if k == "categories"]
+        self.assertEqual(len(ids), 2)
+        self.assertEqual(len(cats), 2)
+
+    def test_no_offset_param_sent(self):
+        """53. offset must never appear in HTTP params sent to Prowlarr."""
+        params = self._capture_params(indexer_ids=[1])
+        keys = {k for k, v in params}
+        self.assertNotIn("offset", keys)
+        self.assertNotIn("Offset", keys)
+
+    def test_no_wrong_param_names(self):
+        """54. Old/wrong names (Categories[], IndexerIds[], category, indexer_ids) must not appear."""
+        params = self._capture_params(categories=[2000], indexer_ids=[1])
+        keys = {k for k, v in params}
+        for wrong in ("Categories[]", "IndexerIds[]", "category", "indexer_ids", "offset", "Offset"):
+            self.assertNotIn(wrong, keys, f"wrong param {wrong!r} must not be sent to Prowlarr")
 
 
 if __name__ == "__main__":
