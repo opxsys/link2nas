@@ -1194,7 +1194,8 @@ export const en = {
   prowlarrIndexerLoading:          'Loading indexers…',
   prowlarrFiltersClear:            'Clear filters',
   prowlarrResultsCount:            'results',
-  prowlarrSearchHintFiltered:      'Searches recent torrents using the selected period.',
+  prowlarrResultsOf:               'of',
+  prowlarrSearchHintFiltered:      'Without a search term, only the latest results returned by Prowlarr are scanned. To find older torrents, enter a search term.',
   prowlarrSearchHintEmpty:         'Enter a search term or choose a recent period.',
   prowlarrSearchBlockedMsg:        'Enter a search term or limit the search to the last 30 days at most.',
   // Prowlarr saved searches

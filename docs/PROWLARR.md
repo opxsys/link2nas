@@ -128,16 +128,18 @@ Type any search term. Leave blank only when a period limiter is active (see belo
 
 #### Period filter
 
-Filters results by publish date, applied client-side after receiving Prowlarr's results.
+Filters results by publish date, applied server-side after receiving Prowlarr's results.
 
 | Value | Behaviour |
 |---|---|
-| **Today** | Results published since midnight (local time) |
+| **Today** | Results published since midnight UTC |
 | **Last 7 days** | Results from the last 7 days |
 | **Last 30 days** | Results from the last 30 days |
 | **All dates** | No date restriction |
 
 > **Rule:** A search without a query term is only allowed when the period is set to **Today**, **Last 7 days**, or **Last 30 days**. The **All dates** period requires a query term. This prevents unbounded open searches.
+
+> **Limitation of empty searches:** When no query term is entered, Prowlarr returns its most recent results (a limited feed from each active indexer). Link2NAS then filters that feed by the selected period — but it cannot retrieve older results that Prowlarr did not include in the feed. To search the full history of an indexer, always enter a search term.
 
 #### Category filter
 
@@ -159,16 +161,16 @@ Columns for Size, Seeders, and Age default to descending order on first click (l
 
 #### Pagination
 
-Searches use server-side pagination via Prowlarr's `limit` and `offset` parameters.
+Results are paginated locally by Link2NAS after period filtering and date sorting. Prowlarr is queried once without an offset; the full filtered result set is then sliced into pages server-side.
 
 | Setting | Value |
 |---|---|
 | **Page size options** | 10 / 25 / 50 |
 | **Default page size** | 25 |
 | **Previous** | Disabled on the first page |
-| **Next** | Active when the current page returned a full page of results |
+| **Next** | Active when more results exist beyond the current page |
 
-Changing any filter or the page size resets the page to 0.
+The result counter shows the number of results on the current page alongside the total number of filtered results (e.g. "25 of 60 results"). Changing any filter or the page size resets the page to 0.
 
 ### Result table
 

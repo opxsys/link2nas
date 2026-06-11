@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -92,6 +93,54 @@ def _client_factory():
     return current_app.config.get("PROWLARR_CLIENT_FACTORY", ProwlarrClient)
 
 
+def _period_cutoff(period: str) -> datetime | None:
+    now = datetime.now(timezone.utc)
+    if period == "today":
+        return now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if period == "week":
+        return now - timedelta(days=7)
+    if period == "month":
+        return now - timedelta(days=30)
+    return None  # 'all' — no cutoff
+
+
+def _filter_by_period(results: list, period: str) -> list:
+    cutoff = _period_cutoff(period)
+    if cutoff is None:
+        return results
+    out = []
+    for r in results:
+        pub = r.get("publish_date")
+        if not pub:
+            out.append(r)  # keep results with no date
+            continue
+        try:
+            pub_dt = datetime.fromisoformat(str(pub).replace("Z", "+00:00"))
+            if pub_dt.tzinfo is None:
+                pub_dt = pub_dt.replace(tzinfo=timezone.utc)
+            if pub_dt >= cutoff:
+                out.append(r)
+        except (ValueError, AttributeError):
+            out.append(r)  # keep unparseable dates
+    return out
+
+
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _parse_pub_date(pub: object) -> datetime:
+    try:
+        dt = datetime.fromisoformat(str(pub).replace("Z", "+00:00"))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except (ValueError, AttributeError):
+        return _EPOCH
+
+
+def _sort_by_date_desc(results: list) -> list:
+    """Sort newest-first. Results with no/unparseable date sort last."""
+    return sorted(results, key=lambda r: _parse_pub_date(r.get("publish_date")), reverse=True)
+
+
 def _error(message: str, code: int = 400, error_code: str | None = None):
     body = {"error": message}
     if error_code:
@@ -175,24 +224,36 @@ def search_prowlarr():
 
     data = request.get_json(silent=True) or {}
     query = str(data.get("query", "")).strip()
-    # An empty query is valid — Prowlarr returns recent results for the selected scope.
-    # The frontend enforces that at least one limiter (period, categories, indexers)
-    # is active before submitting an empty query.
+
+    period = str(data.get("period") or "all").strip().lower()
+    if period not in ("today", "week", "month", "all"):
+        period = "all"
+
+    # Empty query without a period scope is too broad — block it.
+    if not query and period == "all":
+        return _error(
+            "A search query is required when period is 'all'",
+            400,
+            "PROWLARR_EMPTY_QUERY_NO_PERIOD",
+        )
 
     categories = data.get("categories") or []
     indexer_ids = data.get("indexer_ids") or []
+
+    # limit/offset are Link2NAS-side pagination params — NOT forwarded to Prowlarr.
     try:
-        limit = int(data.get("limit") or 50)
+        limit = int(data.get("limit") or 25)
         if limit < 1 or limit > 100:
-            limit = 50
+            limit = 25
     except (ValueError, TypeError):
-        limit = 50
+        limit = 25
     try:
         offset = int(data.get("offset") or 0)
         if offset < 0:
             offset = 0
     except (ValueError, TypeError):
         offset = 0
+
     min_seeders = data.get("min_seeders")
     if min_seeders is not None:
         try:
@@ -206,22 +267,32 @@ def search_prowlarr():
 
     client = _build_client(svc, effective)
     try:
+        # Fetch all results from Prowlarr — no Offset (Prowlarr ignores it in practice).
+        # Pagination is applied locally after period filtering.
         raw_results = client.search(
             query,
             categories=categories or None,
             indexer_ids=indexer_ids or None,
-            limit=limit,
-            offset=offset,
             min_seeders=min_seeders,
         )
     except ProwlarrClientError as exc:
         logger.warning("Prowlarr search failed: %s", exc.message)
         return _error(exc.message, 502, exc.code)
 
-    safe_results = cache.store_results(raw_results, ctx.user_id)
+    filtered = _sort_by_date_desc(_filter_by_period(raw_results, period))
+    total_filtered = len(filtered)
+
+    paged = filtered[offset:offset + limit]
+    has_next = (offset + limit) < total_filtered
+
+    safe_results = cache.store_results(paged, ctx.user_id)
     return jsonify({
         "source": effective.source,
         "results": safe_results,
+        "total_filtered": total_filtered,
+        "has_next": has_next,
+        "limit": limit,
+        "offset": offset,
     })
 
 

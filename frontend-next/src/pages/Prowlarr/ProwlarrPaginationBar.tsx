@@ -6,20 +6,19 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50]
 interface Props {
   page: number
   pageSize: number
-  rawCount: number
+  hasNext: boolean
   onPageChange: (page: number) => void
   onPageSizeChange: (size: number) => void
   disabled?: boolean
 }
 
 export default function ProwlarrPaginationBar({
-  page, pageSize, rawCount,
+  page, pageSize, hasNext,
   onPageChange, onPageSizeChange,
   disabled,
 }: Props) {
   const { t } = useI18n()
   const hasPrev = page > 0
-  const hasNext = rawCount >= pageSize
 
   return (
     <div className="flex items-center justify-between border-t border-border bg-muted/20 px-3 py-2">

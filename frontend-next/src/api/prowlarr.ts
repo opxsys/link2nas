@@ -110,10 +110,15 @@ export interface ProwlarrSearchResult {
 export interface ProwlarrSearchResponse {
   source: 'user' | 'global'
   results: ProwlarrSearchResult[]
+  total_filtered?: number
+  has_next?: boolean
+  limit?: number
+  offset?: number
 }
 
 export interface ProwlarrSearchPayload {
   query: string
+  period?: 'today' | 'week' | 'month' | 'all'
   categories?: number[]
   indexer_ids?: number[]
   limit?: number

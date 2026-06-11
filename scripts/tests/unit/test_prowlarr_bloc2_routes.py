@@ -33,15 +33,24 @@ Covers:
     23. GET /indexers — configured → list of indexers
     24. GET /indexers — not configured → 400 PROWLARR_NOT_CONFIGURED
     25. GET /indexers — client error → 502
-    26. POST /search — valid query → {source, results}
+    26. POST /search — valid query → {source, results, total_filtered, has_next}
     27. POST /search — not configured → 400 PROWLARR_NOT_CONFIGURED
     28. POST /search — client error → 502 PROWLARR_SEARCH_FAILED
-    29. POST /search — empty query → 200 (recent results, Prowlarr accepts Query='')
+    29. POST /search — empty query + period=week → 200
+    29b. POST /search — empty query + period=all → 400 PROWLARR_EMPTY_QUERY_NO_PERIOD
+    29c. POST /search — empty query + period=all + categories → 400 (categories don't bypass rule)
 
-  Pagination (limit / offset):
-    37. limit=25, offset=0 → client receives offset=0 (not sent as param)
-    38. limit=25, offset=25 → client receives offset=25
-    39. invalid offset → defaults to 0, search succeeds
+  Pagination (local, not forwarded to Prowlarr):
+    37. limit=25, offset=0 → 25 results, has_next=True (60 total)
+    38. limit=25, offset=25 → 25 results, has_next=True
+    39. limit=25, offset=50 → 10 results, has_next=False
+    40. client never receives offset param (pagination is local)
+
+  Period filtering (server-side):
+    41. period=today → only today's results
+    42. period=week → only last 7 days
+    43. period=month → only last 30 days
+    44. period=all → no filter (requires non-empty query)
 
   Public source flags (no raw URLs ever exposed):
     30. source_debug absent from results (regression)
@@ -60,6 +69,7 @@ import json
 import os
 import sys
 import unittest
+from datetime import datetime, timezone, timedelta
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 if _PROJECT_ROOT not in sys.path:
@@ -165,6 +175,59 @@ class FakeProwlarrClientFail:
 
     def search(self, query, **kw) -> list:
         raise ProwlarrClientError("PROWLARR_SEARCH_FAILED", "Search failed")
+
+
+# Fixed base time for FakeProwlarrClient60 — computed once so all calls
+# produce identical dates regardless of when each HTTP request arrives.
+_FC60_BASE = datetime.now(timezone.utc)
+_FC60_DIST = [
+    (5,  timedelta(hours=1)),   # today, week, month
+    (10, timedelta(days=3)),    # week, month
+    (15, timedelta(days=15)),   # month only
+    (30, timedelta(days=40)),   # old (period=all only)
+]
+_FC60_RESULTS: list = []
+_idx = 0
+for _count, _delta in _FC60_DIST:
+    for _ in range(_count):
+        _FC60_RESULTS.append({
+            "guid": f"guid-{_idx:03d}",
+            "title": f"Release {_idx:03d}",
+            "indexer": "Test Indexer",
+            "indexer_id": 1,
+            "size": 1_000_000,
+            "seeders": 0,
+            "leechers": 0,
+            "publish_date": (_FC60_BASE - _delta).isoformat(),
+            "categories": [],
+            "magnet_url": None,
+            "download_url": f"https://example.com/d/{_idx}",
+            "info_url": None,
+        })
+        _idx += 1
+del _count, _delta, _idx  # clean up loop vars from module namespace
+
+
+class FakeProwlarrClient60:
+    """
+    Returns 60 results with a controlled publish_date distribution (fixed dates):
+      5  results from 1 hour ago   → today, week, month
+      10 results from 3 days ago  → week, month
+      15 results from 15 days ago → month only
+      30 results from 40 days ago → outside month (period=all only)
+    Dates are computed once at import time so cross-request comparisons are exact.
+    """
+    def __init__(self, base_url: str, api_key: str):
+        pass
+
+    def test_connection(self) -> dict:
+        return {"version": "1.28.0", "active_indexers": 5}
+
+    def get_indexers(self) -> list:
+        return [{"id": 1, "name": "Test Indexer", "enabled": True, "protocol": "torrent"}]
+
+    def search(self, query, **kw) -> list:
+        return list(_FC60_RESULTS)
 
 
 # ── Service / repo fakes ──────────────────────────────────────────────────────
@@ -655,18 +718,61 @@ class TestProwlarrSearch(unittest.TestCase):
         self.assertEqual(r.status_code, 502)
         self.assertEqual(r.get_json().get("code"), "PROWLARR_SEARCH_FAILED")
 
-    def test_empty_query_returns_results(self):
-        """Empty query is valid — Prowlarr accepts Query='' and returns recent results."""
+    def test_empty_query_with_period_all_returns_400(self):
+        """Empty query + period=all is too broad — must be blocked (400)."""
         svc, _, _ = _make_svc()
         svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
         client = _make_app(svc, FakeProwlarrClientOk).test_client()
         r = client.post(
             "/api/v2/prowlarr/search",
             **_auth(_USER_TOKEN),
-            **_json({}),
+            **_json({}),  # no query, no period → defaults to period=all
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.get_json().get("code"), "PROWLARR_EMPTY_QUERY_NO_PERIOD")
+
+    def test_empty_query_with_period_all_and_category_returns_400(self):
+        """Empty query + period=all + categories is still blocked — categories alone don't bypass."""
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        client = _make_app(svc, FakeProwlarrClientOk).test_client()
+        r = client.post(
+            "/api/v2/prowlarr/search",
+            **_auth(_USER_TOKEN),
+            **_json({"period": "all", "categories": [2000]}),
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.get_json().get("code"), "PROWLARR_EMPTY_QUERY_NO_PERIOD")
+
+    def test_empty_query_with_period_week_returns_200(self):
+        """Empty query with a period scope is valid — returns recent results."""
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        client = _make_app(svc, FakeProwlarrClientOk).test_client()
+        r = client.post(
+            "/api/v2/prowlarr/search",
+            **_auth(_USER_TOKEN),
+            **_json({"period": "week"}),
         )
         self.assertEqual(r.status_code, 200)
         self.assertIsInstance(r.get_json()["results"], list)
+
+    def test_search_response_includes_pagination_fields(self):
+        """Search response includes total_filtered, has_next, limit, offset."""
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        client = _make_app(svc, FakeProwlarrClientOk).test_client()
+        r = client.post(
+            "/api/v2/prowlarr/search",
+            **_auth(_USER_TOKEN),
+            **_json({"query": "ubuntu", "limit": 25}),
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.get_json()
+        self.assertIn("total_filtered", data)
+        self.assertIn("has_next", data)
+        self.assertIn("limit", data)
+        self.assertIn("offset", data)
 
     def test_user_config_search_uses_user_source(self):
         svc, _, _ = _make_svc()
@@ -688,49 +794,212 @@ class TestProwlarrSearch(unittest.TestCase):
 
 class TestProwlarrPagination(unittest.TestCase):
     """
-    Tests 37–39: limit/offset pagination passed to ProwlarrClient.search().
+    Tests 37–44: local pagination and period filtering.
+
+    FakeProwlarrClient60 returns 60 results with this date distribution:
+       5  from 1h ago  (today, week, month)
+      10  from 3d ago  (week, month)
+      15  from 15d ago (month only)
+      30  from 40d ago (old — only visible with period=all)
     """
 
-    def _search_with_kw(self, payload: dict) -> dict:
-        """Run a search and return the kwargs captured by the fake client."""
+    def _search(self, payload: dict) -> tuple[dict, dict]:
+        """Run a search, return (response_body, captured_client_kwargs)."""
         captured: dict = {}
 
-        class _CapturingClient:
-            def __init__(self, base_url, api_key): pass
+        class _CapturingClient60(FakeProwlarrClient60):
             def search(self, query, **kw):
                 captured.update(kw)
-                return []
+                return super().search(query, **kw)
 
         svc, _, _ = _make_svc()
         svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
-        client = _make_app(svc, client_factory=_CapturingClient).test_client()
+        client = _make_app(svc, client_factory=_CapturingClient60).test_client()
         r = client.post(
             "/api/v2/prowlarr/search",
             **_auth(_USER_TOKEN),
             **_json(payload),
         )
         self.assertEqual(r.status_code, 200)
-        return captured
+        return r.get_json(), captured
 
-    def test_offset_zero_not_sent_to_prowlarr(self):
-        """offset=0 (default) → Offset param not added to Prowlarr request (clean URL)."""
-        kw = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": 0})
-        self.assertEqual(kw.get("limit"), 25)
-        self.assertEqual(kw.get("offset"), 0)
+    def test_offset_never_sent_to_prowlarr(self):
+        """Offset must never be forwarded to Prowlarr — pagination is local."""
+        data, kw = self._search({"query": "ubuntu", "limit": 25, "offset": 0})
+        self.assertNotIn("offset", kw)
 
-    def test_offset_25_passed_to_client(self):
-        """limit=25, offset=25 → client.search receives offset=25 (page 2)."""
-        kw = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": 25})
-        self.assertEqual(kw.get("limit"), 25)
-        self.assertEqual(kw.get("offset"), 25)
+    def test_offset_25_not_sent_to_prowlarr(self):
+        """Even offset=25 must not be forwarded to Prowlarr."""
+        data, kw = self._search({"query": "ubuntu", "limit": 25, "offset": 25})
+        self.assertNotIn("offset", kw)
 
     def test_invalid_offset_defaults_to_zero(self):
         """Non-numeric or negative offset → defaults to 0, search succeeds."""
-        kw = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": "bad"})
-        self.assertEqual(kw.get("offset"), 0)
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        client = _make_app(svc, FakeProwlarrClient60).test_client()
+        for bad_offset in ["bad", -10]:
+            r = client.post(
+                "/api/v2/prowlarr/search",
+                **_auth(_USER_TOKEN),
+                **_json({"query": "ubuntu", "limit": 25, "offset": bad_offset}),
+            )
+            self.assertEqual(r.status_code, 200)
 
-        kw_neg = self._search_with_kw({"query": "ubuntu", "limit": 25, "offset": -10})
-        self.assertEqual(kw_neg.get("offset"), 0)
+    # ── Local pagination against 60-result fake ──────────────────────────────
+
+    def test_page0_returns_25_results_has_next_true(self):
+        """period=all, limit=25, offset=0 → 25 results, has_next=True."""
+        data, _ = self._search({"query": "ubuntu", "limit": 25, "offset": 0})
+        self.assertEqual(len(data["results"]), 25)
+        self.assertTrue(data["has_next"])
+        self.assertEqual(data["total_filtered"], 60)
+
+    def test_page1_returns_25_results_has_next_true(self):
+        """period=all, limit=25, offset=25 → 25 results, has_next=True."""
+        data, _ = self._search({"query": "ubuntu", "limit": 25, "offset": 25})
+        self.assertEqual(len(data["results"]), 25)
+        self.assertTrue(data["has_next"])
+
+    def test_page2_returns_10_results_has_next_false(self):
+        """period=all, limit=25, offset=50 → 10 remaining results, has_next=False."""
+        data, _ = self._search({"query": "ubuntu", "limit": 25, "offset": 50})
+        self.assertEqual(len(data["results"]), 10)
+        self.assertFalse(data["has_next"])
+
+    # ── Period filtering ─────────────────────────────────────────────────────
+
+    def test_period_today_filters_correctly(self):
+        """period=today → only results from 1h ago (5 results)."""
+        data, _ = self._search({"query": "ubuntu", "period": "today", "limit": 100, "offset": 0})
+        # 5 results from 1 hour ago are today; 3d/15d/40d results are not.
+        self.assertEqual(data["total_filtered"], 5)
+        self.assertFalse(data["has_next"])
+
+    def test_period_week_filters_correctly(self):
+        """period=week → 1h + 3d results = 5 + 10 = 15 results."""
+        data, _ = self._search({"query": "ubuntu", "period": "week", "limit": 100, "offset": 0})
+        self.assertEqual(data["total_filtered"], 15)
+
+    def test_period_month_filters_correctly(self):
+        """period=month → 1h + 3d + 15d results = 5 + 10 + 15 = 30 results."""
+        data, _ = self._search({"query": "ubuntu", "period": "month", "limit": 100, "offset": 0})
+        self.assertEqual(data["total_filtered"], 30)
+
+    def test_period_all_returns_all_60(self):
+        """period=all with a query → all 60 results."""
+        data, _ = self._search({"query": "ubuntu", "period": "all", "limit": 100, "offset": 0})
+        self.assertEqual(data["total_filtered"], 60)
+
+    def test_no_sensitive_url_in_paged_results(self):
+        """Sensitive URLs must not appear in any paged result."""
+        data, _ = self._search({"query": "ubuntu", "limit": 25, "offset": 0})
+        for r in data["results"]:
+            self.assertNotIn("download_url", r)
+            self.assertNotIn("magnet_url", r)
+            self.assertNotIn("info_url", r)
+
+
+class TestProwlarrSortAndPageCoherence(unittest.TestCase):
+    """
+    Verifies that the pipeline order is:
+      1. fetch from Prowlarr (no offset)
+      2. filter by period
+      3. sort newest-first
+      4. paginate locally
+      5. return page + has_next / total_filtered
+
+    FakeProwlarrClient60 date distribution (reminder):
+       5  from 1h ago  → today, week, month
+      10  from 3d ago  → week, month
+      15  from 15d ago → month only
+      30  from 40d ago → old (period=all only)
+    """
+
+    def _search(self, payload: dict) -> dict:
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        client = _make_app(svc, FakeProwlarrClient60).test_client()
+        r = client.post(
+            "/api/v2/prowlarr/search",
+            **_auth(_USER_TOKEN),
+            **_json(payload),
+        )
+        self.assertEqual(r.status_code, 200)
+        return r.get_json()
+
+    def _pub_dates(self, results: list) -> list:
+        """Return ISO publish_dates from a result page (may be None for missing dates)."""
+        return [r.get("publish_date") for r in results]
+
+    def test_page0_newest_first_week(self):
+        """period=week, page 0 — dates must be in descending order."""
+        data = self._search({"query": "ubuntu", "period": "week", "limit": 10, "offset": 0})
+        dates = [d for d in self._pub_dates(data["results"]) if d]
+        parsed = [datetime.fromisoformat(d.replace("Z", "+00:00")) for d in dates]
+        self.assertEqual(parsed, sorted(parsed, reverse=True),
+                         "Page 0 results must be sorted newest-first")
+
+    def test_page1_older_than_page0_week(self):
+        """period=week, page 1 dates must all be ≤ oldest date on page 0."""
+        data0 = self._search({"query": "ubuntu", "period": "week", "limit": 10, "offset": 0})
+        data1 = self._search({"query": "ubuntu", "period": "week", "limit": 10, "offset": 10})
+        dates0 = [datetime.fromisoformat(d.replace("Z", "+00:00"))
+                  for d in self._pub_dates(data0["results"]) if d]
+        dates1 = [datetime.fromisoformat(d.replace("Z", "+00:00"))
+                  for d in self._pub_dates(data1["results"]) if d]
+        if dates0 and dates1:
+            self.assertLessEqual(max(dates1), min(dates0),
+                                 "Page 1 dates must be ≤ oldest date on page 0")
+
+    def test_page0_newest_first_month(self):
+        """period=month, page 0 — dates must be in descending order."""
+        data = self._search({"query": "ubuntu", "period": "month", "limit": 10, "offset": 0})
+        dates = [d for d in self._pub_dates(data["results"]) if d]
+        parsed = [datetime.fromisoformat(d.replace("Z", "+00:00")) for d in dates]
+        self.assertEqual(parsed, sorted(parsed, reverse=True),
+                         "Page 0 results must be sorted newest-first")
+
+    def test_page1_no_artificial_empty_month(self):
+        """period=month has 30 total — page 1 (offset=10, limit=10) must return 10 results."""
+        data = self._search({"query": "ubuntu", "period": "month", "limit": 10, "offset": 10})
+        self.assertEqual(len(data["results"]), 10,
+                         "Page 1 of month filter must not be artificially empty")
+        self.assertTrue(data["has_next"])
+
+    def test_page2_no_artificial_empty_month(self):
+        """period=month page 2 (offset=20, limit=10) must return 10 results."""
+        data = self._search({"query": "ubuntu", "period": "month", "limit": 10, "offset": 20})
+        self.assertEqual(len(data["results"]), 10)
+        self.assertFalse(data["has_next"])
+
+    def test_has_next_based_on_total_filtered_not_raw(self):
+        """has_next must reflect total_filtered, not raw Prowlarr count."""
+        # period=today → 5 filtered results; limit=3, offset=0 → has_next=True
+        data = self._search({"query": "ubuntu", "period": "today", "limit": 3, "offset": 0})
+        self.assertEqual(data["total_filtered"], 5)
+        self.assertTrue(data["has_next"])
+        # limit=3, offset=3 → 2 remaining → has_next=False
+        data2 = self._search({"query": "ubuntu", "period": "today", "limit": 3, "offset": 3})
+        self.assertEqual(len(data2["results"]), 2)
+        self.assertFalse(data2["has_next"])
+
+    def test_cross_page_dates_coherent_all(self):
+        """period=all (with query), pages 0/1/2 — last date on page N must be ≥ first date on page N+1."""
+        pages = [
+            self._search({"query": "ubuntu", "period": "all", "limit": 25, "offset": 0}),
+            self._search({"query": "ubuntu", "period": "all", "limit": 25, "offset": 25}),
+            self._search({"query": "ubuntu", "period": "all", "limit": 25, "offset": 50}),
+        ]
+        all_dates = []
+        for p in pages:
+            for r in p["results"]:
+                d = r.get("publish_date")
+                if d:
+                    all_dates.append(datetime.fromisoformat(d.replace("Z", "+00:00")))
+        # The full 60-result sequence must be non-increasing
+        self.assertEqual(all_dates, sorted(all_dates, reverse=True),
+                         "Cross-page dates must be globally newest-first")
 
 
 class TestProwlarrClientValidation(unittest.TestCase):

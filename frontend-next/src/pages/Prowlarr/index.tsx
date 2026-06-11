@@ -9,7 +9,7 @@ import { useI18n } from '@/i18n'
 import ProwlarrSearchForm from './ProwlarrSearchForm'
 import ProwlarrSavedSearches from './ProwlarrSavedSearches'
 import ProwlarrResultList from './ProwlarrResultList'
-import { filterByPeriod, sortResults } from './prowlarr.utils'
+import { sortResults } from './prowlarr.utils'
 import { loadSavedSearches, upsertSavedSearch, deleteSavedSearch } from './prowlarr.favorites'
 import type { ProwlarrStatusResult, ProwlarrSearchResult, ProwlarrIndexer } from '@/api/prowlarr'
 import type { SearchStatus, SearchFilters, SortState, SortField, SavedSearch } from './prowlarr.types'
@@ -25,9 +25,11 @@ export default function Prowlarr() {
   const [prowlarrStatus, setProwlarrStatus] = useState<ProwlarrStatusResult | null>(null)
   const [statusError, setStatusError]       = useState<string | null>(null)
 
-  const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle')
-  const [rawResults, setRawResults]     = useState<ProwlarrSearchResult[]>([])
-  const [searchError, setSearchError]   = useState<string | null>(null)
+  const [searchStatus, setSearchStatus]   = useState<SearchStatus>('idle')
+  const [rawResults, setRawResults]       = useState<ProwlarrSearchResult[]>([])
+  const [hasNext, setHasNext]             = useState(false)
+  const [totalFiltered, setTotalFiltered] = useState<number | undefined>(undefined)
+  const [searchError, setSearchError]     = useState<string | null>(null)
   const [indexers, setIndexers]         = useState<ProwlarrIndexer[]>([])
 
   const [filters, setFilters]     = useState<SearchFilters>(DEFAULT_FILTERS)
@@ -36,9 +38,11 @@ export default function Prowlarr() {
   const [page, setPage]         = useState(0)
   const [pageSize, setPageSize] = useState(25)
 
+  // Period filtering and pagination are handled by the backend.
+  // sortResults only sorts the current page.
   const displayedResults = useMemo(
-    () => sortResults(filterByPeriod(rawResults, filters.period), sort),
-    [rawResults, filters.period, sort],
+    () => sortResults(rawResults, sort),
+    [rawResults, sort],
   )
 
   useEffect(() => {
@@ -61,15 +65,20 @@ export default function Prowlarr() {
     setSearchStatus('searching')
     setSearchError(null)
     setRawResults([])
+    setHasNext(false)
+    setTotalFiltered(undefined)
     try {
       const data = await searchProwlarr({
-        query: q,
+        query:       q,
+        period:      filters.period,
         categories:  filters.categories.length  > 0 ? filters.categories  : undefined,
         indexer_ids: filters.indexer_ids.length > 0 ? filters.indexer_ids : undefined,
         limit:  sz,
         offset: p * sz,
       })
       setRawResults(data.results)
+      setHasNext(data.has_next ?? (data.results.length === sz))
+      setTotalFiltered(data.total_filtered)
       setSearchStatus('done')
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : t('prowlarrSearchError'))
@@ -162,7 +171,8 @@ export default function Prowlarr() {
                     onSort={handleSort}
                     page={page}
                     pageSize={pageSize}
-                    rawCount={rawResults.length}
+                    hasNext={hasNext}
+                    totalFiltered={totalFiltered}
                     onPageChange={handlePageChange}
                     onPageSizeChange={handlePageSizeChange}
                     searching={searchStatus === 'searching'}

@@ -18,7 +18,8 @@ interface Props {
   onSort: (field: SortField) => void
   page: number
   pageSize: number
-  rawCount: number
+  hasNext: boolean
+  totalFiltered?: number
   onPageChange: (page: number) => void
   onPageSizeChange: (size: number) => void
   searching?: boolean
@@ -26,7 +27,7 @@ interface Props {
 
 export default function ProwlarrResultList({
   results, sort, onSort,
-  page, pageSize, rawCount,
+  page, pageSize, hasNext, totalFiltered,
   onPageChange, onPageSizeChange,
   searching,
 }: Props) {
@@ -76,7 +77,9 @@ export default function ProwlarrResultList({
     <div className="overflow-x-auto rounded-md border border-border">
       <div className="flex items-center border-b border-border bg-muted/20 px-3 py-1.5">
         <span className="text-xs text-muted-foreground">
-          {results.length} {t('prowlarrResultsCount')}
+          {totalFiltered != null && results.length < totalFiltered
+            ? `${results.length} ${t('prowlarrResultsOf')} ${totalFiltered} ${t('prowlarrResultsCount')}`
+            : `${totalFiltered ?? results.length} ${t('prowlarrResultsCount')}`}
         </span>
       </div>
       <table className="w-full text-sm">
@@ -169,7 +172,7 @@ export default function ProwlarrResultList({
       <ProwlarrPaginationBar
         page={page}
         pageSize={pageSize}
-        rawCount={rawCount}
+        hasNext={hasNext}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         disabled={searching}

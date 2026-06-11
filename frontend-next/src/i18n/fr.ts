@@ -1196,7 +1196,8 @@ export const fr: Translations = {
   prowlarrIndexerLoading:          'Chargement des indexeurs…',
   prowlarrFiltersClear:            'Effacer les filtres',
   prowlarrResultsCount:            'résultats',
-  prowlarrSearchHintFiltered:      'Recherche des torrents récents selon la période sélectionnée.',
+  prowlarrResultsOf:               'sur',
+  prowlarrSearchHintFiltered:      'Sans terme de recherche, seuls les derniers résultats fournis par Prowlarr sont parcourus. Pour trouver des torrents plus anciens, saisissez un terme.',
   prowlarrSearchHintEmpty:         'Saisissez un terme ou choisissez une période récente.',
   prowlarrSearchBlockedMsg:        'Saisissez un terme ou limitez la recherche aux 30 derniers jours maximum.',
   // Prowlarr recherches sauvegardées
