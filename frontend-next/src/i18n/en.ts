@@ -1190,6 +1190,7 @@ export const en = {
   prowlarrPeriodMonth:             'Last 30 days',
   prowlarrCategoryLabel:           'Categories',
   prowlarrCategoryAll:             'All categories',
+  prowlarrCategoryHint:            'Top-level categories (Movies, Audio…) may include several subcategories depending on the indexer.',
   prowlarrIndexerLabel:            'Indexers',
   prowlarrIndexerAll:              'All indexers',
   prowlarrIndexerLoading:          'Loading indexers…',

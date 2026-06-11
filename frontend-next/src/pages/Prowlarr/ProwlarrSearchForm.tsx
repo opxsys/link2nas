@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { Search, Loader2, ChevronDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/i18n'
-import { groupedCategories } from './prowlarr.categories'
+import { PROWLARR_CATEGORIES, groupedCategories } from './prowlarr.categories'
 import type { ProwlarrIndexer } from '@/api/prowlarr'
 import type { SearchFilters, PeriodFilter, SearchStatus } from './prowlarr.types'
 
@@ -38,13 +38,46 @@ export default function ProwlarrSearchForm({
     onFiltersChange({ ...filters, [key]: value })
   }
 
-  function toggleId(key: 'categories' | 'indexer_ids', id: number) {
+  function toggleId(key: 'indexer_ids', id: number) {
     if (blockError) setBlockError(false)
     const arr = filters[key]
     onFiltersChange({
       ...filters,
       [key]: arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id],
     })
+  }
+
+  function toggleCategory(catId: number) {
+    if (blockError) setBlockError(false)
+    const cat = PROWLARR_CATEGORIES.find((c) => c.id === catId)
+    if (!cat) return
+
+    const isParent = !cat.label.includes('/')
+    const current = filters.categories
+
+    if (isParent) {
+      const prefix = cat.label + '/'
+      const childIds = PROWLARR_CATEGORIES.filter((c) => c.label.startsWith(prefix)).map((c) => c.id)
+      const familyIds = [catId, ...childIds]
+      if (current.includes(catId)) {
+        // Uncheck parent → uncheck entire family
+        onFiltersChange({ ...filters, categories: current.filter((x) => !familyIds.includes(x)) })
+      } else {
+        // Check parent → check entire family
+        onFiltersChange({ ...filters, categories: [...new Set([...current, ...familyIds])] })
+      }
+    } else {
+      const parentLabel = cat.label.split('/')[0]
+      const parent = PROWLARR_CATEGORIES.find((c) => c.label === parentLabel)
+      if (current.includes(catId)) {
+        // Uncheck child → also uncheck parent (siblings remain unchanged)
+        const toRemove = new Set<number>([catId, ...(parent ? [parent.id] : [])])
+        onFiltersChange({ ...filters, categories: current.filter((x) => !toRemove.has(x)) })
+      } else {
+        // Check child → add child only
+        onFiltersChange({ ...filters, categories: [...current, catId] })
+      }
+    }
   }
 
   function handleSubmit(e: FormEvent) {
@@ -127,19 +160,34 @@ export default function ProwlarrSearchForm({
                 <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {group}
                 </p>
-                {cats.map((cat) => (
-                  <label key={cat.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-muted/60">
-                    <input
-                      type="checkbox"
-                      checked={filters.categories.includes(cat.id)}
-                      onChange={() => toggleId('categories', cat.id)}
-                      className="h-3 w-3 accent-primary"
-                    />
-                    {cat.label}
-                  </label>
-                ))}
+                {cats.map((cat) => {
+                  const slash = cat.label.indexOf('/')
+                  const isChild = slash !== -1
+                  const display = isChild ? cat.label.slice(slash + 1) : cat.label
+                  return (
+                    <label
+                      key={cat.id}
+                      title={cat.label}
+                      className={[
+                        'flex cursor-pointer items-center gap-2 rounded py-1 text-xs hover:bg-muted/60',
+                        isChild ? 'pl-6 pr-2 text-muted-foreground' : 'px-2',
+                      ].join(' ')}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={filters.categories.includes(cat.id)}
+                        onChange={() => toggleCategory(cat.id)}
+                        className="h-3 w-3 shrink-0 accent-primary"
+                      />
+                      {display}
+                    </label>
+                  )
+                })}
               </div>
             ))}
+            <p className="border-t border-border px-2 pb-1 pt-2 text-[10px] text-muted-foreground">
+              {t('prowlarrCategoryHint')}
+            </p>
           </div>
         </FilterDropdown>
 

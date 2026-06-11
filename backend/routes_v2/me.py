@@ -145,7 +145,18 @@ def get_my_integration_settings_v2():
 
     settings = service.get_for_user(ctx.user_id)
 
-    return jsonify(serialize_integration_settings(settings))
+    native_search_available = False
+    prowlarr_svc = current_app.config.get("PROWLARR_CONFIG_SERVICE_V2")
+    if prowlarr_svc:
+        try:
+            effective = prowlarr_svc.resolve_effective_config(ctx.user_id)
+            native_search_available = effective.available
+        except Exception:
+            pass
+
+    data = serialize_integration_settings(settings)
+    data["native_search_available"] = native_search_available
+    return jsonify(data)
 
 
 @me_v2_bp.put("/me/integration-settings")

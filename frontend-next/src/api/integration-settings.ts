@@ -7,6 +7,8 @@ export interface IntegrationSettings {
   prowlarr_url: string
   prowlarr_open_mode: ProwlarrOpenMode
   home_page: string
+  /** True when native Prowlarr search is configured (user or global admin). */
+  native_search_available: boolean
 }
 
 export function getIntegrationSettings(): Promise<IntegrationSettings> {

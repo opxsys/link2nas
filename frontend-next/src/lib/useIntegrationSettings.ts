@@ -27,7 +27,9 @@ export function invalidateIntegrationSettings(): void {
 }
 
 export function isProwlarrAvailable(s: IntegrationSettings | null): boolean {
-  return Boolean(s?.prowlarr_enabled && s.prowlarr_url.trim() !== '')
+  // Native search takes priority; fall back to old iframe/new-tab integration.
+  if (!s) return false
+  return s.native_search_available || Boolean(s.prowlarr_enabled && s.prowlarr_url.trim() !== '')
 }
 
 /**

@@ -1192,6 +1192,7 @@ export const fr: Translations = {
   prowlarrPeriodMonth:             '30 derniers jours',
   prowlarrCategoryLabel:           'Catégories',
   prowlarrCategoryAll:             'Toutes les catégories',
+  prowlarrCategoryHint:            'Les catégories principales (Movies, Audio…) peuvent englober plusieurs sous-catégories selon l\'indexeur.',
   prowlarrIndexerLabel:            'Indexeurs',
   prowlarrIndexerAll:              'Tous les indexeurs',
   prowlarrIndexerLoading:          'Chargement des indexeurs…',

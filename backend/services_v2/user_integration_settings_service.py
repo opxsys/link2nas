@@ -50,9 +50,8 @@ class UserIntegrationSettingsService:
 
         if home_page not in ALLOWED_HOME_PAGES:
             raise ValueError("Invalid home_page")
-
-        if home_page == "prowlarr" and (not prowlarr_enabled or not prowlarr_url):
-            home_page = "dashboard"
+        # home_page=prowlarr is valid regardless of the old iframe/new-tab integration state;
+        # the /prowlarr page uses the native search config and handles its own "not configured" state.
 
         timestamp = self.now()
 
