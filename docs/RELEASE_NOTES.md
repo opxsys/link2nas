@@ -1,5 +1,23 @@
 # Release Notes
 
+## v3.7.0-beta.4
+
+### Fixed
+
+- Fixed native Prowlarr category filter encoding.
+- Prowlarr search filters are now sent using repeated `indexerIds` and `categories` parameters, matching Prowlarr API expectations.
+- Kept local pagination for filtered Prowlarr search results.
+
+### Changed
+
+- Added a Categories column to the native Prowlarr result table.
+- Improved Prowlarr result counters and compact page display.
+
+### Documentation
+
+- Documented that Prowlarr/indexers may limit search result feeds, commonly to 100 results per query/indexer.
+- Clarified that empty searches scan the recent feed returned by Prowlarr/indexers, not the complete historical index.
+
 ## v3.7.0-beta.3
 
 ### Fixed
