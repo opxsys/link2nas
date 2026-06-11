@@ -1207,6 +1207,7 @@ export const fr: Translations = {
   prowlarrSaveSearchConfirm:       'Enregistrer',
   prowlarrDeleteSaved:             'Supprimer la recherche sauvegardée',
   // Prowlarr pagination
+  prowlarrPageLabel:               'Page',
   prowlarrPagePrev:                'Précédent',
   prowlarrPageNext:                'Suivant',
   prowlarrPageSize:                'Par page',

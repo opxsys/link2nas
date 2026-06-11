@@ -173,6 +173,7 @@ export default function ProwlarrResultList({
         page={page}
         pageSize={pageSize}
         hasNext={hasNext}
+        totalFiltered={totalFiltered}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         disabled={searching}

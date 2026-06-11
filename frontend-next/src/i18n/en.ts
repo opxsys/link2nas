@@ -1205,6 +1205,7 @@ export const en = {
   prowlarrSaveSearchConfirm:       'Save',
   prowlarrDeleteSaved:             'Delete saved search',
   // Prowlarr pagination
+  prowlarrPageLabel:               'Page',
   prowlarrPagePrev:                'Previous',
   prowlarrPageNext:                'Next',
   prowlarrPageSize:                'Per page',
