@@ -1,5 +1,23 @@
 # Release Notes
 
+## v3.7.0-beta.5
+
+### Fixed
+
+- Restored the Prowlarr home page option when native Prowlarr search is available through the effective configuration, including global admin configuration.
+- Fixed Prowlarr category parent/child selection behavior in the native search form.
+
+### Changed
+
+- Selecting a parent Prowlarr category now selects its subcategories.
+- Unselecting a child category now unselects the parent while keeping sibling categories selected.
+
+### Tests
+
+- Validated native Prowlarr search route tests.
+- Validated frontend type-check and production build.
+
+
 ## v3.7.0-beta.4
 
 ### Fixed
