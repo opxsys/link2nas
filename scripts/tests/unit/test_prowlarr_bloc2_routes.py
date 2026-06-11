@@ -52,6 +52,13 @@ Covers:
     43. period=month → only last 30 days
     44. period=all → no filter (requires non-empty query)
 
+  Filter passthrough for empty-query + period searches:
+    45. empty query + period=week + categories=[2000] → client receives categories=[2000]
+    46. empty query + period=month + indexer_ids=[1] → client receives indexer_ids=[1]
+    47. empty query + period=today + both filters → both forwarded to client
+    48. empty query + period=all + categories/indexer_ids → still 400 (client never called)
+    49. no filters selected → client receives categories=None, indexer_ids=None (= all)
+
   Public source flags (no raw URLs ever exposed):
     30. source_debug absent from results (regression)
     31. has_real_magnet=True when magnet_url is a real magnet:?
@@ -1000,6 +1007,82 @@ class TestProwlarrSortAndPageCoherence(unittest.TestCase):
         # The full 60-result sequence must be non-increasing
         self.assertEqual(all_dates, sorted(all_dates, reverse=True),
                          "Cross-page dates must be globally newest-first")
+
+
+class TestProwlarrFilterPassthroughEmptyQuery(unittest.TestCase):
+    """
+    Tests 45–49: categories and indexer_ids must reach the Prowlarr client
+    unchanged when query is empty and a period limiter (today/week/month) is set.
+    """
+
+    def _search_with_capture(self, payload: dict) -> tuple[int, dict, dict]:
+        """
+        Return (status_code, response_body, captured_kwargs).
+        captured_kwargs records the keyword arguments passed to client.search().
+        """
+        captured: dict = {}
+
+        class _CapturingClient:
+            def __init__(self, base_url: str, api_key: str):
+                pass
+
+            def search(self, query: str, **kw) -> list:
+                captured["query"] = query
+                captured["categories"] = kw.get("categories")
+                captured["indexer_ids"] = kw.get("indexer_ids")
+                return []
+
+        svc, _, _ = _make_svc()
+        svc.save_global_config(enabled=True, base_url="https://p.example.com", api_key="key")
+        client = _make_app(svc, client_factory=_CapturingClient).test_client()
+        r = client.post(
+            "/api/v2/prowlarr/search",
+            **_auth(_USER_TOKEN),
+            **_json(payload),
+        )
+        return r.status_code, r.get_json(), captured
+
+    def test_empty_query_period_week_passes_categories(self):
+        """45. Empty query + period=week + categories=[2000] → client receives categories=[2000]."""
+        status, _, captured = self._search_with_capture(
+            {"period": "week", "categories": [2000]}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(captured.get("categories"), [2000])
+
+    def test_empty_query_period_month_passes_indexer_ids(self):
+        """46. Empty query + period=month + indexer_ids=[1] → client receives indexer_ids=[1]."""
+        status, _, captured = self._search_with_capture(
+            {"period": "month", "indexer_ids": [1]}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(captured.get("indexer_ids"), [1])
+
+    def test_empty_query_period_today_passes_both_filters(self):
+        """47. Empty query + period=today + both filters → both forwarded to client."""
+        status, _, captured = self._search_with_capture(
+            {"period": "today", "categories": [2000], "indexer_ids": [1]}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(captured.get("categories"), [2000])
+        self.assertEqual(captured.get("indexer_ids"), [1])
+
+    def test_empty_query_period_all_with_filters_still_400(self):
+        """48. Empty query + period=all + filters → 400; client is never invoked."""
+        status, body, captured = self._search_with_capture(
+            {"period": "all", "categories": [2000], "indexer_ids": [1]}
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(body.get("code"), "PROWLARR_EMPTY_QUERY_NO_PERIOD")
+        # The route must have returned before ever calling the client.
+        self.assertNotIn("categories", captured)
+
+    def test_no_filters_passes_none_to_client(self):
+        """49. No categories/indexer_ids → client receives None for both (= all)."""
+        status, _, captured = self._search_with_capture({"query": "ubuntu"})
+        self.assertEqual(status, 200)
+        self.assertIsNone(captured.get("categories"))
+        self.assertIsNone(captured.get("indexer_ids"))
 
 
 class TestProwlarrClientValidation(unittest.TestCase):
