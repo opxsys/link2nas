@@ -1,5 +1,19 @@
 # Release Notes
 
+## v3.7.0-beta.3
+
+### Fixed
+
+- Fixed native Prowlarr search pagination for empty searches and recent-period filters.
+- Link2NAS no longer relies on Prowlarr `offset` pagination for `/api/v1/search`.
+- Results are now filtered by period, sorted newest-first, and paginated locally by Link2NAS.
+- Fixed the native Prowlarr result counter to show displayed results versus total filtered results.
+- Added compact `Page X / Y` pagination.
+
+### Documentation
+
+- Clarified that empty Prowlarr searches scan the recent feed returned by Prowlarr/indexers and may not cover the full 7/30-day history.
+
 ## v3.7.0-beta.2
 
 ### Summary
