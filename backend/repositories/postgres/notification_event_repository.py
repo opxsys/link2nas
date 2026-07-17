@@ -132,6 +132,34 @@ class PostgresNotificationEventRepository:
 
         return [self._row_to_event(row) for row in rows]
 
+    def list_pending_due_for_user(self, user_id: str, now: str, limit: int = 50) -> list[NotificationEvent]:
+        with self.db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT * FROM notification_events
+                       WHERE user_id = %s AND status IN ('pending', 'retrying')
+                         AND (next_retry_at IS NULL OR next_retry_at <= %s)
+                       ORDER BY created_at ASC LIMIT %s""",
+                    (user_id, now, int(limit)),
+                )
+                rows = cur.fetchall()
+        return [self._row_to_event(row) for row in rows]
+
+    def claim_for_dispatch(self, event_id: str, claimed_at: str, stale_before: str) -> bool:
+        with self.db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE notification_events SET status = 'processing', updated_at = %s
+                       WHERE id = %s AND (
+                         status IN ('pending', 'retrying')
+                         OR (status = 'processing' AND updated_at <= %s)
+                       )""",
+                    (claimed_at, event_id, stale_before),
+                )
+                claimed = cur.rowcount == 1
+            conn.commit()
+            return claimed
+
     def mark_sent(self, event_id: str, sent_at: str) -> None:
         with self.db.connect() as conn:
             with conn.cursor() as cur:

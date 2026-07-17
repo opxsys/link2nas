@@ -125,6 +125,30 @@ class SQLiteNotificationEventRepository:
 
         return [self._row_to_event(row) for row in rows]
 
+    def list_pending_due_for_user(self, user_id: str, now: str, limit: int = 50) -> list[NotificationEvent]:
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                """SELECT * FROM notification_events
+                   WHERE user_id = ? AND status IN ('pending', 'retrying')
+                     AND (next_retry_at IS NULL OR next_retry_at <= ?)
+                   ORDER BY created_at ASC LIMIT ?""",
+                (user_id, now, int(limit)),
+            ).fetchall()
+        return [self._row_to_event(row) for row in rows]
+
+    def claim_for_dispatch(self, event_id: str, claimed_at: str, stale_before: str) -> bool:
+        with self.db.connect() as conn:
+            cursor = conn.execute(
+                """UPDATE notification_events SET status = 'processing', updated_at = ?
+                   WHERE id = ? AND (
+                     status IN ('pending', 'retrying')
+                     OR (status = 'processing' AND updated_at <= ?)
+                   )""",
+                (claimed_at, event_id, stale_before),
+            )
+            conn.commit()
+            return cursor.rowcount == 1
+
     def mark_sent(self, event_id: str, sent_at: str) -> None:
         with self.db.connect() as conn:
             conn.execute(

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import UTC, datetime, timedelta
 
 
 def run_once_for_user(
@@ -26,18 +27,15 @@ def run_once_for_user(
     }
 
     try:
-        events = notification_event_repository.list_for_user(
-            user_id=user_id,
-            limit=limit,
+        candidates = notification_event_repository.list_pending_due_for_user(
+            user_id, started_at, limit=limit
         )
 
-        candidates = [
-            event
-            for event in events
-            if str(getattr(event, "status", "") or "").lower() in {"pending", "retrying"}
-        ]
-
         for event in candidates[:limit]:
+            stale_before = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+            if not notification_event_repository.claim_for_dispatch(event.id, now_func(), stale_before):
+                result["skipped"] += 1
+                continue
             result["processed"] += 1
 
             try:
