@@ -1,5 +1,23 @@
 # Release Notes
 
+## v3.7.0-beta.6
+
+### Fixed
+
+- Fixed repeated provider failure alerts that could continue after a job was deleted.
+- Workers now ignore pending work for jobs that no longer exist and re-check jobs after external provider or destination calls.
+- Provider status changes, notifications, destination writes, and follow-up work are now guarded against concurrent job deletion.
+- Repeated occurrences of the same provider error during one failure state now create a single alert, including with multiple workers.
+- AllDebrid `MAGNET_INVALID_ID` is now treated as a terminal failure: the job moves to failed state and is no longer refreshed automatically.
+- Temporary network, timeout, DNS, HTTP 5xx, and provider availability errors remain retryable.
+
+### Reliability
+
+- Strengthened transitions between the scheduler, workers, providers, destinations, and notification dispatcher.
+- Queued local downloads are now identifiable and cancelled on job deletion when possible; in-flight downloads stop when the job disappears.
+- Notification events are claimed atomically so concurrent dispatchers do not send the same event twice.
+- Added regression coverage for deleted jobs, concurrent deletion, terminal provider errors, repeated alerts, scheduler selection, and concurrent workers.
+
 ## v3.7.0-beta.5
 
 ### Fixed
