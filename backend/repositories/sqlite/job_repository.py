@@ -110,10 +110,12 @@ class JobRepository:
                 FROM jobs
                 WHERE status IN (
                     'started',
+                    'source_added',
                     'downloading',
                     'waiting_files_selection',
                     'downloaded',
-                    'ready'
+                    'ready',
+                    'partially_ready'
                 )
                 AND (
                     destination_status IS NULL
@@ -195,6 +197,7 @@ class JobRepository:
             provider_resource_id=row["provider_resource_id"],
             provider_status=row["provider_status"],
             provider_payload_json=row["provider_payload_json"],
+            provider_error_fingerprint=self._row_get(row, "provider_error_fingerprint"),
             destination_config_id=self._row_get(row, "destination_config_id"),
             destination_name=row["destination_name"],
             destination_profile_name=self._row_get(row, "destination_profile_name"),
@@ -260,6 +263,7 @@ class JobRepository:
                 SET status = ?,
                     provider_status = ?,
                     provider_payload_json = ?,
+                    provider_error_fingerprint = ?,
                     error_message = ?,
                     updated_at = ?,
                     completed_at = ?
@@ -269,6 +273,7 @@ class JobRepository:
                     job.status,
                     job.provider_status,
                     job.provider_payload_json,
+                    job.provider_error_fingerprint,
                     job.error_message,
                     job.updated_at,
                     job.completed_at,
@@ -276,6 +281,31 @@ class JobRepository:
                     job.user_id,
                 ),
             )
+
+    def record_provider_failure(self, job: Job, fingerprint: str, *, terminal: bool) -> tuple[bool, bool]:
+        """Atomically record a provider failure; return (job_exists, first_occurrence)."""
+        with self.db.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT provider_error_fingerprint FROM jobs WHERE id = ? AND user_id = ?",
+                (job.id, job.user_id),
+            ).fetchone()
+            if row is None:
+                return False, False
+            first = row["provider_error_fingerprint"] != fingerprint
+            if terminal:
+                conn.execute(
+                    """UPDATE jobs SET status = 'failed', provider_status = 'failed',
+                       error_message = ?, provider_error_fingerprint = ?, updated_at = ?, completed_at = ?
+                       WHERE id = ? AND user_id = ?""",
+                    (job.error_message, fingerprint, job.updated_at, job.completed_at, job.id, job.user_id),
+                )
+            elif first:
+                conn.execute(
+                    "UPDATE jobs SET provider_error_fingerprint = ?, error_message = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                    (fingerprint, job.error_message, job.updated_at, job.id, job.user_id),
+                )
+            return True, first
 
     def update_after_select_files(self, job: Job) -> None:
         with self.db.connect() as conn:
@@ -285,6 +315,7 @@ class JobRepository:
                 SET status = ?,
                     provider_status = ?,
                     provider_payload_json = ?,
+                    provider_error_fingerprint = ?,
                     error_message = ?,
                     updated_at = ?
                 WHERE id = ? AND user_id = ?
@@ -293,6 +324,7 @@ class JobRepository:
                     job.status,
                     job.provider_status,
                     job.provider_payload_json,
+                    job.provider_error_fingerprint,
                     job.error_message,
                     job.updated_at,
                     job.id,
@@ -309,6 +341,7 @@ class JobRepository:
                     output_mode = ?,
                     output_links_json = ?,
                     unrestricted_at = ?,
+                    provider_error_fingerprint = ?,
                     error_message = ?,
                     updated_at = ?
                 WHERE id = ? AND user_id = ?
@@ -318,6 +351,7 @@ class JobRepository:
                     job.output_mode,
                     job.output_links_json,
                     job.unrestricted_at,
+                    job.provider_error_fingerprint,
                     job.error_message,
                     job.updated_at,
                     job.id,
@@ -381,6 +415,7 @@ class JobRepository:
                     provider_resource_id = ?,
                     provider_status = ?,
                     provider_payload_json = ?,
+                    provider_error_fingerprint = ?,
                     output_mode = ?,
                     output_links_json = ?,
                     unrestricted_at = ?,
@@ -405,6 +440,7 @@ class JobRepository:
                     job.provider_resource_id,
                     job.provider_status,
                     job.provider_payload_json,
+                    job.provider_error_fingerprint,
                     job.output_mode,
                     job.output_links_json,
                     job.unrestricted_at,

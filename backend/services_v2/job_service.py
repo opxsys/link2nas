@@ -10,6 +10,8 @@ from backend.services_v2.user_context import UserContext
 from backend.services_v2.job_support.provider_failure import (
     classify_provider_error_message,
     is_persistable_provider_error,
+    is_terminal_provider_error,
+    provider_error_fingerprint,
 )
 
 from backend.services_v2.job_support.notifications import (
@@ -96,6 +98,9 @@ class JobService:
         message: str,
         payload: dict | None = None,
     ) -> None:
+        if self.job_repository.get_by_id(job.user_id, job.id) is None:
+            logger.info("Skipping event emission: job no longer exists job_id=%s event_type=%s", job.id, event_type)
+            return
         emit_notification_event(
             self.notification_service,
             job,
@@ -107,7 +112,35 @@ class JobService:
         )
 
     def _emit_provider_failed(self, job: Job, exc: Exception) -> None:
+        if self.job_repository.get_by_id(job.user_id, job.id) is None:
+            logger.info("Skipping event emission: job no longer exists job_id=%s event_type=provider.failed", job.id)
+            return
         emit_provider_failed(self.notification_service, job, exc)
+
+    def _record_provider_failure(self, context: UserContext, job: Job, exc: Exception) -> bool:
+        """Persist/deduplicate failure and emit only if the job still exists."""
+        timestamp = now()
+        terminal = is_terminal_provider_error(exc)
+        job.error_message = classify_provider_error_message(exc)
+        job.updated_at = timestamp
+        if terminal:
+            job.status = "failed"
+            job.provider_status = "failed"
+            job.completed_at = timestamp
+        exists, first_occurrence = self.job_repository.record_provider_failure(
+            job, provider_error_fingerprint(job, exc), terminal=terminal
+        )
+        if not exists:
+            logger.info(
+                "Skipping event emission: job was deleted during provider call job_id=%s provider=%s",
+                job.id, job.provider_name,
+            )
+            return False
+        if first_occurrence:
+            latest = self.get_job(context, job.id)
+            if latest is not None:
+                self._emit_provider_failed(latest, exc)
+        return terminal
 
     def _mark_job_failed_if_provider_error(self, job: Job, exc: Exception) -> None:
         """Persist job as failed if exc is an expected provider content/API error.
@@ -319,6 +352,11 @@ class JobService:
             destination_config_id,
         )
 
+        job = self.get_job(context, job_id)
+        if job is None:
+            logger.info("Skipping destination send: job was deleted during preparation job_id=%s", job_id)
+            return None
+
         try:
             self._attach_job_metadata_to_output_links(job, output_links)
             job.output_links_json = json.dumps(output_links)
@@ -341,6 +379,10 @@ class JobService:
             )
 
         except Exception as exc:
+            job = self.get_job(context, job_id)
+            if job is None:
+                logger.info("Skipping destination failure: job was deleted during destination call job_id=%s", job_id)
+                return None
             apply_destination_failure(job, exc)
             self.job_repository.update_destination_state(job)
 
@@ -411,4 +453,3 @@ class JobService:
         except Exception as exc:
             self._emit_provider_failed(job, exc)
             raise
-

@@ -5,6 +5,7 @@ from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
 from backend.services_v2.job_support.source_helpers import filename_from_path
 from backend.services_v2.job_support.notifications import emit_notification_event
+from backend.services_v2.job_support.task_guard import reload_job
 
 
 def unrestrict_file_impl(
@@ -13,7 +14,7 @@ def unrestrict_file_impl(
     job_id: str,
     file_id: int,
 ) -> "Job | None":
-    job = service.get_job(context, job_id)
+    job = reload_job(service, context, job_id, task_type="provider_file_unrestrict")
 
     if job is None:
         return None
@@ -49,8 +50,14 @@ def unrestrict_file_impl(
     try:
         result = provider.unrestrict_link(link)
     except Exception as exc:
-        service._emit_provider_failed(job, exc)
+        terminal = service._record_provider_failure(context, job, exc)
+        if terminal or service.get_job(context, job_id) is None:
+            return service.get_job(context, job_id)
         raise
+
+    job = reload_job(service, context, job_id, task_type="provider_file_unrestrict_post_call")
+    if job is None:
+        return None
 
     download_url = result.get("download")
 
@@ -82,6 +89,7 @@ def unrestrict_file_impl(
     job.unrestricted_at = now()
     job.updated_at = now()
     job.error_message = None
+    job.provider_error_fingerprint = None
 
     service.job_repository.update_unrestrict_state(job)
 

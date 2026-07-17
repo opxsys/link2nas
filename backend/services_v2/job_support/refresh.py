@@ -4,7 +4,7 @@ from backend.utils.time import utc_now_iso as now
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
 from backend.services_v2.job_support.status_actions import map_provider_status
-from backend.services_v2.job_support.notifications import emit_provider_failed
+from backend.services_v2.job_support.task_guard import reload_job
 
 
 def refresh_job_impl(
@@ -12,7 +12,7 @@ def refresh_job_impl(
     context: UserContext,
     job_id: str,
 ) -> "Job | None":
-    job = service.get_job(context, job_id)
+    job = reload_job(service, context, job_id, task_type="provider_refresh", require_active=True)
 
     if job is None:
         return None
@@ -34,8 +34,15 @@ def refresh_job_impl(
     try:
         info = provider.get_torrent_info(job.provider_resource_id)
     except Exception as exc:
-        emit_provider_failed(service.notification_service, job, exc)
+        terminal = service._record_provider_failure(context, job, exc)
+        if terminal or service.get_job(context, job_id) is None:
+            return service.get_job(context, job_id)
         raise
+
+    job = reload_job(service, context, job_id, task_type="provider_refresh_post_call", require_active=True)
+    if job is None:
+        return None
+    job.provider_error_fingerprint = None
 
     provider_status = info.get("status")
 
@@ -45,8 +52,14 @@ def refresh_job_impl(
         try:
             provider.select_files(job.provider_resource_id, files_to_select)
         except Exception as exc:
-            emit_provider_failed(service.notification_service, job, exc)
+            terminal = service._record_provider_failure(context, job, exc)
+            if terminal or service.get_job(context, job_id) is None:
+                return service.get_job(context, job_id)
             raise
+
+        job = reload_job(service, context, job_id, task_type="provider_file_selection_post_call", require_active=True)
+        if job is None:
+            return None
 
         job.status = "downloading"
         job.provider_status = "files_selected"

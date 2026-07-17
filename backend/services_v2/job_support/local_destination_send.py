@@ -38,6 +38,10 @@ def send_to_local_destination_impl(
     service.job_repository.update_unrestrict_state(job)
     service.job_repository.update_destination_state(job)
 
+    job = service.get_job(context, job.id)
+    if job is None:
+        return None
+
     service._enqueue_local_download(
         context=context,
         job=job,

@@ -20,3 +20,10 @@ class PostgresDatabase:
                 with open(schema_path, "r", encoding="utf-8") as f:
                     cur.execute(f.read())
             conn.commit()
+
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS provider_error_fingerprint TEXT DEFAULT NULL"
+                )
+            conn.commit()

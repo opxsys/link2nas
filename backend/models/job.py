@@ -42,6 +42,7 @@ class Job:
     updated_at: str
     started_at: str | None
     completed_at: str | None
+    provider_error_fingerprint: str | None = None
     cancelled_at: str | None = None
 
     send_to_destination: bool = False

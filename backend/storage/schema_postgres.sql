@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     provider_resource_id TEXT,
     provider_status TEXT,
     provider_payload_json TEXT,
+    provider_error_fingerprint TEXT,
 
     destination_config_id TEXT,
     destination_name TEXT,

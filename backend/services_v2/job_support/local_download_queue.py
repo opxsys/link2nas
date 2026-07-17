@@ -5,6 +5,10 @@ from backend.services_v2.redis_connection import build_redis_connection
 from backend.services_v2.user_context import UserContext
 
 
+def local_download_task_id(user_id: str, job_id: str) -> str:
+    return f"link2nas:local-download:{user_id}:{job_id}"
+
+
 def enqueue_local_download(
     settings,
     context: UserContext,
@@ -23,6 +27,7 @@ def enqueue_local_download(
         context.user_id,
         job.id,
         destination_config_id,
+        job_id=local_download_task_id(context.user_id, job.id),
         job_timeout="24h",
         result_ttl=3600,
         failure_ttl=86400,

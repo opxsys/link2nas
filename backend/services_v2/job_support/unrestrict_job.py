@@ -3,7 +3,8 @@ import json
 from backend.utils.time import utc_now_iso as now
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
-from backend.services_v2.job_support.notifications import emit_notification_event, emit_provider_failed
+from backend.services_v2.job_support.notifications import emit_notification_event
+from backend.services_v2.job_support.task_guard import reload_job
 
 
 def unrestrict_job_impl(
@@ -11,7 +12,7 @@ def unrestrict_job_impl(
     context: UserContext,
     job_id: str,
 ) -> "Job | None":
-    job = service.get_job(context, job_id)
+    job = reload_job(service, context, job_id, task_type="provider_unrestrict")
 
     if job is None:
         return None
@@ -25,8 +26,14 @@ def unrestrict_job_impl(
     try:
         output_links = service._build_output_links(context, job)
     except Exception as exc:
-        emit_provider_failed(service.notification_service, job, exc)
+        terminal = service._record_provider_failure(context, job, exc)
+        if terminal or service.get_job(context, job_id) is None:
+            return service.get_job(context, job_id)
         raise
+
+    job = reload_job(service, context, job_id, task_type="provider_unrestrict_post_call")
+    if job is None:
+        return None
 
     job.output_mode = "single" if len(output_links) == 1 else "per_file"
     job.output_links_json = json.dumps(output_links)
@@ -34,6 +41,7 @@ def unrestrict_job_impl(
     job.unrestricted_at = now()
     job.updated_at = now()
     job.error_message = None
+    job.provider_error_fingerprint = None
 
     service.job_repository.update_unrestrict_state(job)
 

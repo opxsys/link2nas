@@ -110,10 +110,12 @@ class JobRepository:
                 FROM jobs
                 WHERE status IN (
                     'started',
+                    'source_added',
                     'downloading',
                     'waiting_files_selection',
                     'downloaded',
-                    'ready'
+                    'ready',
+                    'partially_ready'
                 )
                 AND (
                     destination_status IS NULL
@@ -195,6 +197,7 @@ class JobRepository:
             provider_resource_id=row["provider_resource_id"],
             provider_status=row["provider_status"],
             provider_payload_json=row["provider_payload_json"],
+            provider_error_fingerprint=self._row_get(row, "provider_error_fingerprint"),
             destination_config_id=self._row_get(row, "destination_config_id"),
             destination_name=row["destination_name"],
             destination_profile_name=self._row_get(row, "destination_profile_name"),
@@ -231,6 +234,7 @@ class JobRepository:
                     provider_resource_id = %s,
                     provider_status = %s,
                     provider_payload_json = %s,
+                    provider_error_fingerprint = %s,
                     error_message = %s,
                     updated_at = %s,
                     started_at = %s
@@ -244,6 +248,7 @@ class JobRepository:
                     job.provider_resource_id,
                     job.provider_status,
                     job.provider_payload_json,
+                    job.provider_error_fingerprint,
                     job.error_message,
                     job.updated_at,
                     job.started_at,
@@ -251,6 +256,33 @@ class JobRepository:
                     job.user_id,
                 ),
             )
+
+    def record_provider_failure(self, job: Job, fingerprint: str, *, terminal: bool) -> tuple[bool, bool]:
+        """Atomically record a provider failure; return (job_exists, first_occurrence)."""
+        with self.db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT provider_error_fingerprint FROM jobs WHERE id = %s AND user_id = %s FOR UPDATE",
+                    (job.id, job.user_id),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    return False, False
+                first = row["provider_error_fingerprint"] != fingerprint
+                if terminal:
+                    cur.execute(
+                        """UPDATE jobs SET status = 'failed', provider_status = 'failed',
+                           error_message = %s, provider_error_fingerprint = %s, updated_at = %s, completed_at = %s
+                           WHERE id = %s AND user_id = %s""",
+                        (job.error_message, fingerprint, job.updated_at, job.completed_at, job.id, job.user_id),
+                    )
+                elif first:
+                    cur.execute(
+                        "UPDATE jobs SET provider_error_fingerprint = %s, error_message = %s, updated_at = %s WHERE id = %s AND user_id = %s",
+                        (fingerprint, job.error_message, job.updated_at, job.id, job.user_id),
+                    )
+            conn.commit()
+            return True, first
 
     def update_refresh_state(self, job: Job) -> None:
         with self.db.connect() as conn:
@@ -260,6 +292,7 @@ class JobRepository:
                 SET status = %s,
                     provider_status = %s,
                     provider_payload_json = %s,
+                    provider_error_fingerprint = %s,
                     error_message = %s,
                     updated_at = %s,
                     completed_at = %s
@@ -269,6 +302,7 @@ class JobRepository:
                     job.status,
                     job.provider_status,
                     job.provider_payload_json,
+                    job.provider_error_fingerprint,
                     job.error_message,
                     job.updated_at,
                     job.completed_at,
@@ -285,6 +319,7 @@ class JobRepository:
                 SET status = %s,
                     provider_status = %s,
                     provider_payload_json = %s,
+                    provider_error_fingerprint = %s,
                     error_message = %s,
                     updated_at = %s
                 WHERE id = %s AND user_id = %s
@@ -293,6 +328,7 @@ class JobRepository:
                     job.status,
                     job.provider_status,
                     job.provider_payload_json,
+                    job.provider_error_fingerprint,
                     job.error_message,
                     job.updated_at,
                     job.id,
@@ -309,6 +345,7 @@ class JobRepository:
                     output_mode = %s,
                     output_links_json = %s,
                     unrestricted_at = %s,
+                    provider_error_fingerprint = %s,
                     error_message = %s,
                     updated_at = %s
                 WHERE id = %s AND user_id = %s
@@ -318,6 +355,7 @@ class JobRepository:
                     job.output_mode,
                     job.output_links_json,
                     job.unrestricted_at,
+                    job.provider_error_fingerprint,
                     job.error_message,
                     job.updated_at,
                     job.id,
@@ -381,6 +419,7 @@ class JobRepository:
                     provider_resource_id = %s,
                     provider_status = %s,
                     provider_payload_json = %s,
+                    provider_error_fingerprint = %s,
                     output_mode = %s,
                     output_links_json = %s,
                     unrestricted_at = %s,
@@ -405,6 +444,7 @@ class JobRepository:
                     job.provider_resource_id,
                     job.provider_status,
                     job.provider_payload_json,
+                    job.provider_error_fingerprint,
                     job.output_mode,
                     job.output_links_json,
                     job.unrestricted_at,

@@ -1,6 +1,7 @@
 from backend.utils.time import utc_now_iso as now
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
+from backend.services_v2.job_support.task_guard import reload_job
 
 
 def restart_job_impl(
@@ -21,6 +22,7 @@ def restart_job_impl(
     job.provider_resource_id = None
     job.provider_status = None
     job.provider_payload_json = None
+    job.provider_error_fingerprint = None
 
     job.output_mode = None
     job.output_links_json = None
@@ -44,5 +46,8 @@ def restart_job_impl(
     job.updated_at = now()
 
     service.job_repository.update_full_reset(job)
+
+    if reload_job(service, context, job.id, task_type="provider_restart", require_active=True) is None:
+        return None
 
     return service.start_job(context, job.id)

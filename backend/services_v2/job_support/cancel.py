@@ -2,6 +2,7 @@ from backend.utils.time import utc_now_iso as now
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
 from backend.services_v2.job_support.notifications import emit_notification_event
+from backend.services_v2.job_support.task_guard import reload_job
 
 
 def cancel_job_impl(
@@ -24,6 +25,10 @@ def cancel_job_impl(
         service.job_repository.update_status_state(job)
         raise
 
+    job = reload_job(service, context, job_id, task_type="provider_cancel_post_call")
+    if job is None:
+        return None
+
     timestamp = now()
 
     job.status = "cancelled"
@@ -35,6 +40,7 @@ def cancel_job_impl(
     job.provider_resource_id = None
     job.provider_status = None
     job.provider_payload_json = None
+    job.provider_error_fingerprint = None
 
     job.output_mode = None
     job.output_links_json = None

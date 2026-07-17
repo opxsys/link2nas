@@ -14,8 +14,13 @@ def start_direct_link_job(
     try:
         result = provider.unrestrict_link(job.source_value)
     except Exception as exc:
-        emit_provider_failed(notification_service, job, exc)
+        if job_repository.get_by_id(job.user_id, job.id) is not None:
+            emit_provider_failed(notification_service, job, exc)
         raise
+
+    job = job_repository.get_by_id(job.user_id, job.id)
+    if job is None:
+        return None
 
     download_url = result.get("download")
 
@@ -47,6 +52,9 @@ def start_direct_link_job(
 
     job_repository.update_provider_state(job)
     job_repository.update_unrestrict_state(job)
+
+    if job_repository.get_by_id(job.user_id, job.id) is None:
+        return None
 
     emit_notification_event(
         notification_service,

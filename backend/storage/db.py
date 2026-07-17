@@ -25,6 +25,7 @@ class Database:
             ("users", "can_use_local_space", "ALTER TABLE users ADD COLUMN can_use_local_space INTEGER NOT NULL DEFAULT 0"),
             ("users", "ui_theme", "ALTER TABLE users ADD COLUMN ui_theme TEXT DEFAULT NULL"),
             ("oidc_states", "provider_id", "ALTER TABLE oidc_states ADD COLUMN provider_id TEXT DEFAULT NULL"),
+            ("jobs", "provider_error_fingerprint", "ALTER TABLE jobs ADD COLUMN provider_error_fingerprint TEXT DEFAULT NULL"),
         ]
         index_migrations = [
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_slug ON users(public_slug) WHERE public_slug IS NOT NULL",

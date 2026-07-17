@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from rq import Queue, Worker
 
@@ -8,6 +9,8 @@ from backend.services_v2.redis_connection import build_redis_connection
 from backend.services_v2.job_service import now
 from backend.services_v2.destinations.local_destination import LocalDownloadCancelled
 from backend.services_v2.job_support.destination_error import apply_destination_failure
+
+logger = logging.getLogger(__name__)
 
 
 def _is_cancel_requested(job) -> bool:
@@ -26,6 +29,7 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
 
         job = job_repository.get_by_id(user_id, job_id)
         if not job:
+            logger.info("Ignoring task for deleted job %s task=local_download", job_id)
             return
 
         if _is_cancel_requested(job):
@@ -67,7 +71,7 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
 
         def cancel_check() -> bool:
             latest = job_repository.get_by_id(user_id, job_id)
-            return bool(latest and _is_cancel_requested(latest))
+            return latest is None or _is_cancel_requested(latest)
 
         required_bytes = resolved.destination._required_bytes(output_links)
 
@@ -163,7 +167,8 @@ def perform_local_download_job(user_id: str, job_id: str, destination_config_id:
         except Exception as exc:
             job = job_repository.get_by_id(user_id, job_id)
             if not job:
-                raise
+                logger.info("Skipping destination failure: job was deleted during local download job_id=%s", job_id)
+                return
 
             apply_destination_failure(job, exc)
             job_repository.update_destination_state(job)

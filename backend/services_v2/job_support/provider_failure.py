@@ -1,4 +1,6 @@
 import logging
+import hashlib
+import re
 
 from backend.services_v2.providers.realdebrid_client import (
     RealDebridApiError,
@@ -14,8 +16,10 @@ from backend.services_v2.providers.alldebrid_client import (
 
 logger = logging.getLogger(__name__)
 
+_ERROR_CODE_RE = re.compile(r"\bcode=([A-Z0-9_]+)\b", re.IGNORECASE)
+
 _REJECTION_SIGNALS = frozenset({
-    "invalid_uri", "invalid_file", "file_upload_failed", "upload_failed",
+    "invalid_id", "invalid_uri", "invalid_file", "file_upload_failed", "upload_failed",
     "bad_link", "not_supported", "infringing", "too_large", "too_big",
     "invalid uri", "invalid file", "file is invalid", "rejected",
 })
@@ -69,9 +73,25 @@ def is_persistable_provider_error(exc: Exception) -> bool:
     """
     if isinstance(exc, (AllDebridAuthError, RealDebridAuthError)):
         return False
-    return isinstance(exc, (AllDebridClientError, RealDebridClientError))
+    if not isinstance(exc, (AllDebridApiError, RealDebridApiError)):
+        return False
+    message = str(exc).lower()
+    return any(signal in message for signal in _REJECTION_SIGNALS)
 
 
 def is_provider_client_error(exc: Exception) -> bool:
     """Return True for any AllDebrid or RealDebrid client exception (including auth)."""
     return isinstance(exc, (AllDebridClientError, RealDebridClientError))
+
+
+def is_terminal_provider_error(exc: Exception) -> bool:
+    """Only errors known to make further polling useless belong here."""
+    return isinstance(exc, AllDebridApiError) and "MAGNET_INVALID_ID" in str(exc).upper()
+
+
+def provider_error_fingerprint(job, exc: Exception) -> str:
+    message = " ".join(str(exc).strip().lower().split())
+    match = _ERROR_CODE_RE.search(str(exc))
+    normalized = match.group(1).upper() if match else message
+    logical_key = "|".join((job.id, "provider.failed", job.provider_config_id or job.provider_name or "", normalized))
+    return hashlib.sha256(logical_key.encode("utf-8")).hexdigest()

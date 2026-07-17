@@ -12,6 +12,11 @@ def send_to_non_local_destination_impl(
 ) -> "Job":
     result = resolved.destination.send(output_links) or {}
 
+    latest = service.job_repository.get_by_id(job.user_id, job.id)
+    if latest is None:
+        return None
+    job = latest
+
     job.status = "completed"
     job.sent_to_destination = True
     job.sent_to_destination_at = now()

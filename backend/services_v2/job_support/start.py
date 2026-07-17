@@ -3,6 +3,7 @@ from pathlib import Path
 from backend.models.job import Job
 from backend.services_v2.user_context import UserContext
 from backend.services_v2.job_support.direct_link_start import start_direct_link_job
+from backend.services_v2.job_support.task_guard import reload_job
 
 
 def start_job_impl(
@@ -39,6 +40,10 @@ def start_job_impl(
             service._mark_job_failed_if_provider_error(job, exc)
             raise
 
+        job = reload_job(service, context, job_id, task_type="provider_start_post_call", require_active=True)
+        if job is None:
+            return None
+
         return service._set_started_provider_job(job, result)
 
     if job.source_type == "torrent_file":
@@ -54,6 +59,10 @@ def start_job_impl(
             service._emit_provider_failed(job, exc)
             service._mark_job_failed_if_provider_error(job, exc)
             raise
+
+        job = reload_job(service, context, job_id, task_type="provider_start_post_call", require_active=True)
+        if job is None:
+            return None
 
         return service._set_started_provider_job(job, result)
 
