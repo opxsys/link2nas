@@ -354,6 +354,14 @@ The SMTP password is encrypted at rest using `V2_SECRET_ENCRYPTION_KEY`.
 
 `PUBLIC_BASE_URL` must be set for outbound email links (magic login, invitation, password reset, email verification) to be correct.
 
+### Notification event lifetime
+
+| Variable | Default | Allowed range | Description |
+|---|---:|---:|---|
+| `NOTIFICATION_EVENT_MAX_AGE_HOURS` | `24` | `1`–`720` hours | Maximum age, measured from `created_at`, at which an existing notification event may still be dispatched. |
+
+Events older than this limit are marked `expired` and are not sent or retried. On startup, stale `pending`, `retrying`, and abandoned `processing` events are neutralized with an idempotent database update. This setting applies to events that already exist in the dispatch queue; it does not schedule notifications or alter a future business schedule.
+
 ---
 
 ## Runtime and admin settings

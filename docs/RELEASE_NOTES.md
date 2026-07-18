@@ -1,5 +1,21 @@
 # Release Notes
 
+## v3.7.0-beta.7
+
+### Fixed
+
+- Fixed stale notification events being sent long after their original creation date.
+- Notification events now expire after a configurable maximum age.
+- Expired events are no longer retried or sent after a restart.
+- Historical pending and retrying events are safely marked as expired during startup cleanup.
+- Maximum retry limits are now enforced consistently.
+- Improved notification dispatcher concurrency and startup recovery behavior.
+
+### Reliability
+
+- Added regression tests for stale notification backlogs, restart recovery, retry limits, and concurrent dispatchers.
+- Preserved SQLite and PostgreSQL compatibility.
+
 ## v3.7.0-beta.6
 
 ### Fixed
