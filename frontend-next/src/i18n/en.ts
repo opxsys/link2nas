@@ -732,6 +732,8 @@ export const en = {
   notifEvRetrying:     'Retrying',
   notifEvPending:      'Pending',
   notifEvSent:         'Sent',
+  notifEvProcessing:   'Processing',
+  notifEvExpired:      'Expired',
   notifTestTitle:      'Send Test Notification',
   notifTestDesc:       'Verify a channel is working by sending a test message.',
   notifTestNoChannels: 'No notification channels configured. Add one to test delivery.',
@@ -1067,6 +1069,8 @@ export const en = {
   adminEvFailed:              'Failed',
   adminEvRetrying:            'Retrying',
   adminEvIgnored:             'Ignored',
+  adminEvProcessing:          'Processing',
+  adminEvExpired:             'Expired',
   adminEvAttempts:            'attempts',
   // Admin maintenance section (inside admin panel)
   adminMaintSectionApp:       'Application',

@@ -125,26 +125,70 @@ class SQLiteNotificationEventRepository:
 
         return [self._row_to_event(row) for row in rows]
 
-    def list_pending_due_for_user(self, user_id: str, now: str, limit: int = 50) -> list[NotificationEvent]:
-        with self.db.connect() as conn:
-            rows = conn.execute(
-                """SELECT * FROM notification_events
-                   WHERE user_id = ? AND status IN ('pending', 'retrying')
-                     AND (next_retry_at IS NULL OR next_retry_at <= ?)
-                   ORDER BY created_at ASC LIMIT ?""",
-                (user_id, now, int(limit)),
-            ).fetchall()
-        return [self._row_to_event(row) for row in rows]
-
-    def claim_for_dispatch(self, event_id: str, claimed_at: str, stale_before: str) -> bool:
+    def expire_stale(self, cutoff: str, updated_at: str, stale_processing_before: str) -> int:
         with self.db.connect() as conn:
             cursor = conn.execute(
-                """UPDATE notification_events SET status = 'processing', updated_at = ?
-                   WHERE id = ? AND (
+                """UPDATE notification_events
+                   SET status = 'expired', updated_at = ?, last_error = ?, next_retry_at = NULL
+                   WHERE created_at < ? AND (
                      status IN ('pending', 'retrying')
                      OR (status = 'processing' AND updated_at <= ?)
                    )""",
-                (claimed_at, event_id, stale_before),
+                (
+                    updated_at,
+                    "Notification event expired before dispatch: age exceeds configured maximum",
+                    cutoff,
+                    stale_processing_before,
+                ),
+            )
+            conn.commit()
+            return cursor.rowcount
+
+    def fail_exhausted(self, updated_at: str, stale_processing_before: str) -> int:
+        with self.db.connect() as conn:
+            cursor = conn.execute(
+                """UPDATE notification_events
+                   SET status = 'failed', updated_at = ?,
+                       last_error = 'Notification event reached maximum dispatch attempts',
+                       next_retry_at = NULL
+                   WHERE attempts >= max_attempts AND (
+                     status IN ('pending', 'retrying')
+                     OR (status = 'processing' AND updated_at <= ?)
+                   )""",
+                (updated_at, stale_processing_before),
+            )
+            conn.commit()
+            return cursor.rowcount
+
+    def list_pending_due_for_user(
+        self, user_id: str, now: str, cutoff: str, stale_before: str, limit: int = 50
+    ) -> list[NotificationEvent]:
+        with self.db.connect() as conn:
+            rows = conn.execute(
+                """SELECT * FROM notification_events
+                   WHERE user_id = ? AND created_at >= ? AND attempts < max_attempts
+                     AND (
+                       (status IN ('pending', 'retrying')
+                        AND (next_retry_at IS NULL OR next_retry_at <= ?))
+                       OR (status = 'processing' AND updated_at <= ?)
+                     )
+                   ORDER BY created_at ASC LIMIT ?""",
+                (user_id, cutoff, now, stale_before, int(limit)),
+            ).fetchall()
+        return [self._row_to_event(row) for row in rows]
+
+    def claim_for_dispatch(
+        self, event_id: str, claimed_at: str, stale_before: str, cutoff: str = "0000"
+    ) -> bool:
+        with self.db.connect() as conn:
+            cursor = conn.execute(
+                """UPDATE notification_events SET status = 'processing', updated_at = ?
+                   WHERE id = ? AND created_at >= ? AND attempts < max_attempts AND (
+                     (status IN ('pending', 'retrying')
+                      AND (next_retry_at IS NULL OR next_retry_at <= ?))
+                     OR (status = 'processing' AND updated_at <= ?)
+                   )""",
+                (claimed_at, event_id, cutoff, claimed_at, stale_before),
             )
             conn.commit()
             return cursor.rowcount == 1
@@ -219,6 +263,7 @@ class SQLiteNotificationEventRepository:
                     status = ?,
                     attempts = attempts + 1,
                     last_error = ?,
+                    next_retry_at = NULL,
                     updated_at = ?
                 WHERE id = ?
                 """,

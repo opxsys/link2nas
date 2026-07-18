@@ -243,6 +243,7 @@ def create_app() -> Flask:
         user_repository=user_repo_v2,
         app_settings_service=app_settings_service_v2,
         job_repository=job_repo_v2,
+        max_age_hours=settings.NOTIFICATION_EVENT_MAX_AGE_HOURS,
     )
     app.config["ACCOUNT_TOKEN_SERVICE_V2"] = AccountTokenService(
         account_token_repo_v2,

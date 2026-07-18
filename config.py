@@ -156,6 +156,12 @@ class Settings:
         self.CLEANUP_CANCELLED_JOB_RETENTION_HOURS = env_int("CLEANUP_CANCELLED_JOB_RETENTION_HOURS", 336)
         self.CLEANUP_TEMP_FILE_RETENTION_HOURS = env_int("CLEANUP_TEMP_FILE_RETENTION_HOURS", 24)
 
+        self.NOTIFICATION_EVENT_MAX_AGE_HOURS = env_int("NOTIFICATION_EVENT_MAX_AGE_HOURS", 24)
+        if not 1 <= self.NOTIFICATION_EVENT_MAX_AGE_HOURS <= 720:
+            raise ValueError(
+                "NOTIFICATION_EVENT_MAX_AGE_HOURS must be between 1 and 720"
+            )
+
         self.OIDC_ENABLED = env_bool("OIDC_ENABLED", False)
         self.OIDC_ISSUER = env("OIDC_ISSUER", "")
         self.OIDC_CLIENT_ID = env("OIDC_CLIENT_ID", "")

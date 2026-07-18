@@ -21,6 +21,8 @@ const STATUS_BADGE: Record<NotificationEventStatus, string> = {
   failed:   'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400',
   retrying: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400',
   pending:  'border-border bg-muted text-muted-foreground',
+  processing: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400',
+  expired:  'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
   ignored:  'border-border bg-muted text-muted-foreground',
 }
 
@@ -74,6 +76,8 @@ export default function AdminSystemEvents() {
     { key: 'failed',   labelKey: 'adminEvFailed'   },
     { key: 'retrying', labelKey: 'adminEvRetrying' },
     { key: 'ignored',  labelKey: 'adminEvIgnored'  },
+    { key: 'processing', labelKey: 'adminEvProcessing' },
+    { key: 'expired', labelKey: 'adminEvExpired' },
   ]
 
   const [events, setEvents] = useState<AdminNotificationEvent[]>([])

@@ -132,29 +132,78 @@ class PostgresNotificationEventRepository:
 
         return [self._row_to_event(row) for row in rows]
 
-    def list_pending_due_for_user(self, user_id: str, now: str, limit: int = 50) -> list[NotificationEvent]:
+    def expire_stale(self, cutoff: str, updated_at: str, stale_processing_before: str) -> int:
+        with self.db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE notification_events
+                       SET status = 'expired', updated_at = %s, last_error = %s,
+                           next_retry_at = NULL
+                       WHERE created_at < %s AND (
+                         status IN ('pending', 'retrying')
+                         OR (status = 'processing' AND updated_at <= %s)
+                       )""",
+                    (
+                        updated_at,
+                        "Notification event expired before dispatch: age exceeds configured maximum",
+                        cutoff,
+                        stale_processing_before,
+                    ),
+                )
+                expired = cur.rowcount
+            conn.commit()
+            return expired
+
+    def fail_exhausted(self, updated_at: str, stale_processing_before: str) -> int:
+        with self.db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE notification_events
+                       SET status = 'failed', updated_at = %s,
+                           last_error = 'Notification event reached maximum dispatch attempts',
+                           next_retry_at = NULL
+                       WHERE attempts >= max_attempts AND (
+                         status IN ('pending', 'retrying')
+                         OR (status = 'processing' AND updated_at <= %s)
+                       )""",
+                    (updated_at, stale_processing_before),
+                )
+                failed = cur.rowcount
+            conn.commit()
+            return failed
+
+    def list_pending_due_for_user(
+        self, user_id: str, now: str, cutoff: str, stale_before: str, limit: int = 50
+    ) -> list[NotificationEvent]:
         with self.db.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """SELECT * FROM notification_events
-                       WHERE user_id = %s AND status IN ('pending', 'retrying')
-                         AND (next_retry_at IS NULL OR next_retry_at <= %s)
+                       WHERE user_id = %s AND created_at >= %s AND attempts < max_attempts
+                         AND (
+                           (status IN ('pending', 'retrying')
+                            AND (next_retry_at IS NULL OR next_retry_at <= %s))
+                           OR (status = 'processing' AND updated_at <= %s)
+                         )
                        ORDER BY created_at ASC LIMIT %s""",
-                    (user_id, now, int(limit)),
+                    (user_id, cutoff, now, stale_before, int(limit)),
                 )
                 rows = cur.fetchall()
         return [self._row_to_event(row) for row in rows]
 
-    def claim_for_dispatch(self, event_id: str, claimed_at: str, stale_before: str) -> bool:
+    def claim_for_dispatch(
+        self, event_id: str, claimed_at: str, stale_before: str, cutoff: str = "0000"
+    ) -> bool:
         with self.db.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """UPDATE notification_events SET status = 'processing', updated_at = %s
-                       WHERE id = %s AND (
-                         status IN ('pending', 'retrying')
+                       WHERE id = %s AND created_at >= %s AND attempts < max_attempts AND (
+                         (status IN ('pending', 'retrying')
+                          AND (next_retry_at IS NULL OR next_retry_at <= %s))
                          OR (status = 'processing' AND updated_at <= %s)
                        )""",
-                    (claimed_at, event_id, stale_before),
+                    (claimed_at, event_id, cutoff, claimed_at, stale_before),
                 )
                 claimed = cur.rowcount == 1
             conn.commit()
@@ -233,8 +282,9 @@ class PostgresNotificationEventRepository:
                     SET
                         status = %s,
                         attempts = attempts + 1,
-                        last_error = %s,
-                        updated_at = %s
+                    last_error = %s,
+                    next_retry_at = NULL,
+                    updated_at = %s
                     WHERE id = %s
                     """,
                     (

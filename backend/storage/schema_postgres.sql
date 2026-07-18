@@ -341,6 +341,9 @@ ON notification_events(next_retry_at);
 CREATE INDEX IF NOT EXISTS idx_notification_events_user_status
 ON notification_events(user_id, status);
 
+CREATE INDEX IF NOT EXISTS idx_notification_events_dispatch_eligibility
+ON notification_events(user_id, status, created_at);
+
 CREATE INDEX IF NOT EXISTS idx_notification_events_job_id
 ON notification_events(job_id);
 

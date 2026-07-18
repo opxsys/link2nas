@@ -734,6 +734,8 @@ export const fr: Translations = {
   notifEvRetrying:     'En cours de réessai',
   notifEvPending:      'En attente',
   notifEvSent:         'Envoyé',
+  notifEvProcessing:   'En cours de traitement',
+  notifEvExpired:      'Expiré',
   notifTestTitle:      'Envoyer une notification de test',
   notifTestDesc:       "Vérifiez qu'un canal fonctionne en envoyant un message test.",
   notifTestNoChannels: "Aucun canal configuré. Ajoutez-en un pour tester la livraison.",
@@ -1069,6 +1071,8 @@ export const fr: Translations = {
   adminEvFailed:              'Échoués',
   adminEvRetrying:            'En cours de réessai',
   adminEvIgnored:             'Ignorés',
+  adminEvProcessing:          'En cours de traitement',
+  adminEvExpired:             'Expirés',
   adminEvAttempts:            'tentatives',
   // Admin maintenance section (inside admin panel)
   adminMaintSectionApp:       'Application',

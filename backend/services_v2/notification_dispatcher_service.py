@@ -26,6 +26,7 @@ class NotificationDispatcherService:
         app_settings_service=None,
         job_repository=None,
         max_attempts: int = 3,
+        max_age_hours: int = 24,
     ) -> None:
         self.notification_config_repository = notification_config_repository
         self.notification_event_repository = notification_event_repository
@@ -38,6 +39,7 @@ class NotificationDispatcherService:
         self.app_settings_service = app_settings_service
         self.job_repository = job_repository
         self.max_attempts = max_attempts
+        self.max_age_hours = max_age_hours
 
         self.last_run_at: str | None = None
         self.last_error: str | None = None
@@ -60,6 +62,7 @@ class NotificationDispatcherService:
             self._dispatch_event,
             self._mark_event_failure,
             now,
+            self.max_age_hours,
             on_state_update=self._update_run_state,
         )
 

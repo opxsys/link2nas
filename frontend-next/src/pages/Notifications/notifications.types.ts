@@ -2,7 +2,7 @@
 
 export type NotificationChannel = 'email' | 'gotify' | 'webhook'
 export type NotificationSeverity = 'info' | 'warning' | 'error' | 'critical'
-export type NotificationEventStatus = 'pending' | 'sent' | 'retrying' | 'failed' | 'ignored'
+export type NotificationEventStatus = 'pending' | 'processing' | 'sent' | 'retrying' | 'failed' | 'expired' | 'ignored'
 export type TestStatus = 'idle' | 'sending' | 'sent' | 'failed'
 
 export interface NotificationConfigSafeData {

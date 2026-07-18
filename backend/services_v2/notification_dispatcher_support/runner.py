@@ -1,5 +1,9 @@
 from __future__ import annotations
-from datetime import UTC, datetime, timedelta
+import logging
+from datetime import datetime, timedelta
+
+
+logger = logging.getLogger(__name__)
 
 
 def run_once_for_user(
@@ -9,6 +13,7 @@ def run_once_for_user(
     dispatch_func,
     mark_failure_func,
     now_func,
+    max_age_hours: int,
     on_state_update=None,
 ) -> dict:
     started_at = now_func()
@@ -27,13 +32,40 @@ def run_once_for_user(
     }
 
     try:
+        current = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+        cutoff = (current - timedelta(hours=max_age_hours)).isoformat()
+        stale_before = (current - timedelta(minutes=10)).isoformat()
+        notification_event_repository.expire_stale(cutoff, started_at, stale_before)
+        notification_event_repository.fail_exhausted(started_at, stale_before)
         candidates = notification_event_repository.list_pending_due_for_user(
-            user_id, started_at, limit=limit
+            user_id, started_at, cutoff, stale_before, limit=limit
         )
 
         for event in candidates[:limit]:
-            stale_before = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
-            if not notification_event_repository.claim_for_dispatch(event.id, now_func(), stale_before):
+            claimed_at = now_func()
+            claimed_now = datetime.fromisoformat(claimed_at.replace("Z", "+00:00"))
+            claim_cutoff = (claimed_now - timedelta(hours=max_age_hours)).isoformat()
+            claim_stale_before = (claimed_now - timedelta(minutes=10)).isoformat()
+            created_at = datetime.fromisoformat(event.created_at.replace("Z", "+00:00"))
+            age_hours = (claimed_now - created_at).total_seconds() / 3600
+            if event.created_at < claim_cutoff:
+                notification_event_repository.expire_stale(
+                    claim_cutoff, claimed_at, claim_stale_before
+                )
+                logger.info(
+                    "Notification event expired before dispatch event_id=%s age_hours=%.2f "
+                    "max_age_hours=%s attempts=%s previous_status=%s",
+                    event.id,
+                    age_hours,
+                    max_age_hours,
+                    event.attempts,
+                    event.status,
+                )
+                result["skipped"] += 1
+                continue
+            if not notification_event_repository.claim_for_dispatch(
+                event.id, claimed_at, claim_stale_before, claim_cutoff
+            ):
                 result["skipped"] += 1
                 continue
             result["processed"] += 1

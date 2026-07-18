@@ -310,7 +310,7 @@ export interface GeneralSettingsPayload {
 }
 
 // Real API types for GET /api/v2/admin/notifications/events
-export type NotificationEventStatus = 'pending' | 'sent' | 'retrying' | 'failed' | 'ignored'
+export type NotificationEventStatus = 'pending' | 'processing' | 'sent' | 'retrying' | 'failed' | 'expired' | 'ignored'
 
 export interface AdminNotificationEvent {
   id: string
