@@ -10,6 +10,7 @@ SECURITY_PASSWORD_POLICY_KEY = "security.password_policy"
 CLEANUP_RETENTION_KEY = "cleanup.retention"
 RESTART_COOLDOWN_KEY = "jobs.restart_cooldown"
 NOTIFICATION_DISPATCHER_KEY = "notifications.dispatcher"
+NOTIFICATION_EVENT_POLICY_KEY = "notifications.event_policy"
 JOBS_ORCHESTRATOR_KEY = "jobs.orchestrator"
 LOCAL_DOWNLOAD_WORKER_KEY = "downloads.local_worker"
 NOTIFICATION_DISPATCHER_RUNTIME_KEY = "notifications.dispatcher.runtime"
@@ -33,6 +34,10 @@ DEFAULT_NOTIFICATION_DISPATCHER = {
     "enabled": True,
     "interval_seconds": 60,
     "limit": 25,
+}
+
+DEFAULT_NOTIFICATION_EVENT_POLICY = {
+    "max_age_hours": 24,
 }
 
 DEFAULT_JOBS_ORCHESTRATOR = {

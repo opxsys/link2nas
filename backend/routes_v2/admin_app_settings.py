@@ -47,6 +47,31 @@ def get_cleanup_settings():
     service = current_app.config["APP_SETTINGS_SERVICE_V2"]
     return jsonify(service.get_cleanup_settings())
 
+
+@admin_app_settings_bp.get("/notifications")
+def get_notification_settings():
+    ctx, err = require_super_admin()
+    if err:
+        return err
+
+    service = current_app.config["APP_SETTINGS_SERVICE_V2"]
+    return jsonify(service.get_notification_settings())
+
+
+@admin_app_settings_bp.put("/notifications")
+def save_notification_settings():
+    ctx, err = require_super_admin()
+    if err:
+        return err
+
+    service = current_app.config["APP_SETTINGS_SERVICE_V2"]
+    payload = request.get_json(silent=True) or {}
+    try:
+        result = service.save_notification_settings(payload)
+    except AppSettingsValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(result)
+
 @admin_app_settings_bp.get("/system-events")
 def get_system_events_settings():
     ctx, err = require_super_admin()

@@ -13,6 +13,7 @@ from backend.services_v2.app_settings_support.defaults import (
     DEFAULT_JOBS_ORCHESTRATOR,
     DEFAULT_LOCAL_DOWNLOAD_WORKER,
     DEFAULT_NOTIFICATION_DISPATCHER,
+    DEFAULT_NOTIFICATION_EVENT_POLICY,
     DEFAULT_NOTIFICATION_DISPATCHER_RUNTIME,
     DEFAULT_RESTART_COOLDOWNS,
     DEFAULT_SECURITY_PASSWORD_POLICY,
@@ -21,6 +22,7 @@ from backend.services_v2.app_settings_support.defaults import (
     JOBS_ORCHESTRATOR_KEY,
     LOCAL_DOWNLOAD_WORKER_KEY,
     NOTIFICATION_DISPATCHER_KEY,
+    NOTIFICATION_EVENT_POLICY_KEY,
     NOTIFICATION_DISPATCHER_RUNTIME_KEY,
     RESTART_COOLDOWN_KEY,
     SECURITY_PASSWORD_POLICY_KEY,
@@ -41,8 +43,11 @@ from backend.services_v2.app_settings_support.storage import (
 
 
 class AppSettingsService:
-    def __init__(self, repository):
+    def __init__(self, repository, notification_event_max_age_hours: int = 24):
         self.repository = repository
+        self.notification_event_max_age_hours = max(
+            1, min(int(notification_event_max_age_hours), 720)
+        )
 
     def now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -280,6 +285,47 @@ class AppSettingsService:
             DEFAULT_NOTIFICATION_DISPATCHER,
         )
 
+    def get_notification_event_policy(self) -> dict:
+        default = {
+            **DEFAULT_NOTIFICATION_EVENT_POLICY,
+            "max_age_hours": self.notification_event_max_age_hours,
+        }
+        value = self._get_json_setting(NOTIFICATION_EVENT_POLICY_KEY, default)
+        try:
+            value["max_age_hours"] = validate_int(
+                value.get("max_age_hours"),
+                "max_age_hours",
+                min_value=1,
+                max_value=720,
+            )
+        except AppSettingsValidationError:
+            value["max_age_hours"] = self.notification_event_max_age_hours
+        return value
+
+    def save_notification_event_policy(self, value: dict) -> dict:
+        if not isinstance(value, dict):
+            raise AppSettingsValidationError("notification event policy must be an object")
+        max_age_hours = validate_int(
+            value.get("max_age_hours"),
+            "max_age_hours",
+            min_value=1,
+            max_value=720,
+        )
+        result = {"max_age_hours": max_age_hours}
+        self._save_json_setting(NOTIFICATION_EVENT_POLICY_KEY, result)
+        return result
+
+    def get_notification_settings(self) -> dict:
+        return {"event_policy": self.get_notification_event_policy()}
+
+    def save_notification_settings(self, payload: dict) -> dict:
+        if not isinstance(payload, dict):
+            raise AppSettingsValidationError("payload must be an object")
+        event_policy = payload.get("event_policy")
+        if not isinstance(event_policy, dict):
+            raise AppSettingsValidationError("event_policy must be an object")
+        return {"event_policy": self.save_notification_event_policy(event_policy)}
+
     def save_notification_dispatcher_settings(self, value: dict) -> dict:
         if not isinstance(value, dict):
             raise AppSettingsValidationError("notifications.dispatcher must be an object")
@@ -514,4 +560,3 @@ class AppSettingsService:
 
     def _save_string_setting(self, key: str, value: str) -> None:
         save_string_setting(self.repository, key, value, self.now)
-

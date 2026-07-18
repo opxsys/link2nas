@@ -5,6 +5,7 @@ export type AdminSection =
   | 'emails'
   | 'security'
   | 'runtime'
+  | 'notifications'
   | 'cleanup'
   | 'system-events'
   | 'maintenance'
@@ -235,6 +236,12 @@ export interface RuntimeSettingsPayload {
   notifications: { dispatcher: Pick<DispatcherSettings, 'enabled' | 'interval_seconds' | 'limit'> }
   jobs: { orchestrator: OrchestratorSettings }
   downloads: { local_worker: LocalWorkerSettings }
+}
+
+export interface AdminNotificationSettings {
+  event_policy: {
+    max_age_hours: number
+  }
 }
 
 // Real API types for GET/PUT /api/v2/admin/app-settings/cleanup and POST /api/v2/admin/cleanup/run

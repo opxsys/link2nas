@@ -131,7 +131,10 @@ def create_app() -> Flask:
     notification_config_repo_v2 = repositories_v2.notification_config_repository
     notification_event_repo_v2 = repositories_v2.notification_event_repository
 
-    app_settings_service_v2 = AppSettingsService(app_settings_repo_v2)
+    app_settings_service_v2 = AppSettingsService(
+        app_settings_repo_v2,
+        notification_event_max_age_hours=settings.NOTIFICATION_EVENT_MAX_AGE_HOURS,
+    )
 
     user_destination_factory_v2 = UserDestinationFactory(
         destination_config_repository=destination_config_repo_v2,

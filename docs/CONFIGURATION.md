@@ -358,9 +358,9 @@ The SMTP password is encrypted at rest using `V2_SECRET_ENCRYPTION_KEY`.
 
 | Variable | Default | Allowed range | Description |
 |---|---:|---:|---|
-| `NOTIFICATION_EVENT_MAX_AGE_HOURS` | `24` | `1`–`720` hours | Maximum age, measured from `created_at`, at which an existing notification event may still be dispatched. |
+| `NOTIFICATION_EVENT_MAX_AGE_HOURS` | `24` | `1`–`720` hours | Initial default/fallback for the maximum age, measured from `created_at`, at which an existing notification event may still be dispatched. |
 
-Events older than this limit are marked `expired` and are not sent or retried. On startup, stale `pending`, `retrying`, and abandoned `processing` events are neutralized with an idempotent database update. This setting applies to events that already exist in the dispatch queue; it does not schedule notifications or alter a future business schedule.
+The effective value can be changed without a restart in **Administration > Notifications**. The saved application setting takes precedence over the environment fallback and is shared by SQLite and PostgreSQL deployments. Events older than this limit are marked `expired` and are not sent or retried. On startup, stale `pending`, `retrying`, and abandoned `processing` events are neutralized with an idempotent database update. This setting applies to events that already exist in the dispatch queue; it does not schedule notifications or alter a future business schedule.
 
 ---
 

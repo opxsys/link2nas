@@ -20,11 +20,12 @@ import AdminTimeouts from './AdminTimeouts'
 import AdminSso from './AdminSso'
 import AdminIdentityProxy from './AdminIdentityProxy'
 import AdminProwlarr from './AdminProwlarr'
+import AdminNotifications from './AdminNotifications'
 import type { AdminSection } from './admin.types'
 
 const VALID_SECTIONS: AdminSection[] = [
   'overview', 'general', 'users', 'announcements', 'emails',
-  'security', 'timeouts', 'runtime', 'cleanup', 'system-events', 'maintenance', 'sso',
+  'security', 'timeouts', 'runtime', 'notifications', 'cleanup', 'system-events', 'maintenance', 'sso',
   'identity-proxy', 'prowlarr',
 ]
 
@@ -108,6 +109,7 @@ export default function Admin() {
           {activeSection === 'emails'        && <AdminEmails />}
           {activeSection === 'security'      && <AdminSecurity />}
           {activeSection === 'runtime'       && <AdminRuntime />}
+          {activeSection === 'notifications' && <AdminNotifications />}
           {activeSection === 'cleanup'       && <AdminCleanup />}
           {activeSection === 'system-events' && <AdminSystemEvents />}
           {activeSection === 'maintenance'   && <AdminMaintenance />}

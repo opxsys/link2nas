@@ -13,6 +13,7 @@ import {
   KeyRound,
   ShieldAlert,
   Search,
+  Bell,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'security',      labelKey: 'adminNavSecurity',      icon: ShieldCheck },
   { id: 'timeouts',      labelKey: 'adminNavTimeouts',      icon: Timer },
   { id: 'runtime',       labelKey: 'adminNavRuntime',       icon: Cpu },
+  { id: 'notifications', labelKey: 'adminNavNotifications', icon: Bell },
   { id: 'cleanup',       labelKey: 'adminNavCleanup',       icon: Trash2 },
   { id: 'system-events', labelKey: 'adminNavEvents',        icon: AlertTriangle },
   { id: 'maintenance',   labelKey: 'adminNavMaintenance',   icon: Wrench },

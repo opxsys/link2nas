@@ -10,11 +10,14 @@
 - Historical pending and retrying events are safely marked as expired during startup cleanup.
 - Maximum retry limits are now enforced consistently.
 - Improved notification dispatcher concurrency and startup recovery behavior.
+- Added an Administration > Notifications setting to change the notification event maximum age without restarting Link2NAS.
+- Notification event TTL overrides are persisted in application settings, with the environment value retained as the initial fallback.
 
 ### Reliability
 
 - Added regression tests for stale notification backlogs, restart recovery, retry limits, and concurrent dispatchers.
 - Preserved SQLite and PostgreSQL compatibility.
+- Added secured admin API and UI coverage for notification event TTL configuration.
 
 ## v3.7.0-beta.6
 

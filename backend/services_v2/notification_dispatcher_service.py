@@ -57,10 +57,17 @@ class NotificationDispatcherService:
             "message": "Notification dispatcher active",
         }
 
+    def _effective_max_age_hours(self) -> int:
+        if self.app_settings_service is not None:
+            policy = self.app_settings_service.get_notification_event_policy()
+            return int(policy["max_age_hours"])
+        return self.max_age_hours
+
     def cleanup_stale_events_on_startup(self) -> int:
         updated_at = now()
         current = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-        cutoff = (current - timedelta(hours=self.max_age_hours)).isoformat()
+        max_age_hours = self._effective_max_age_hours()
+        cutoff = (current - timedelta(hours=max_age_hours)).isoformat()
         stale_processing_before = (current - timedelta(minutes=10)).isoformat()
         expired = self.notification_event_repository.expire_stale(
             cutoff,
@@ -82,7 +89,7 @@ class NotificationDispatcherService:
             self._dispatch_event,
             self._mark_event_failure,
             now,
-            self.max_age_hours,
+            self._effective_max_age_hours(),
             on_state_update=self._update_run_state,
         )
 
