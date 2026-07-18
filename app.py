@@ -245,6 +245,7 @@ def create_app() -> Flask:
         job_repository=job_repo_v2,
         max_age_hours=settings.NOTIFICATION_EVENT_MAX_AGE_HOURS,
     )
+    app.config["NOTIFICATION_DISPATCHER_SERVICE_V2"].cleanup_stale_events_on_startup()
     app.config["ACCOUNT_TOKEN_SERVICE_V2"] = AccountTokenService(
         account_token_repo_v2,
         public_base_url=getattr(settings, "PUBLIC_BASE_URL", None),

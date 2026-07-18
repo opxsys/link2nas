@@ -1,5 +1,7 @@
 
 from __future__ import annotations
+import logging
+from datetime import datetime, timedelta
 from backend.utils.time import utc_now_iso
 from backend.services_v2.notification_dispatcher_support.config import load_config_json
 from backend.services_v2.notification_dispatcher_support.gotify import send_gotify
@@ -10,6 +12,7 @@ from backend.services_v2.notification_dispatcher_support.runner import run_once_
 from typing import Any
 
 now = utc_now_iso
+logger = logging.getLogger(__name__)
 
 
 class NotificationDispatcherService:
@@ -53,6 +56,23 @@ class NotificationDispatcherService:
             "last_result": self.last_result,
             "message": "Notification dispatcher active",
         }
+
+    def cleanup_stale_events_on_startup(self) -> int:
+        updated_at = now()
+        current = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+        cutoff = (current - timedelta(hours=self.max_age_hours)).isoformat()
+        stale_processing_before = (current - timedelta(minutes=10)).isoformat()
+        expired = self.notification_event_repository.expire_stale(
+            cutoff,
+            updated_at,
+            stale_processing_before,
+        )
+        if expired:
+            logger.info(
+                "Expired %s stale notification events during startup cleanup",
+                expired,
+            )
+        return expired
 
     def run_once_for_user(self, user_id: str, limit: int = 25) -> dict:
         return run_once_for_user(
